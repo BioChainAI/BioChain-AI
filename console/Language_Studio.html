@@ -511,7 +511,7 @@ async function replaySession() {
 /** Burn the current session: destroys the local unexported working log.
  *  Does NOT touch anything already crystallized/published — those are
  *  immutable chains on the mesh already. The burn EVENT itself (turn count +
- *  last parity, never content) is logged to chronicles, so the system stays
+ *  last parity, never content) is logged to the audit log, so the system stays
  *  auditable even though the burned content is deliberately unrecoverable. */
 async function burnSession() {
   if (!sessionLog.length) { $("auditMsg").textContent = "Nothing to burn — session is already empty."; return; }
