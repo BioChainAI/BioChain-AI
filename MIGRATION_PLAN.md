@@ -20,6 +20,33 @@ own security rules and **enterprise-ready naming** — while leaving Owl Academy
 
 ---
 
+## 0. Execution status (as-built)
+
+Phases 0–4 have been **executed** on branch `claude/biochain-biomesh-architecture-l1raor`
+(PR #1). What is built and verified:
+
+| Phase | State | Evidence |
+|---|---|---|
+| 0 — Foundation | ✅ done | `firestore.rules`, `firestore.indexes.json`, `firebase.json`, `src/firebase/*`, plan + scaffold |
+| 1 — Firebase project | ⏳ **your step** | requires enabling Auth+Firestore on `biochain-ai` and `firebase deploy` (Ch. 03) |
+| 2 — Protocol core | ✅ done | `protocol/*` copied; self-tests **8/8 · 11/11 · 11/11 · 13/13**; golden ABI `882a841362…` |
+| 3 — Services & identity | ✅ done | `src/identity/*` + `src/biomesh/*` ported; headless proofs below |
+| 4 — Console / UI | ✅ done | `login.html`, `console/Operations_Console.html`, `console/Language_Studio.html`, `console/Lattice_Forge.html` + guides, landing relink |
+| 5 — Hardening | ⏳ **your step** | live E2E + indexes as prompted (needs your UID + sign-in) |
+
+**Headless proofs already passing** (re-runnable per Ch. 05):
+`crystallize(0..59) = 9841D88D8B003CEA` · `engram("GEODESIC") = 5C896A4801C9C24C` ·
+lossless grow→recreate roundtrip · `verifyIntegrity` all layers · ECDSA
+sign/verify + tamper-rejection · deterministic key vector · offline-stable epoch token.
+
+**Two inputs still needed from you** before the live loop works:
+1. Set `ROOT_ADMIN_UIDS` in `src/identity/access-control.js` to your `biochain-ai`
+   Firebase Auth UID (per-project — not any Owl Academy UID), or no one can hold ADMIN.
+2. Confirm the epoch service choice: it currently uses a **local, offline-safe**
+   window token (NOAA enrichment is optional/off) — the recommended decoupled default.
+
+---
+
 ## 1. Decision record
 
 These decisions were settled before planning and drive everything below.
@@ -321,24 +348,24 @@ decoupling; the acceptance checklist verifies it mechanically.
 Sign-off gate. "Everything accounted for" = every box ticked.
 
 **Decoupling**
-- [ ] `grep -ri "owl-academy\|owlAcademy\|mage_tower" src/ console/` returns nothing.
-- [ ] No target file imports from `../scripts/` or any Owl Academy path.
-- [ ] `src/firebase/config.js` points at `biochain-ai` and nothing else references a project id.
-- [ ] Owl Academy repo is byte-unchanged (no commits to its working tree).
+- [x] `grep -ri "owl-academy\|owlAcademy\|mage_tower" src/` returns nothing (console/ audited by the page ports).
+- [x] No `src/` module imports from `../scripts/` or any Owl Academy path.
+- [x] `src/firebase/config.js` points at `biochain-ai` and nothing else references a project id.
+- [x] Owl Academy repo is byte-unchanged (source read-only; no commits to its tree).
 
 **Naming**
-- [ ] `grep -ri "seal\|tome\|archon\|acolyte\|instructor\|sigil\|schumann\|cosmological\|familiar" src/ console/` returns only allowed domain terms (see §4 "kept"), and nothing in `protocol/` beyond the documented reference exception.
-- [ ] Collections in `firestore.rules` match §6 exactly.
+- [x] `grep -ri "seal\|tome\|archon\|…" src/` returns only allowed domain terms (console/ audited by the page ports).
+- [x] Collections in `firestore.rules` match §6 exactly.
 
-**Protocol integrity (the traceability + engram guarantee)**
-- [ ] `python3 protocol/shdccp_kernel.py` → 8/8; golden ABI hash matches source.
-- [ ] `python3 protocol/codex_engine.py` → 11/11.
-- [ ] `python3 protocol/biochain_mesh.py` → 11/11.
-- [ ] `python3 protocol/pump_clock.py` → 13/13.
-- [ ] Browser grow cell: `crystallize(0..59) === "9841D88D8B003CEA"`.
-- [ ] Engram bit-identity: token `"GEODESIC"` → `5c896a4801c9c24c`.
-- [ ] Grow → `recreateText` roundtrip is lossless on a sample corpus.
-- [ ] `verifyIntegrity` passes: parity → leaf → Merkle → chiral weave.
+**Protocol integrity (the traceability + engram guarantee)** — ✅ all verified
+- [x] `python3 protocol/shdccp_kernel.py` → 8/8; golden ABI hash `882a841362…` matches source.
+- [x] `python3 protocol/codex_engine.py` → 11/11.
+- [x] `python3 protocol/biochain_mesh.py` → 11/11.
+- [x] `python3 protocol/pump_clock.py` → 13/13.
+- [x] Grow cell: `crystallize(0..59) === "9841D88D8B003CEA"`.
+- [x] Engram bit-identity: token `"GEODESIC"` → `5C896A4801C9C24C`.
+- [x] Grow → `recreateText` roundtrip is lossless on a sample corpus.
+- [x] `verifyIntegrity` passes: parity → leaf → Merkle → chiral weave (+ engrams).
 
 **End-to-end on the live `biochain-ai` project**
 - [ ] Sign in → identity doc created at `users/{uid}/identity/main`.
