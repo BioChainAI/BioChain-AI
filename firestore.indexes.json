@@ -1,0 +1,14 @@
+{
+  "//": "Composite indexes for BioChain AI queries. Single-field queries (orderBy createdAt; where chainId ==) are auto-indexed and need no entry here. The one compound query is listIncoming(uid): transfers where toUid == AND status ==. If the console ever emits a 'query requires an index' link, click it to add the exact index and mirror it here.",
+  "indexes": [
+    {
+      "collectionGroup": "transfers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "toUid", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

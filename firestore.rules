@@ -1,0 +1,149 @@
+rules_version = '2';
+// ============================================================================
+// BioChain AI — standalone Firestore security rules
+// ----------------------------------------------------------------------------
+// Decoupled from Owl Academy. This file governs ONLY the BioChain platform:
+// identities, signing keys, the public key registry, and the BioMesh objects
+// (biochains, transfers, codices, ratings) plus an append-only audit log.
+//
+// Trust model: client-side ECDSA crypto with these rules as the server-side
+// backstop. Rules pin grower/owner identity on create, free-only transfers,
+// recipient-only resolution, ownership-moves-only-via-accepted-transfer (joined
+// server-side via get()), and no deletes anywhere history must survive.
+//
+// Roles are ADMIN > OPERATOR > MEMBER (see src/identity/access-control.js).
+// Any signed-in MEMBER can grow, transfer, and rate; roles only gate the
+// operations console and rating weight.
+// ============================================================================
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ───────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function hasIdentity() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)/identity/main);
+    }
+    function myRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)/identity/main).data.role;
+    }
+    function isOperatorOrAdmin() {
+      return hasIdentity() && (myRole() == "OPERATOR" || myRole() == "ADMIN");
+    }
+    function isAdmin() {
+      return hasIdentity() && myRole() == "ADMIN";
+    }
+
+    // ── Account-private space ─────────────────────────────────────────
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Identity: the immutable account fingerprint. Role/certificate fields may
+    // be appended, but identityId / identitySeed / geoVector are frozen forever.
+    match /users/{uid}/identity/{doc} {
+      allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.identityId   == resource.data.identityId
+        && request.resource.data.identitySeed == resource.data.identitySeed
+        && request.resource.data.geoVector    == resource.data.geoVector;
+      allow delete: if false;
+    }
+
+    // Signing keys: hold the ECDSA PRIVATE key — owner-only, never deletable.
+    // (Retire/revoke via a status flag; the record itself must survive.)
+    match /users/{uid}/signingKeys/{keyId} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Any other per-account subcollection: strictly owner-only.
+    match /users/{uid}/{collection}/{doc=**} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid
+        && collection != "identity"
+        && collection != "signingKeys";
+    }
+
+    // ── Public key registry — verification surface, NEVER a private key ──
+    match /keyRegistry/{keyId} {
+      allow read:   if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+      // Owner may only flip lifecycle status (revoke / retire) — content frozen.
+      allow update: if isSignedIn() && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','updatedAt','revokedEpoch']);
+      allow delete: if false; // revoke via status, never delete — preserves traceability
+    }
+
+    // ── BioMesh — biochains, free certified transfers, codices, ratings ─
+    // A biochain is grown in the growth substrate, certified by the grower's
+    // signing-key attestation (GROWN/1), transferred FREE via a signed
+    // TRANSFER/1 record, and never deleted — the transfer docs ARE the lineage.
+    match /biochains/{chainId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.growerUid == request.auth.uid
+        && request.resource.data.ownerUid  == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // current owner manages listing + codex pairing only — grown record frozen
+        (resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status','description','pairedCodexHash','pairAttestation','updatedAt']))
+        ||
+        // ownership moves ONLY to the caller, ONLY via an accepted transfer
+        // addressed to them for this exact chain (joined server-side via get())
+        (request.resource.data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['ownerUid','ownerIdentityId','lineage','lastTransferId','updatedAt'])
+          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.chainId == chainId
+          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.toUid  == request.auth.uid
+          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.status == "accepted")
+      );
+      allow delete: if false; // chains never vanish — traceability
+    }
+
+    match /transfers/{txId} {
+      allow read: if isSignedIn();                 // the lineage is public to the tenant
+      allow create: if isSignedIn()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.price  == 0       // transfers are ALWAYS free
+        && get(/databases/$(database)/documents/biochains/$(request.resource.data.chainId)).data.ownerUid == request.auth.uid;
+      // only the recipient resolves, status fields only
+      allow update: if isSignedIn() && resource.data.toUid == request.auth.uid
+        && resource.data.status == "pending"
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','acceptedAt','updatedAt'])
+        && (request.resource.data.status == "accepted" || request.resource.data.status == "declined");
+      allow delete: if false;                      // lineage is append-only
+    }
+
+    // Codices: content-addressed personalization seeds paired to chains.
+    // Immutable once published — pairing lives on the chain doc, not here.
+    match /codices/{codexHash} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.creatorUid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    match /ratings/{rid} {
+      allow read: if isSignedIn();
+      // one rating per user per chain — the doc id enforces it
+      allow create: if isSignedIn()
+        && request.resource.data.raterUid == request.auth.uid
+        && rid == request.resource.data.chainId + "_" + request.auth.uid;
+      allow update: if isSignedIn() && resource.data.raterUid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ── Audit log (append-only; no client reads) ──────────────────────
+    match /auditLog/{entry} {
+      allow create: if isSignedIn();
+      allow read:   if false;
+    }
+  }
+}

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioChain AI — Deployment Scaffold</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05030a; --cyan:#00d4ff; --purple:#8A2BE2;
+    --emerald:#10b981; --gold:#D4AF37; --text:#CBD5E1;
+  }
+  body{
+    background-color:var(--void); color:var(--text);
+    font-family:'Inter',sans-serif;
+    background:radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--purple) 10%, var(--void)), var(--void) 100%);
+    min-height:100vh; margin:0;
+  }
+  .grid-bg{position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:linear-gradient(to right,rgba(255,255,255,.02) 1px,transparent 1px),
+      linear-gradient(to bottom,rgba(255,255,255,.02) 1px,transparent 1px);
+    background-size:50px 50px;
+    -webkit-mask-image:radial-gradient(circle at center,black,transparent 80%);
+    mask-image:radial-gradient(circle at center,black,transparent 80%);}
+  h1,h2,h3,.font-display{font-family:'Cinzel',serif;}
+  .mono{font-family:'Fira Code',monospace;}
+  .glass{background:rgba(10,6,22,.7); backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.06); box-shadow:0 10px 40px -10px rgba(0,0,0,.8);}
+  .chip{border:1px solid rgba(255,255,255,.08); border-radius:9999px; padding:.15rem .6rem; font-size:.7rem;}
+  a.card:hover{border-color:var(--cyan); transform:translateY(-2px);}
+  a.card{transition:all .18s ease;}
+  .layer{border-left:3px solid; padding:.5rem .9rem; border-radius:.4rem; background:rgba(255,255,255,.02);}
+  table{border-collapse:collapse; width:100%;}
+  th,td{border:1px solid rgba(255,255,255,.07); padding:.5rem .7rem; text-align:left; font-size:.86rem; vertical-align:top;}
+  th{background:rgba(138,43,226,.12); font-weight:600;}
+  code{background:rgba(0,212,255,.08); color:var(--cyan); padding:.05rem .35rem; border-radius:.25rem; font-family:'Fira Code',monospace; font-size:.82em;}
+  .old{color:#94a3b8; text-decoration:line-through; text-decoration-color:rgba(148,163,184,.4);}
+  .new{color:var(--emerald); font-weight:600;}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+<main class="relative z-10 max-w-5xl mx-auto px-5 py-14">
+
+  <!-- Hero -->
+  <header class="mb-12">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="chip" style="color:var(--emerald)">STANDALONE</span>
+      <span class="chip" style="color:var(--cyan)">DECOUPLED</span>
+      <span class="chip" style="color:var(--gold)">SHD-CCP</span>
+    </div>
+    <h1 class="text-4xl md:text-5xl font-bold text-white leading-tight">BioChain AI<br>Deployment Scaffold</h1>
+    <p class="mt-5 text-lg max-w-3xl">A reproducible runbook for spinning the BioMesh architecture — the
+      traceability&nbsp;+&nbsp;engram system on the SHD-CCP data protocol — out of a reference codebase into a
+      <strong class="text-white">standalone platform on its own Firebase project</strong>, with enterprise-ready
+      naming. Documents exactly how the migration was performed, so the next product is days, not weeks.</p>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <a href="../../MIGRATION_PLAN.md" class="glass px-5 py-2.5 rounded-lg text-white font-medium" style="border-color:rgba(0,212,255,.3)">📋 Migration Plan</a>
+      <a href="README.md" class="glass px-5 py-2.5 rounded-lg font-medium">📚 Chapter Index</a>
+    </div>
+  </header>
+
+  <!-- The one principle -->
+  <section class="glass rounded-xl p-6 mb-12" style="border-color:rgba(16,185,129,.25)">
+    <h2 class="text-sm tracking-widest text-emerald-400 mb-2" style="color:var(--emerald)">THE ONE PRINCIPLE</h2>
+    <p class="text-xl text-white font-display">Names and hosting change; the protocol never does.</p>
+    <p class="mt-2 text-sm">The SHD-CCP wire format, engram crystallization, Merkle/chiral commitments, and
+      certification chain are mathematically pinned — the browser grow cell is already byte-identical to the Python
+      kernel (<code>crystallize(0..59) = 9841D88D8B003CEA</code>). Migration only touches identity naming and project
+      binding; the traceability guarantee carries over by construction and is re-proven in Chapter&nbsp;05.</p>
+  </section>
+
+  <!-- Four layers -->
+  <section class="mb-12">
+    <h2 class="text-2xl text-white mb-1">The four layers</h2>
+    <p class="text-sm mb-5 opacity-80">Difficulty is inverted: the protocol core (Layer&nbsp;2) has
+      <em>zero</em> coupling; all coupling lives in Layer&nbsp;3 — and it's naming, not logic.</p>
+    <div class="space-y-3">
+      <div class="layer" style="border-color:var(--cyan)"><strong class="text-white">Layer 4 · Console / UI</strong>
+        — operator + member web pages. <span class="chip" style="color:var(--cyan)">re-host + re-theme</span></div>
+      <div class="layer" style="border-color:var(--purple)"><strong class="text-white">Layer 3 · BioMesh services</strong>
+        — grow · certify · transfer · rate · trace, plus the identity/keys it leans on.
+        <span class="chip" style="color:var(--purple)">copy + rename + rewire</span></div>
+      <div class="layer" style="border-color:var(--emerald)"><strong class="text-white">Layer 2 · Protocol core</strong>
+        — SHD-CCP kernel · codex engine · engram shard · mesh · pump clock.
+        <span class="chip" style="color:var(--emerald)">copy verbatim · zero coupling</span></div>
+      <div class="layer" style="border-color:var(--gold)"><strong class="text-white">Layer 1 · Data / rules</strong>
+        — Firestore collections + security rules + project binding.
+        <span class="chip" style="color:var(--gold)">rewrite clean</span></div>
+    </div>
+  </section>
+
+  <!-- Chapters -->
+  <section class="mb-12">
+    <h2 class="text-2xl text-white mb-5">Chapters</h2>
+    <div class="grid md:grid-cols-2 gap-4">
+      <a class="card glass rounded-lg p-5" href="01-architecture-and-scope.md">
+        <div class="text-xs mono opacity-60 mb-1">01</div>
+        <div class="text-white font-medium">Architecture &amp; scope</div>
+        <div class="text-sm opacity-75 mt-1">The four layers and exactly what does / doesn't move.</div></a>
+      <a class="card glass rounded-lg p-5" href="02-naming-standard.md">
+        <div class="text-xs mono opacity-60 mb-1">02</div>
+        <div class="text-white font-medium">The naming standard</div>
+        <div class="text-sm opacity-75 mt-1">Mechanical esoteric → enterprise find/replace map.</div></a>
+      <a class="card glass rounded-lg p-5" href="03-firebase-and-identity.md">
+        <div class="text-xs mono opacity-60 mb-1">03</div>
+        <div class="text-white font-medium">Firebase &amp; identity substrate</div>
+        <div class="text-sm opacity-75 mt-1">Live project, rules deployed, identity/keys ported.</div></a>
+      <a class="card glass rounded-lg p-5" href="04-protocol-and-biomesh.md">
+        <div class="text-xs mono opacity-60 mb-1">04</div>
+        <div class="text-white font-medium">Protocol core &amp; services</div>
+        <div class="text-sm opacity-75 mt-1">SHD-CCP copied + verified; <code>biomesh.js</code> rewired.</div></a>
+      <a class="card glass rounded-lg p-5" href="05-rules-and-verification.md">
+        <div class="text-xs mono opacity-60 mb-1">05</div>
+        <div class="text-white font-medium">Rules &amp; verification</div>
+        <div class="text-sm opacity-75 mt-1">Rules proven in emulator; integrity proven bit-for-bit.</div></a>
+      <a class="card glass rounded-lg p-5" href="06-console-and-reuse.md">
+        <div class="text-xs mono opacity-60 mb-1">06</div>
+        <div class="text-white font-medium">Console, login &amp; reuse</div>
+        <div class="text-sm opacity-75 mt-1">Re-hosted console + login/Key Manager; reuse recipe.</div></a>
+    </div>
+  </section>
+
+  <!-- Naming standard preview -->
+  <section class="mb-12">
+    <h2 class="text-2xl text-white mb-1">Naming standard (excerpt)</h2>
+    <p class="text-sm mb-4 opacity-80">Full table in the plan, §4. Replace fantasy-guild terms; keep real
+      domain terms (<code>biochain</code>, <code>engram</code>, <code>codex</code>, <code>SHD-CCP</code>).</p>
+    <div class="glass rounded-xl overflow-x-auto">
+      <table>
+        <thead><tr><th>Domain</th><th>Esoteric → Enterprise</th></tr></thead>
+        <tbody>
+          <tr><td>Identity</td><td><span class="old">Cosmological ID</span> → <span class="new">Identity ID</span> · <span class="old">spire-registrar</span> → <span class="new">identity-registry</span></td></tr>
+          <tr><td>Roles</td><td><span class="old">Archon / Instructor / Acolyte</span> → <span class="new">Admin / Operator / Member</span></td></tr>
+          <tr><td>Signing</td><td><span class="old">Minor Tome</span> → <span class="new">Signing Key</span> · <span class="old">Seal</span> → <span class="new">Attestation</span> · <span class="old">seals/</span> → <span class="new">keyRegistry/</span></td></tr>
+          <tr><td>Visual</td><td><span class="old">Sigil</span> → <span class="new">Identicon</span></td></tr>
+          <tr><td>Timing</td><td><span class="old">Schumann Oracle / tick</span> → <span class="new">Epoch Service / epoch</span></td></tr>
+          <tr><td>Data</td><td><span class="old">chronicles</span> → <span class="new">auditLog</span> · <span class="old">biochainTransfers</span> → <span class="new">transfers</span></td></tr>
+          <tr><td>Concepts</td><td><span class="old">Biostrata</span> → <span class="new">Growth Substrate</span> · <span class="old">Familiar</span> → <span class="new">Retrieval Agent</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Phases -->
+  <section class="mb-12">
+    <h2 class="text-2xl text-white mb-5">Execution phases</h2>
+    <div class="grid md:grid-cols-3 gap-4 text-sm">
+      <div class="glass rounded-lg p-4"><div class="mono text-emerald-400" style="color:var(--emerald)">PHASE 0 ✓</div><div class="text-white mt-1">Foundation</div><div class="opacity-75 mt-1">Rules, config, indexes, plan &amp; this scaffold — staged for review.</div></div>
+      <div class="glass rounded-lg p-4"><div class="mono opacity-60">PHASE 1</div><div class="text-white mt-1">Firebase project</div><div class="opacity-75 mt-1">Enable auth + Firestore; deploy rules &amp; indexes.</div></div>
+      <div class="glass rounded-lg p-4"><div class="mono opacity-60">PHASE 2</div><div class="text-white mt-1">Protocol core</div><div class="opacity-75 mt-1">Copy <code>protocol/</code>; 8/8·11/11·11/11·13/13 green.</div></div>
+      <div class="glass rounded-lg p-4"><div class="mono opacity-60">PHASE 3</div><div class="text-white mt-1">Services &amp; identity</div><div class="opacity-75 mt-1">Port Layer 3 with renames; prove bit-identity.</div></div>
+      <div class="glass rounded-lg p-4"><div class="mono opacity-60">PHASE 4</div><div class="text-white mt-1">Console / UI</div><div class="opacity-75 mt-1">Re-host pages; login + Key Manager; end-to-end.</div></div>
+      <div class="glass rounded-lg p-4"><div class="mono opacity-60">PHASE 5</div><div class="text-white mt-1">Hardening</div><div class="opacity-75 mt-1">Indexes, optional server-side verify, sign-off.</div></div>
+    </div>
+  </section>
+
+  <footer class="text-center text-xs opacity-50 pt-8 border-t" style="border-color:rgba(255,255,255,.06)">
+    Owl Academy stays exactly as it is — this scaffold only adds to the BioChain-AI platform.
+  </footer>
+
+</main>
+</body>
+</html>
