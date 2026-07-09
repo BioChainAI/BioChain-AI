@@ -1,0 +1,1588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioChain AI — Lattice Forge</title>
+    <style>
+        body { margin: 0; overflow: hidden; background:#04060a; color:#e6f2ff; font-family:'Inter',system-ui,sans-serif; }
+        canvas { display: block; }
+        kbd { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); border-radius:4px; padding:0 5px; font-family:'JetBrains Mono',monospace; font-size:11px; }
+        .panel {
+            position:absolute; padding:11px 13px; border-radius:10px;
+            background:rgba(8,14,22,.86); border:1px solid rgba(0,255,136,.28);
+            backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
+            box-shadow:0 8px 30px -6px rgba(0,0,0,.7);
+        }
+        #info { top:12px; left:12px; max-width:250px; font-size:13px; line-height:1.55; }
+        #info .brand { color:#00ff88; font-weight:700; letter-spacing:.04em; font-family:'Cinzel',serif; }
+        #info .hl { color:#00d4ff; }
+        #info .count { color:#9fb4c8; font-family:'JetBrains Mono',monospace; font-size:11px; }
+        #info a { color:#7fe9c4; }
+        #packet-details {
+            bottom:12px; right:12px; max-width:270px; font-size:12px; display:none;
+            border-color:rgba(0,212,255,.4);
+        }
+        #packet-details h4 { margin:0 0 8px; color:#00d4ff; border-bottom:1px solid rgba(0,212,255,.35); padding-bottom:5px; font-family:'Cinzel',serif; font-weight:600; }
+        #packet-details p { margin:3px 0; display:flex; justify-content:space-between; gap:12px; }
+        #packet-details span { color:#9fb4c8; }
+        #packet-details strong { color:#eaf6ff; font-weight:500; font-family:'JetBrains Mono',monospace; font-size:11px; }
+        #seedPanel { bottom:12px; left:12px; width:340px; font-size:12px; }
+        #seedPanel h4 { margin:0 0 7px; color:#00ff88; font-family:'Cinzel',serif; font-weight:600; font-size:14px; display:flex; align-items:center; gap:7px; }
+        #seedPanel textarea {
+            width:100%; height:74px; resize:vertical; box-sizing:border-box;
+            background:rgba(0,0,0,.5); color:#bfe9d6; border:1px solid rgba(0,255,136,.25);
+            border-radius:6px; font-family:'JetBrains Mono',monospace; font-size:10.5px; padding:6px; margin-bottom:6px;
+        }
+        #seedPanel .row { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; }
+        #seedPanel button {
+            flex:1 1 auto; min-width:62px; cursor:pointer; font-size:11px; padding:5px 8px;
+            background:rgba(0,255,136,.12); color:#d9ffee; border:1px solid rgba(0,255,136,.4);
+            border-radius:6px; font-family:'Inter',sans-serif; transition:background .15s;
+        }
+        #seedPanel button:hover { background:rgba(0,255,136,.24); }
+        #seedPanel button.cyan { background:rgba(0,212,255,.1); color:#d6f6ff; border-color:rgba(0,212,255,.4); }
+        #seedPanel button.cyan:hover { background:rgba(0,212,255,.22); }
+        #seedPanel button.amber { background:rgba(245,166,35,.12); color:#ffe6c2; border-color:rgba(245,166,35,.45); }
+        #seedPanel button.amber:hover { background:rgba(245,166,35,.24); }
+        #seedStatus { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#9fb4c8; line-height:1.5; min-height:15px; word-break:break-all; }
+        #seedStatus .ok { color:#00ff88; } #seedStatus .bad { color:#f87171; } #seedStatus .warn { color:#f5a623; }
+        #helpBtn {
+            position:absolute; right:14px; bottom:200px; z-index:60; width:40px; height:40px; border-radius:50%;
+            background:rgba(0,255,136,.16); color:#d9ffee; border:1px solid rgba(0,255,136,.5);
+            font-size:1.05rem; font-weight:700; cursor:pointer; box-shadow:0 4px 18px rgba(0,0,0,.5);
+        }
+        #chainBadge { top:12px; left:274px; font-size:11px; display:none; border-color:rgba(245,166,35,.5); }
+        #chainBadge b { color:#f5a623; }
+        .lil-gui { --background-color:#0a1018; --widget-color:#12202c; --focus-color:#00ff88; }
+
+        /* Synchronization pump — breath playback engine */
+        #pumpPanel { bottom:12px; left:50%; transform:translateX(-50%); width:520px; max-width:calc(100vw - 380px); font-size:12px; border-color:rgba(168,85,247,.4); }
+        #pumpPanel h4 { margin:0 0 8px; color:#c084fc; font-family:'Cinzel',serif; font-weight:600; font-size:14px; display:flex; align-items:center; justify-content:space-between; }
+        #pumpPanel .subttl { color:#8b93a7; font-weight:400; font-size:10px; font-family:'JetBrains Mono',monospace; }
+        #pumpRow { display:flex; align-items:center; gap:8px; margin-bottom:7px; }
+        #pumpRow button { cursor:pointer; font-size:12px; padding:6px 10px; background:rgba(168,85,247,.16); color:#eadcff; border:1px solid rgba(168,85,247,.45); border-radius:7px; font-family:'Inter',sans-serif; transition:background .15s; }
+        #pumpRow button:hover { background:rgba(168,85,247,.3); }
+        #pumpRow button.play { flex:1; font-weight:700; letter-spacing:.05em; }
+        #frameSlider { flex:1; -webkit-appearance:none; height:4px; border-radius:2px; background:#2a2340; outline:none; }
+        #frameSlider::-webkit-slider-thumb { -webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:#c084fc; cursor:pointer; box-shadow:0 0 8px rgba(192,132,252,.8); }
+        #frameReadout { font-family:'JetBrains Mono',monospace; font-size:11px; color:#eadcff; background:rgba(168,85,247,.18); padding:3px 7px; border-radius:5px; white-space:nowrap; }
+        #breathBar { height:3px; background:linear-gradient(90deg,#a855f7,#2dd4bf); border-radius:2px; margin:2px 0 8px; transition:width .05s linear; width:0%; }
+        #pumpCtl { display:flex; flex-wrap:wrap; gap:6px 12px; align-items:center; font-family:'JetBrains Mono',monospace; font-size:10px; color:#9fb4c8; margin-bottom:7px; }
+        #pumpCtl label { display:flex; align-items:center; gap:5px; cursor:pointer; }
+        #pumpCtl input[type=number] { width:52px; background:rgba(0,0,0,.5); color:#eadcff; border:1px solid rgba(168,85,247,.35); border-radius:4px; font-family:'JetBrains Mono',monospace; font-size:10px; padding:2px 4px; }
+        #pumpCtl input[type=range] { width:72px; accent-color:#c084fc; }
+        #pumpCtl .speed { cursor:pointer; padding:2px 6px; border-radius:4px; border:1px solid rgba(45,212,191,.4); color:#7fe9c4; background:rgba(45,212,191,.08); }
+        #pumpCtl .speed.on { background:rgba(45,212,191,.3); color:#fff; }
+        #pumpLedger { height:70px; overflow-y:auto; background:rgba(0,0,0,.55); border:1px solid rgba(168,85,247,.25); border-radius:6px; padding:5px 7px; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#9fb4c8; line-height:1.55; }
+        #pumpLedger .spark { color:#fde047; } #pumpLedger .scal { color:#2dd4bf; } #pumpLedger .sys { color:#c084fc; }
+        #pumpLedger::-webkit-scrollbar { width:5px; } #pumpLedger::-webkit-scrollbar-thumb { background:rgba(168,85,247,.5); border-radius:3px; }
+        #pumpMini { display:flex; gap:6px; margin-top:6px; }
+        #pumpMini button { flex:1; cursor:pointer; font-size:10px; padding:4px; background:rgba(45,212,191,.1); color:#7fe9c4; border:1px solid rgba(45,212,191,.4); border-radius:5px; }
+        #pumpMini button:hover { background:rgba(45,212,191,.22); }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="info" class="panel">
+        <div class="brand">🧠 BioMesh · Lattice Forge</div>
+        <div class="count" id="packet-count">Seed: 64-cell …</div>
+        <em class="hl">One 64-bit seed → 4×4×4 cube · click canvas → FPS.</em><br>
+        <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>Z</kbd>/<kbd>C</kbd> up/down<br>
+        <kbd>Shift</kbd>+click multi-select · <kbd>G</kbd> chain mode<br>
+        <kbd>Space</kbd> flow · <kbd>Esc</kbd> orbit<br>
+        <a href="guides/Lattice_Forge_Guide.html" target="_blank">How this works →</a>
+    </div>
+
+    <div id="chainBadge" class="panel"><b>⛓ CHAIN MODE</b> · click vertices to link<br><span id="chainBadgeInfo"></span></div>
+
+    <div id="packet-details" class="panel">
+        <h4>SHD-CCP Packet</h4>
+        <p><span>Node index</span> <strong id="pd-index"></strong></p>
+        <p><span>64-bit word</span> <strong id="pd-word"></strong></p>
+        <p><span>Quaternion (RGBA)</span> <strong id="pd-quat"></strong></p>
+        <p><span>Form</span> <strong id="pd-form"></strong></p>
+        <p><span>Amplitude</span> <strong id="pd-amp"></strong></p>
+        <p><span>Frequency</span> <strong id="pd-freq"></strong></p>
+        <p><span>Spin class</span> <strong id="pd-spin"></strong></p>
+        <p><span>Payload / scale</span> <strong id="pd-scale"></strong></p>
+        <p><span>Parity</span> <strong id="pd-parity"></strong></p>
+    </div>
+
+    <div id="seedPanel" class="panel">
+        <h4>🌱 Lattice Seed</h4>
+        <textarea id="seedBox" spellcheck="false" placeholder="Build a seed from the lattice you've programmed, or paste a seed here and Regrow…"></textarea>
+        <div class="row">
+            <button onclick="window.ME.buildSeed()">Build</button>
+            <button class="cyan" onclick="window.ME.regrow()">Regrow</button>
+            <button onclick="window.ME.verifySeed()">Verify</button>
+        </div>
+        <div class="row">
+            <button onclick="window.ME.copySeed()">Copy</button>
+            <button onclick="window.ME.downloadSeed()">Download</button>
+            <button onclick="window.ME.loadFile()">Load file</button>
+            <button class="amber" onclick="window.ME.publish()">Publish</button>
+        </div>
+        <div id="seedStatus">Program vertices, chain them, then Build a regrowable seed.</div>
+        <input type="file" id="seedFile" accept=".json,.latticeseed,.txt" style="display:none">
+    </div>
+
+    <div id="pumpPanel" class="panel">
+        <h4>🫁 Synchronization Pump <span class="subttl">torsional Markov · zero-point breath</span></h4>
+        <div id="pumpRow">
+            <button id="pumpPlay" class="play" onclick="window.ME.pumpToggle()">⏯ Pump</button>
+            <input type="range" id="frameSlider" min="0" max="720" value="0" step="1">
+            <span id="frameReadout">0 / 720</span>
+        </div>
+        <div id="breathBar"></div>
+        <div id="pumpCtl">
+            <label>frames <input type="number" id="pumpFrames" value="720" min="12" max="4320" step="12"></label>
+            <label>breath <input type="range" id="pumpBreath" min="0" max="1.2" step="0.05" value="0.5"></label>
+            <label>torsion <input type="range" id="pumpTorsion" min="0" max="6" step="0.5" value="3"></label>
+            <label>reach <input type="range" id="pumpReach" min="2" max="30" step="1" value="12"></label>
+            <label><input type="checkbox" id="pumpBackprop" checked> backprop</label>
+            <span class="speed on" data-s="1" onclick="window.ME.pumpSpeed(1,this)">1×</span>
+            <span class="speed" data-s="0.25" onclick="window.ME.pumpSpeed(0.25,this)">0.25×</span>
+            <span class="speed" data-s="4" onclick="window.ME.pumpSpeed(4,this)">4×</span>
+        </div>
+        <div id="pumpLedger"><div class="sys">Pump idle. Program packets, then ▶ to breathe the substrate — packets interact across the cycle.</div></div>
+        <div id="pumpMini">
+            <button onclick="window.ME.pumpReset()">Reset cycle</button>
+            <button onclick="window.ME.pumpExport()">Export interaction ledger</button>
+            <button onclick="window.ME.pumpBake()">Bake scalar → packets</button>
+        </div>
+    </div>
+
+    <button id="helpBtn" title="How this works" onclick="window.open('guides/Lattice_Forge_Guide.html','_blank')">?</button>
+
+    <canvas id="c"></canvas>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import GUI from 'lil-gui';
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SHD-CCP 64-bit packet codec — byte-identical to src/biomesh/biomesh.js
+        //  (and BioChain_Enterprise/shdccp_kernel.py). Inlined so this page is a
+        //  fully standalone node of the mesh; the canonical definition lives in
+        //  biomesh.js. Field map (MSB..LSB of the 64-bit word):
+        //    63..60 form · 59 parity · 58..56 spin · 55..24 quat32
+        //    · 23..8 payload16 · 7..3 freq · 2..0 amp
+        // ══════════════════════════════════════════════════════════════════════
+        const M64 = (1n << 64n) - 1n;
+        const PAR_MASK = M64 ^ (1n << 59n);
+        function fold64(bytes) {
+            let a = 0x9E3779B97F4A7C15n;
+            for (const b of bytes) a = (((a << 7n) | (a >> 57n)) & M64) ^ ((BigInt(b) * 0x100000001B3n) & M64);
+            return a;
+        }
+        function popcountEven(word) { let b = word & PAR_MASK, c = 0n; while (b) { c ^= (b & 1n); b >>= 1n; } return c; }
+        /** raw bytes → 16-hex crystal packet (form 9, payload = length, real parity). */
+        function crystallize(bytes) {
+            const acc = fold64(bytes);
+            const crystal32 = (acc ^ (acc >> 32n)) & 0xFFFFFFFFn;
+            let csum = 0; for (const b of bytes) csum += b; csum &= 0xFF;
+            let word = (9n << 60n) | (crystal32 << 24n) | (BigInt(bytes.length & 0xFFFF) << 8n)
+                     | (BigInt(csum >> 3) << 3n) | BigInt(csum & 7);
+            word |= (popcountEven(word) << 59n);
+            return word.toString(16).toUpperCase().padStart(16, "0");
+        }
+        /** form/spin/[r,g,b,a]/payload16/freq/amp → 16-hex word with parity. */
+        function packWord(form, spin, quatCodes, payload16, freq, amp) {
+            let q = 0n; for (const c of quatCodes) q = (q << 8n) | BigInt(c & 0xFF);
+            let word = (BigInt(form & 0xF) << 60n) | (BigInt(spin & 0x7) << 56n) | (q << 24n)
+                     | (BigInt(payload16 & 0xFFFF) << 8n) | (BigInt(freq & 0x1F) << 3n) | BigInt(amp & 0x7);
+            word |= (popcountEven(word) << 59n);
+            return word.toString(16).toUpperCase().padStart(16, "0");
+        }
+        function unpackWord(hex) {
+            const word = BigInt("0x" + hex);
+            const parityBit = (word >> 59n) & 1n;
+            const payload16 = Number((word >> 8n) & 0xFFFFn);
+            return {
+                form: Number((word >> 60n) & 0xFn), spin: Number((word >> 56n) & 0x7n),
+                quat32: Number((word >> 24n) & 0xFFFFFFFFn), payload16,
+                freq: Number((word >> 3n) & 0x1Fn), amp: Number(word & 0x7n),
+                parityOk: popcountEven(word) === parityBit,
+            };
+        }
+        /** deterministic 32-bit fold (FNV-style, SHDC-seeded) for seed hashes. */
+        function fold32(str) {
+            let h = 0x53484443 >>> 0;
+            for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 0x01000193) >>> 0;
+            return h >>> 0;
+        }
+        // seeded PRNG so knot lattices regrow identically from a stored rngSeed
+        function mulberry32(seed) {
+            return function () {
+                seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+                let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+                t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            };
+        }
+
+        // ── packet-data <-> 64-bit word mapping ────────────────────────────────
+        //  payload16: bit15 = wireframe flag, bits14..0 = round(scale*100).
+        function nodeToWord(d) {
+            if (d.rawWord) return d.rawWord;                 // data packets keep their exact crystal word
+            const { r, g, b, a } = quaternionToRgba(d.quaternion);
+            const scaleQ = Math.max(0, Math.min(0x7FFF, Math.round((d.payloadScalingFactor || 0) * 100)));
+            const payload16 = ((d.isWireframe ? 1 : 0) << 15) | scaleQ;
+            return packWord(d.formId & 0xF, d.spinClassId & 0x7, [r, g, b, a], payload16, d.frequencyId & 0x1F, d.amplitudeId & 0x7);
+        }
+        function wordToNode(hex, keepRaw) {
+            const u = unpackWord(hex);
+            // crystals (keepRaw) show as 8D E8; gates keep their opcode form; else geometry as-is
+            const displayForm = keepRaw ? 7 : u.form;
+            const node = {
+                quaternion: u.quat32 | 0, formId: displayForm, amplitudeId: u.amp,
+                frequencyId: u.freq, spinClassId: u.spin,
+                payloadScalingFactor: (u.payload16 & 0x7FFF) / 100,
+                reserved: 0, isWireframe: !!((u.payload16 >> 15) & 1), parityOk: u.parityOk,
+            };
+            if (keepRaw) node.rawWord = hex;                 // preserve exact word for data packets
+            return node;
+        }
+
+        // --- GLOBAL VARIABLES ---
+        let scene, camera, renderer, pointerLockControls, orbitControls, gui, selectionHighlight;
+        let particleSystem, wireframe, particleParams, chainGroup;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        const PHI = 1.61803398875;
+
+        const packetData = new Map();
+        const activeNodes = new Map();
+        const selectedNodes = new Set();
+        let shiftPressed = false;
+
+        // chains: array of ordered index-arrays; currentChain being drawn in chain mode
+        const chains = [];
+        let currentChain = [];
+        let chainMode = false;
+
+        // ── ENVIRONMENT / FRONTIER / FOLD / ECONOMY state ──────────────────────
+        const frontier = new Set();        // vertex indices where new biochains may attach
+        let frontierMode = false;
+        let frontierGroup = null;
+        let attachedCodex = null;          // CODEX/1 packet-stream string bound to this environment
+        // the cubic expansion grammar: singularity → axes → pivots → faces → edges → cube-cell
+        const EXPANSION_TIERS = [1, 3, 7, 6, 12, 64];
+        const FLUX = { frames: 0, folds: 0, interactions: 0 };   // free meter (simulation cost = time only)
+        const CRYST = { window: false, lastCost: 0 };            // scarce meter (paid at crystallization windows)
+        const foldState = { program: [], ledger: [], maxCells: 1200 };
+
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, moveUp = false, moveDown = false;
+        let prevTime = performance.now();
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        let editorGUI, dataStreamFolder, generationFolder, environmentFolder, chainFolder, rawFolder;
+        const editorState = { color: '#00ffcc', formId: 1, amplitudeId: 0, frequencyId: 0, spinClassId: 0, scalingFactor: 0.0, parity: 0, isWireframe: true };
+        const environmentState = { isPlaying: false, nullNodeOpacity: 0.4, nullNodeColor: '#0a4a6a' };
+        const chainState = {
+            chainMode: false,
+            newChain: () => finishChain(true),
+            finishChain: () => finishChain(false),
+            undoLink: () => { if (currentChain.length) { currentChain.pop(); rebuildChains(); updateChainBadge(); } },
+            clearAll: () => { chains.length = 0; currentChain = []; rebuildChains(); updateChainBadge(); setStatus('All chains cleared.'); },
+        };
+        const rawState = { data: 'Hello, Lattice Forge. Any data becomes SHD-CCP packets.', mode: 'Text (UTF-8)', startIndex: 0, autoChain: true, inject: () => injectRawData() };
+        const state = {
+            latticeShape: '64-Cell', particleCount: 40000, rngSeed: 1337,
+            seedWord: '3C7A5A0FE1966C99', cubeScale: 12, fractalLevel: 1,   // one 64-bit seed → 4×4×4 = 64 SHD-CCP packets
+            boxSize: { x: 100, y: 100, z: 100 },
+            toroidMajorRadius: 60, toroidTubeRadius: 20,
+            cylinderRadius: 40, cylinderHeight: 150,
+            lissajousScale: 50, lissajousNx: 3, lissajousNy: 5, lissajousNz: 7, lissajousTubeRadius: 10,
+            trefoilScale: 40, trefoilTubeRadius: 15,
+            regenerate: () => regenerateLattice(),
+        };
+        const SEED64_COORDS = [-1.5, -0.5, 0.5, 1.5];    // 4 divisions per axis → 4×4×4
+
+        // ── FORM nibble = kind + value (top-bit split) ─────────────────────────
+        //   bit 3 (0x8) = 0 → GEOMETRY (form 0..7): 0D point · 5 Platonic solids ·
+        //                                            4D hypercube · 8D E8 lattice
+        //   bit 3 (0x8) = 1 → GATE     (form 8..15): 8 bounded fold opcodes, each a
+        //                                            pseudo-quantum logic gate run per fold
+        //   Exception: a kernel data-crystal (crystallize() → form 9) is flagged by
+        //   node.rawWord, so it is a CRYSTAL regardless of the top bit.
+        const GEOMETRY = {
+            0: { name: '0D Point',        getGeometry: () => new THREE.SphereGeometry(0.18, 8, 6) },
+            1: { name: 'Tetrahedron',     getGeometry: () => new THREE.TetrahedronGeometry(0.5) },
+            2: { name: 'Cube',            getGeometry: () => new THREE.BoxGeometry(0.7, 0.7, 0.7) },
+            3: { name: 'Octahedron',      getGeometry: () => new THREE.OctahedronGeometry(0.6) },
+            4: { name: 'Dodecahedron',    getGeometry: () => new THREE.DodecahedronGeometry(0.7) },
+            5: { name: 'Icosahedron',     getGeometry: () => new THREE.IcosahedronGeometry(0.7) },
+            6: { name: '4D Hypercube',    getGeometry: () => new THREE.BoxGeometry(0.9, 0.9, 0.9) },
+            7: { name: '8D E8 Lattice',   getGeometry: () => new THREE.IcosahedronGeometry(0.85, 1) },
+        };
+        const GATES = {
+            8:  { name: 'HALT',   sym: '⊗', desc: 'terminate the fold program' },
+            9:  { name: 'SEED',   sym: '●', desc: 'identity / anchor cell' },
+            10: { name: 'ROT',    sym: '⟳', desc: 'rotate by spin (torsional twist)' },
+            11: { name: 'XFOLD',  sym: '⊕', desc: 'XOR-fold with chain neighbour (annihilation knot)' },
+            12: { name: 'MIRROR', sym: '⇋', desc: 'phase-conjugate reflect (backprop hand)' },
+            13: { name: 'SPLIT',  sym: '⧈', desc: 'expand cell into the next cubic shell' },
+            14: { name: 'MERGE',  sym: '⧉', desc: 'fold the outer shell inward (collapse)' },
+            15: { name: 'LINK',   sym: '⛓', desc: 'entangle: bind to the nearest frontier cell' },
+        };
+        const isGateForm = (f) => (f & 0x8) !== 0;
+        const geomIdOf = (f) => f & 0x7;                          // low 3 bits pick the shape
+        function formLabel(f) { return isGateForm(f) ? `${GATES[f].sym} ${GATES[f].name} (gate)` : `${GEOMETRY[f].name} (geom)`; }
+        function geometryForForm(f) { return (GEOMETRY[f] || GEOMETRY[geomIdOf(f)]).getGeometry(); }
+        // back-compat shim: existing code paths that read SHAPE_DATA[form].name / .getGeometry
+        const SHAPE_DATA = new Proxy({}, {
+            get(_, key) {
+                if (key === '-1') return { name: 'Null', getGeometry: () => null };
+                const f = Number(key); if (Number.isNaN(f)) return undefined;
+                if (isGateForm(f)) return { name: (GATES[f] ? GATES[f].name : 'GATE'), getGeometry: () => geometryForForm(geomIdOf(f)), isGate: true };
+                return { name: (GEOMETRY[f] ? GEOMETRY[f].name : GEOMETRY[geomIdOf(f)].name), getGeometry: () => geometryForForm(f) };
+            },
+        });
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 20000);
+            camera.position.set(0, 14, 64);          // framed for the default 64-cell seed
+
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            pointerLockControls = new PointerLockControls(camera, renderer.domElement);
+            scene.add(pointerLockControls.getObject());
+
+            orbitControls = new OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true; orbitControls.dampingFactor = 0.1;
+            orbitControls.enabled = true; orbitControls.minDistance = 1; orbitControls.maxDistance = 5000;
+            orbitControls.enableZoom = false; orbitControls.panSpeed = 0.5;
+
+            raycaster.params.Points.threshold = 0.5;
+
+            const highlightMat = new THREE.MeshBasicMaterial({ color: 0xffff00, wireframe: true, depthTest: false });
+            selectionHighlight = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 8), highlightMat);
+            selectionHighlight.renderOrder = 1; selectionHighlight.visible = false;
+            scene.add(selectionHighlight);
+
+            chainGroup = new THREE.Group();
+            scene.add(chainGroup);
+
+            setupGUI();
+            regenerateLattice();
+            setupEventListeners();
+            animate();
+        }
+
+        function setupEventListeners() {
+            document.getElementById('info').addEventListener('click', (e) => {
+                if (e.target.tagName === 'A') return;
+                pointerLockControls.lock();
+            });
+            pointerLockControls.addEventListener('lock', () => {
+                document.getElementById('info').style.display = 'none';
+                orbitControls.enabled = false;
+            });
+            pointerLockControls.addEventListener('unlock', () => {
+                document.getElementById('info').style.display = 'block';
+                orbitControls.enabled = true;
+                if (selectedNodes.size > 0) {
+                    const last = Array.from(selectedNodes).pop();
+                    const p = particleSystem.geometry.attributes.position;
+                    orbitControls.target.set(p.getX(last), p.getY(last), p.getZ(last));
+                } else {
+                    const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
+                    orbitControls.target.copy(camera.position).add(dir.multiplyScalar(50));
+                }
+                orbitControls.update();
+            });
+            window.addEventListener('resize', onWindowResize, false);
+            renderer.domElement.addEventListener('click', onCanvasClick, false);
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', onKeyUp);
+            renderer.domElement.addEventListener('wheel', onCanvasWheel, { passive: false });
+            document.getElementById('seedFile').addEventListener('change', onSeedFile);
+            pumpInit();
+        }
+
+        // ── LATTICE & NODE MANAGEMENT ──────────────────────────────────────────
+        function regenerateLattice() {
+            if (typeof pump !== 'undefined') { pump.on = false; pump.started = false; pump.parts = []; if (pump.tess) pump.tess.visible = false; pumpClearLinks(); }
+            if (typeof frontier !== 'undefined') { frontier.clear(); if (frontierGroup) while (frontierGroup.children.length) { const c = frontierGroup.children.pop(); c.geometry.dispose(); c.material.dispose(); } }
+            if (particleSystem) scene.remove(particleSystem);
+            if (wireframe) scene.remove(wireframe);
+            activeNodes.forEach(node => scene.remove(node));
+            packetData.clear(); activeNodes.clear(); selectedNodes.clear();
+            chains.length = 0; currentChain = [];
+            updateEditorGUI();
+
+            let positions;
+            switch (state.latticeShape) {
+                case '64-Cell': positions = generate64CellPositions(); break;
+                case 'Toroid': positions = generateOrderedToroidPositions(state.toroidMajorRadius, state.toroidTubeRadius); break;
+                case 'Cylinder': positions = generateOrderedCylinderPositions(state.cylinderRadius, state.cylinderHeight); break;
+                case 'Lissajous Knot': positions = generateOrderedLissajousPositions(state.particleCount); break;
+                case 'Trefoil Knot': positions = generateOrderedTrefoilPositions(state.particleCount); break;
+                default: positions = generateOrderedBoxPositions(state.boxSize); break;
+            }
+            const n = positions.length / 3;
+            document.getElementById('packet-count').innerText = state.latticeShape === '64-Cell'
+                ? `Seed → ${state.fractalLevel === 1 ? '64-cell (64 packets)' : `fractal L${state.fractalLevel} · ${n.toLocaleString()} verts`}` : `Packets: ${n.toLocaleString()}`;
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const colors = new Float32Array(n * 3);
+            const baseColor = new THREE.Color(environmentState.nullNodeColor);
+            for (let i = 0; i < n; i++) baseColor.toArray(colors, i * 3);
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({ size: 0.25, transparent: true, opacity: environmentState.nullNodeOpacity, vertexColors: true });
+            particleSystem = new THREE.Points(geometry, material);
+            scene.add(particleSystem);
+            createWireframe();
+
+            for (let i = 0; i < n; i++) packetData.set(i, createDefaultPacketData());
+            if (state.latticeShape === '64-Cell') seed64Cell();     // every vertex becomes a packet from the seed word
+            rebuildChains();
+
+            if (rawFolder) {
+                const c = rawFolder.controllers.find(c => c.property === 'startIndex');
+                if (c) { c.max(n - 1); if (rawState.startIndex >= n) rawState.startIndex = 0; c.updateDisplay(); }
+            }
+        }
+
+        // ── the 64-cell seed manifold: one 64-bit SHD-CCP word → a 4×4×4 cube ──
+        //  index i = z*16 + y*4 + x (0..63), stable so bit i of the seed ↔ vertex i.
+        //  Fractal levels: level L has N = 4^L vertices per axis; a vertex is active
+        //  only where the seed's 64-bit pattern is set at EVERY 4× scale (self-similar,
+        //  Menger/Cantor-style), so "4 fractal steps" unfold from one seed word.
+        function fractalN() { return Math.pow(4, state.fractalLevel); }
+        function seedBitSet(seedBig, cell) { return Number((seedBig >> BigInt(cell)) & 1n) === 1; }
+        function fractalActive(ix, iy, iz, seedBig) {
+            for (let d = 0; d < state.fractalLevel; d++) {
+                const p = Math.pow(4, d);
+                const dx = Math.floor(ix / p) % 4, dy = Math.floor(iy / p) % 4, dz = Math.floor(iz / p) % 4;
+                if (!seedBitSet(seedBig, dz * 16 + dy * 4 + dx)) return false;
+            }
+            return true;
+        }
+        function generate64CellPositions() {
+            const s = state.cubeScale, N = fractalN(), out = [];
+            const span = 3 * s;                       // level-1 span (SEED64_COORDS: -1.5..1.5 × scale)
+            for (let z = 0; z < N; z++) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+                const c = (i) => N === 4 ? SEED64_COORDS[i] * s : (i / (N - 1) - 0.5) * span * 2;
+                out.push(c(x), c(y), c(z));
+            }
+            return new Float32Array(out);             // N^3 vertices (64 at level 1)
+        }
+        // deterministic per-vertex packet derived from the seed word + position.
+        // bit i of the seed activates vertex i (a Platonic solid); a clear bit is a
+        // 0D point — either way every vertex is a real, parity-valid SHD-CCP packet.
+        function vertexFromSeed(seedHex, i) {
+            const seed = BigInt('0x' + (seedHex || '0').replace(/[^0-9a-fA-F]/g, '').padStart(16, '0').slice(0, 16));
+            const bit = Number((seed >> BigInt(i)) & 1n);
+            const rot = ((seed << BigInt(i % 64)) | (seed >> BigInt((64 - i % 64) % 64))) & ((1n << 64n) - 1n);
+            const b = (k) => Number((rot >> BigInt(k * 8)) & 0xFFn);
+            const form = bit ? (1 + (i % 5)) : 0;                  // active → Platonic solid, clear → 0D point
+            const spin = i % 8, freq = b(1) % 32, amp = bit ? (b(2) % 5) : 0;
+            const r = b(3), g = b(4), bl = b(5), a = 255;
+            const word = packWord(form, spin, [r, g, bl, a], (b(6) << 8) | b(7), freq, amp);
+            const node = wordToNode(word, false);
+            node.isWireframe = !bit;                                // clear bits render as dim wire points
+            return node;
+        }
+        function seed64Cell() {
+            const seedBig = BigInt('0x' + (state.seedWord || '0').replace(/[^0-9a-fA-F]/g, '').padStart(16, '0').slice(0, 16));
+            const N = fractalN();
+            if (N === 4) {                            // level 1: every vertex is a packet (active geom or 0D point)
+                for (let i = 0; i < 64; i++) { if (packetData.has(i)) { packetData.set(i, vertexFromSeed(state.seedWord, i)); updateNodeVisuals(i); } }
+                return;
+            }
+            for (let z = 0, i = 0; z < N; z++) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++, i++) {
+                if (!packetData.has(i)) continue;
+                if (fractalActive(x, y, z, seedBig)) { packetData.set(i, vertexFromSeed(state.seedWord, (z % 4) * 16 + (y % 4) * 4 + (x % 4))); updateNodeVisuals(i); }
+                // inactive vertices stay null (free room for further folds)
+            }
+        }
+        function activeCount() { let n = 0; for (const d of packetData.values()) if (d.formId >= 1 && d.formId <= 7) n++; return n; }
+        function reseed64Cell(hex) {
+            if (hex != null) state.seedWord = String(hex).replace(/[^0-9a-fA-F]/g, '').padStart(16, '0').slice(0, 16).toUpperCase();
+            if (state.latticeShape !== '64-Cell') { state.latticeShape = '64-Cell'; regenerateLattice(); setupGenerationGUI(); }
+            else regenerateLattice();
+            const set = Array.from({ length: 64 }, (_, i) => Number((BigInt('0x' + state.seedWord) >> BigInt(i)) & 1n)).reduce((a, b) => a + b, 0);
+            setStatus(`64-cell seeded from 0x${state.seedWord} — ${set}/64 seed bits · ${activeCount()} active vertices at level ${state.fractalLevel}.`, 'ok');
+        }
+        function tessellate(delta) {
+            const next = Math.max(1, Math.min(3, state.fractalLevel + delta));   // cap level 3 (64³ vertices)
+            if (next === state.fractalLevel) { setStatus(delta > 0 ? 'Already at max fractal level (3).' : 'Already at the base 64-cell (level 1).', 'warn'); return; }
+            state.fractalLevel = next; if (state.latticeShape !== '64-Cell') state.latticeShape = '64-Cell';
+            regenerateLattice(); setupGenerationGUI();
+            const N = fractalN();
+            setStatus(`Fractal step → level ${state.fractalLevel} · ${N}×${N}×${N} = ${(N * N * N).toLocaleString()} vertices · ${activeCount()} active (self-similar from seed 0x${state.seedWord}).`, 'ok');
+        }
+
+        function getSpacing(volume, count) { return Math.cbrt(volume / count); }
+        function generateOrderedBoxPositions(size) {
+            const spacing = getSpacing(size.x * size.y * size.z, state.particleCount);
+            const positions = [];
+            for (let y = -size.y / 2; y < size.y / 2; y += spacing)
+                for (let z = -size.z / 2; z < size.z / 2; z += spacing)
+                    for (let x = -size.x / 2; x < size.x / 2; x += spacing) positions.push(x, y, z);
+            return new Float32Array(positions);
+        }
+        function generateOrderedToroidPositions(majorRadius, tubeRadius) {
+            const volume = (2 * Math.PI * majorRadius) * (Math.PI * tubeRadius * tubeRadius);
+            const spacing = getSpacing(volume, state.particleCount);
+            const positions = []; const tubeRadiusSq = tubeRadius * tubeRadius; const bb = majorRadius + tubeRadius;
+            for (let y = -tubeRadius; y < tubeRadius; y += spacing)
+                for (let z = -bb; z < bb; z += spacing)
+                    for (let x = -bb; x < bb; x += spacing) {
+                        const d = Math.sqrt(x * x + z * z);
+                        if (d > 0) {
+                            const dx = x - (x / d) * majorRadius, dz = z - (z / d) * majorRadius;
+                            if (dx * dx + dz * dz + y * y < tubeRadiusSq) positions.push(x, y, z);
+                        }
+                    }
+            return new Float32Array(positions);
+        }
+        function generateOrderedCylinderPositions(radius, height) {
+            const spacing = getSpacing(Math.PI * radius * radius * height, state.particleCount);
+            const positions = []; const rSq = radius * radius; const hh = height / 2;
+            for (let y = -hh; y < hh; y += spacing)
+                for (let z = -radius; z < radius; z += spacing)
+                    for (let x = -radius; x < radius; x += spacing) if (x * x + z * z < rSq) positions.push(x, y, z);
+            return new Float32Array(positions);
+        }
+        const lissajousPoint = (t, s, nx, ny, nz) => new THREE.Vector3(s * Math.cos(nx * t), s * Math.sin(ny * t), s * Math.cos(nz * t));
+        const lissajousDerivative = (t, s, nx, ny, nz) => new THREE.Vector3(-s * nx * Math.sin(nx * t), s * ny * Math.cos(ny * t), -s * nz * Math.sin(nz * t));
+        const lissajousSecondDerivative = (t, s, nx, ny, nz) => new THREE.Vector3(-s * nx * nx * Math.cos(nx * t), -s * ny * ny * Math.sin(ny * t), -s * nz * nz * Math.cos(nz * t));
+        const trefoilPoint = (t, s) => new THREE.Vector3(s * (Math.sin(t) + 2 * Math.sin(2 * t)), s * (Math.cos(t) - 2 * Math.cos(2 * t)), s * (-Math.sin(3 * t)));
+        const trefoilDerivative = (t, s) => new THREE.Vector3(s * (Math.cos(t) + 4 * Math.cos(2 * t)), s * (-Math.sin(t) + 4 * Math.sin(2 * t)), s * (-3 * Math.cos(3 * t)));
+        const trefoilSecondDerivative = (t, s) => new THREE.Vector3(s * (-Math.sin(t) - 8 * Math.sin(2 * t)), s * (-Math.cos(t) + 8 * Math.cos(2 * t)), s * (9 * Math.sin(3 * t)));
+        function knotFrame(p, pp, ppp, r, v) {
+            const T = pp.clone().normalize();
+            const N = ppp.clone().projectOnPlane(T).normalize();
+            const B = new THREE.Vector3().crossVectors(T, N);
+            return p.clone().add(N.multiplyScalar(r * Math.cos(v)).add(B.multiplyScalar(r * Math.sin(v))));
+        }
+        function generateOrderedLissajousPositions(count) {
+            const positions = []; particleParams = [];
+            const rng = mulberry32(state.rngSeed);          // deterministic → regrowable
+            const { lissajousScale: s, lissajousNx: nx, lissajousNy: ny, lissajousNz: nz, lissajousTubeRadius: tr } = state;
+            for (let i = 0; i < count; i++) {
+                const u = rng() * 2 * Math.PI, v = rng() * 2 * Math.PI, r = rng() * tr;
+                const fp = knotFrame(lissajousPoint(u, s, nx, ny, nz), lissajousDerivative(u, s, nx, ny, nz), lissajousSecondDerivative(u, s, nx, ny, nz), r, v);
+                positions.push(fp.x, fp.y, fp.z); particleParams.push({ u, v, r });
+            }
+            return new Float32Array(positions);
+        }
+        function generateOrderedTrefoilPositions(count) {
+            const positions = []; particleParams = [];
+            const rng = mulberry32(state.rngSeed);
+            const { trefoilScale: s, trefoilTubeRadius: tr } = state;
+            for (let i = 0; i < count; i++) {
+                const u = rng() * 2 * Math.PI, v = rng() * 2 * Math.PI, r = rng() * tr;
+                const fp = knotFrame(trefoilPoint(u, s), trefoilDerivative(u, s), trefoilSecondDerivative(u, s), r, v);
+                positions.push(fp.x, fp.y, fp.z); particleParams.push({ u, v, r });
+            }
+            return new Float32Array(positions);
+        }
+
+        function createWireframe() {
+            if (wireframe) scene.remove(wireframe);
+            if (state.latticeShape === '64-Cell') {                 // 4×4×4 tessellation grid (base cell)
+                const s = state.cubeScale, grp = new THREE.Group();
+                const mat = new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.22 });
+                const pts = [];
+                const lo = SEED64_COORDS[0] * s, hi = SEED64_COORDS[3] * s;
+                for (const a of SEED64_COORDS) for (const b of SEED64_COORDS) {
+                    const A = a * s, B = b * s;
+                    pts.push(lo, A, B, hi, A, B);   // lines along X
+                    pts.push(A, lo, B, A, hi, B);   // along Y
+                    pts.push(A, B, lo, A, B, hi);   // along Z
+                }
+                const g = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+                grp.add(new THREE.LineSegments(g, mat));
+                if (state.fractalLevel > 1) {       // outer bounding cube marks the tessellated span
+                    const span = 3 * s, box = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(span * 2, span * 2, span * 2)), new THREE.LineBasicMaterial({ color: 0x00d4ff, transparent: true, opacity: 0.12 }));
+                    grp.add(box);
+                }
+                wireframe = grp; scene.add(wireframe); return;
+            }
+            let geom;
+            switch (state.latticeShape) {
+                case 'Toroid': geom = new THREE.TorusGeometry(state.toroidMajorRadius, state.toroidTubeRadius, 16, 100); break;
+                case 'Cylinder': geom = new THREE.CylinderGeometry(state.cylinderRadius, state.cylinderRadius, state.cylinderHeight, 32); break;
+                case 'Lissajous Knot': {
+                    const pts = []; const { lissajousScale: s, lissajousNx: nx, lissajousNy: ny, lissajousNz: nz } = state;
+                    for (let i = 0; i <= 200; i++) pts.push(lissajousPoint((i / 200) * 2 * Math.PI, s, nx, ny, nz));
+                    geom = new THREE.BufferGeometry().setFromPoints(pts); break;
+                }
+                case 'Trefoil Knot': {
+                    const pts = []; const { trefoilScale: s } = state;
+                    for (let i = 0; i <= 200; i++) pts.push(trefoilPoint((i / 200) * 2 * Math.PI, s));
+                    geom = new THREE.BufferGeometry().setFromPoints(pts); break;
+                }
+                default: geom = new THREE.BoxGeometry(state.boxSize.x, state.boxSize.y, state.boxSize.z); break;
+            }
+            if (state.latticeShape === 'Lissajous Knot' || state.latticeShape === 'Trefoil Knot') {
+                wireframe = new THREE.Line(geom, new THREE.LineBasicMaterial({ color: 0x00aaff, transparent: true, opacity: 0.5 }));
+            } else {
+                wireframe = new THREE.Mesh(geom, new THREE.MeshBasicMaterial({ color: 0x00aaff, wireframe: true, transparent: true, opacity: 0.18 }));
+                if (state.latticeShape === 'Toroid') wireframe.rotation.x = Math.PI / 2;
+            }
+            scene.add(wireframe);
+        }
+
+        function setPointVisibility(index, visible) {
+            const colors = particleSystem.geometry.attributes.color;
+            const baseColor = new THREE.Color(environmentState.nullNodeColor);
+            if (visible) colors.setXYZ(index, baseColor.r, baseColor.g, baseColor.b);
+            else colors.setXYZ(index, 0, 0, 0);
+            colors.needsUpdate = true;
+        }
+        function activateNode(index) {
+            const data = packetData.get(index);
+            if (!data || activeNodes.has(index) || data.formId === -1) return;
+            const shapeDef = SHAPE_DATA[data.formId]; if (!shapeDef) return;
+            const geometry = shapeDef.getGeometry(); if (!geometry) return;
+            const nodeGroup = new THREE.Group();
+            const gate = isGateForm(data.formId);
+            const material = new THREE.MeshBasicMaterial({ color: gate ? new THREE.Color(0xf5c542) : quaternionToColor(data.quaternion), wireframe: gate || data.isWireframe });
+            nodeGroup.add(new THREE.Mesh(geometry, material));
+            const p = particleSystem.geometry.attributes.position;
+            nodeGroup.position.set(p.getX(index), p.getY(index), p.getZ(index));
+            const scale = Math.pow(PHI, data.amplitudeId); nodeGroup.scale.set(scale, scale, scale);
+            nodeGroup.rotation.y = data.spinClassId * (Math.PI / 4);
+            activeNodes.set(index, nodeGroup); scene.add(nodeGroup); setPointVisibility(index, false);
+        }
+        function deactivateNode(index) {
+            if (activeNodes.has(index)) {
+                const node = activeNodes.get(index); scene.remove(node);
+                node.traverse(c => { if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose(); });
+                activeNodes.delete(index);
+            }
+            packetData.set(index, createDefaultPacketData()); setPointVisibility(index, true);
+        }
+        function updateNodeVisuals(index) {
+            const data = packetData.get(index);
+            if (!data || data.formId === -1) { deactivateNode(index); return; }
+            if (!activeNodes.has(index)) { activateNode(index); return; }
+            const nodeGroup = activeNodes.get(index); if (!nodeGroup) return;
+            const mesh = nodeGroup.children[0];
+            const gate = isGateForm(data.formId);
+            mesh.material.color = gate ? new THREE.Color(0xf5c542) : quaternionToColor(data.quaternion);
+            mesh.material.wireframe = gate || data.isWireframe;
+            const scale = Math.pow(PHI, data.amplitudeId); nodeGroup.scale.set(scale, scale, scale);
+            nodeGroup.rotation.y = data.spinClassId * (Math.PI / 4);
+            const def = SHAPE_DATA[data.formId]; if (!def) return;
+            const g = def.getGeometry(); if (!g) { deactivateNode(index); return; }
+            mesh.geometry.dispose(); mesh.geometry = g;
+        }
+
+        function createDefaultPacketData() { return { quaternion: rgbaToQuaternion(100, 150, 255, 242), formId: -1, amplitudeId: 0, reserved: 0, frequencyId: 0, spinClassId: 0, payloadScalingFactor: 0.0, isWireframe: true }; }
+        function rgbaToQuaternion(r, g, b, a) { return (r << 24) | (g << 16) | (b << 8) | a; }
+        function quaternionToRgba(q) { return { r: (q >> 24) & 0xFF, g: (q >> 16) & 0xFF, b: (q >> 8) & 0xFF, a: q & 0xFF }; }
+        function quaternionToColor(q) { const { r, g, b } = quaternionToRgba(q); return new THREE.Color(r / 255, g / 255, b / 255); }
+
+        // ── CHAINING ───────────────────────────────────────────────────────────
+        function programIfNull(index) {
+            const d = packetData.get(index);
+            if (!d || d.formId !== -1) return;
+            const color = new THREE.Color(editorState.color);
+            const { a } = quaternionToRgba(d.quaternion);
+            d.quaternion = rgbaToQuaternion(color.r * 255, color.g * 255, color.b * 255, a);
+            d.formId = parseInt(editorState.formId); d.amplitudeId = editorState.amplitudeId;
+            d.frequencyId = editorState.frequencyId; d.spinClassId = editorState.spinClassId;
+            d.isWireframe = editorState.isWireframe;
+            packetData.set(index, d); updateNodeVisuals(index);
+        }
+        function addToChain(index) {
+            programIfNull(index);                       // chain links are always real packets
+            if (currentChain[currentChain.length - 1] === index) return;
+            currentChain.push(index);
+            rebuildChains(); updateChainBadge();
+        }
+        function finishChain(startNew) {
+            if (currentChain.length >= 2) chains.push(currentChain.slice());
+            currentChain = [];
+            rebuildChains(); updateChainBadge();
+            setStatus(`Chains: ${chains.length}. ${startNew ? 'Started a new chain.' : 'Chain finished.'}`);
+        }
+        function nodePos(index) {
+            const p = particleSystem.geometry.attributes.position;
+            return new THREE.Vector3(p.getX(index), p.getY(index), p.getZ(index));
+        }
+        function chainColor(i) { const h = (fold32('chain' + i) % 360) / 360; return new THREE.Color().setHSL(h, 0.85, 0.6); }
+        function rebuildChains() {
+            while (chainGroup.children.length) {
+                const c = chainGroup.children.pop();
+                if (c.geometry) c.geometry.dispose(); if (c.material) c.material.dispose();
+            }
+            const draw = (idxs, color, opacity) => {
+                if (!particleSystem || idxs.length < 2) return;
+                const pts = idxs.filter(i => packetData.has(i)).map(nodePos);
+                if (pts.length < 2) return;
+                const geom = new THREE.BufferGeometry().setFromPoints(pts);
+                chainGroup.add(new THREE.Line(geom, new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthTest: false })));
+            };
+            chains.forEach((c, i) => draw(c, chainColor(i), 0.9));
+            draw(currentChain, new THREE.Color(0xf5a623), 0.95);
+        }
+        function updateChainLinePositions() {   // during flow, keep lines glued to moving nodes
+            let k = 0;
+            const set = (idxs) => {
+                if (idxs.length < 2) return;
+                const pts = idxs.filter(i => packetData.has(i)).map(nodePos);
+                const line = chainGroup.children[k++]; if (!line || pts.length < 2) return;
+                line.geometry.setFromPoints(pts);
+            };
+            chains.forEach(set); if (currentChain.length >= 2) set(currentChain);
+        }
+        function updateChainBadge() {
+            const badge = document.getElementById('chainBadge');
+            badge.style.display = chainMode ? 'block' : 'none';
+            document.getElementById('chainBadgeInfo').textContent =
+                `current: ${currentChain.length} links · total chains: ${chains.length}`;
+        }
+
+        // ── UI & INTERACTION ───────────────────────────────────────────────────
+        function onKeyDown(event) {
+            if (event.target && (event.target.tagName === 'TEXTAREA' || event.target.tagName === 'INPUT')) return;
+            switch (event.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'KeyZ': moveUp = true; break;
+                case 'KeyC': moveDown = true; break;
+                case 'ShiftLeft': shiftPressed = true; break;
+                case 'KeyG': toggleChainMode(); break;
+                case 'Enter': if (chainMode) finishChain(false); break;
+                case 'Space':
+                    environmentState.isPlaying = !environmentState.isPlaying;
+                    if (environmentFolder) environmentFolder.controllers.find(c => c.property === 'isPlaying').updateDisplay();
+                    break;
+            }
+        }
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyD': moveRight = false; break;
+                case 'KeyZ': moveUp = false; break;
+                case 'KeyC': moveDown = false; break;
+                case 'ShiftLeft': shiftPressed = false; break;
+            }
+        }
+        function toggleChainMode() {
+            chainMode = !chainMode; chainState.chainMode = chainMode;
+            if (chainFolder) chainFolder.controllers.find(c => c.property === 'chainMode').updateDisplay();
+            updateChainBadge();
+        }
+        function onCanvasClick(event) {
+            if (pointerLockControls.isLocked) raycaster.setFromCamera({ x: 0, y: 0 }, camera);
+            else {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+            }
+            const intersects = raycaster.intersectObject(particleSystem);
+            if (intersects.length === 0) return;
+            const index = intersects[0].index;
+
+            if (frontierMode) { markFrontier(index); return; }
+            if (chainMode) { addToChain(index); }
+
+            if (shiftPressed) { selectedNodes.has(index) ? selectedNodes.delete(index) : selectedNodes.add(index); }
+            else {
+                selectedNodes.clear(); selectedNodes.add(index);
+                rawState.startIndex = index;
+                if (rawFolder) rawFolder.controllers.find(c => c.property === 'startIndex').updateDisplay();
+            }
+            if (selectedNodes.size > 0) { updateSelectionHighlight(); updatePacketInfoPanel(Array.from(selectedNodes).pop()); }
+            else selectionHighlight.visible = false;
+            selectedNodes.forEach(idx => updateNodeVisuals(idx));
+            updateEditorGUI();
+        }
+        function onCanvasWheel(event) {
+            if (pointerLockControls.isLocked) return;
+            event.preventDefault();
+            const dir = new THREE.Vector3().subVectors(camera.position, orbitControls.target);
+            const distance = dir.length(); const move = distance * 0.05;
+            if (event.deltaY > 0) { if (distance + move < orbitControls.maxDistance) camera.position.addScaledVector(dir.normalize(), move); }
+            else { if (distance - move > orbitControls.minDistance) camera.position.addScaledVector(dir.normalize(), -move); }
+        }
+        function updateSelectionHighlight() {
+            if (selectedNodes.size === 0) { selectionHighlight.visible = false; return; }
+            const last = Array.from(selectedNodes).pop();
+            const data = packetData.get(last); const p = particleSystem.geometry.attributes.position;
+            selectionHighlight.position.set(p.getX(last), p.getY(last), p.getZ(last));
+            if (data && data.formId !== -1 && SHAPE_DATA[data.formId]) {
+                const g = SHAPE_DATA[data.formId].getGeometry();
+                if (g) {
+                    selectionHighlight.geometry.dispose(); selectionHighlight.geometry = g;
+                    const scale = Math.pow(PHI, data.amplitudeId) * 1.05; selectionHighlight.scale.set(scale, scale, scale);
+                    selectionHighlight.rotation.y = data.spinClassId * (Math.PI / 4);
+                }
+            } else {
+                selectionHighlight.geometry.dispose(); selectionHighlight.geometry = new THREE.SphereGeometry(0.4, 16, 8);
+                selectionHighlight.scale.set(1, 1, 1); selectionHighlight.rotation.y = 0;
+            }
+            selectionHighlight.visible = true;
+        }
+        function updatePacketInfoPanel(index) {
+            const data = packetData.get(index); if (!data) return;
+            const kind = data.formId === -1 ? 'null' : data.rawWord ? 'crystal' : isGateForm(data.formId) ? 'gate' : 'geometry';
+            const shapeName = data.formId === -1 ? 'Null' : data.rawWord ? '8D E8 crystal' : formLabel(data.formId);
+            const word = data.formId === -1 ? '—' : nodeToWord(data);
+            const parityTxt = data.formId === -1 ? '—' : (unpackWord(word).parityOk ? '✓ valid' : '✗ broken');
+            document.getElementById('pd-index').textContent = index.toLocaleString();
+            document.getElementById('pd-word').textContent = word + (data.rawWord ? ' (data)' : '') + (kind === 'gate' ? ' · ' + GATES[data.formId].desc : '');
+            document.getElementById('pd-quat').textContent = `0x${(data.quaternion >>> 0).toString(16).toUpperCase()}`;
+            document.getElementById('pd-form').textContent = `${data.formId} · ${shapeName}`;
+            document.getElementById('pd-amp').textContent = data.amplitudeId;
+            document.getElementById('pd-freq').textContent = data.frequencyId;
+            document.getElementById('pd-spin').textContent = data.spinClassId;
+            document.getElementById('pd-scale').textContent = data.payloadScalingFactor;
+            document.getElementById('pd-parity').textContent = parityTxt;
+            document.getElementById('packet-details').style.display = 'block';
+        }
+
+        // ── RAW DATA → SHD-CCP PACKETS ──────────────────────────────────────────
+        function parseRawBytes() {
+            if (rawState.mode === 'Hex bytes') {
+                return rawState.data.trim().split(/[\s,]+/).filter(Boolean)
+                    .flatMap(tok => { const t = tok.replace(/^0x/i, ''); const out = []; for (let i = 0; i < t.length; i += 2) out.push(parseInt(t.substr(i, 2), 16) || 0); return out; });
+            }
+            return Array.from(new TextEncoder().encode(rawState.data));
+        }
+        function injectRawData() {
+            const bytes = parseRawBytes();
+            if (!bytes.length) { setStatus('No data to inject.', 'warn'); return; }
+            const chunkSize = 8; let idx = rawState.startIndex; const laid = [];
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                if (!packetData.has(idx)) break;
+                const chunk = bytes.slice(i, i + chunkSize);
+                const word = crystallize(chunk);         // real form-9 crystal packet
+                packetData.set(idx, wordToNode(word, true));
+                updateNodeVisuals(idx); laid.push(idx); idx++;
+            }
+            if (rawState.autoChain && laid.length >= 2) chains.push(laid);
+            rebuildChains();
+            const bits = laid.length * 64;
+            setStatus(`Injected ${laid.length} packets (${bytes.length} bytes → ${bits} bits) from index ${rawState.startIndex}.${rawState.autoChain && laid.length >= 2 ? ' Auto-chained.' : ''}`, 'ok');
+        }
+
+        // ── SEED: BUILD / REGROW / VERIFY / IO ─────────────────────────────────
+        function currentShapeParams() {
+            switch (state.latticeShape) {
+                case '64-Cell': return { seedWord: state.seedWord, cubeScale: state.cubeScale, fractalLevel: state.fractalLevel };
+                case 'Toroid': return { toroidMajorRadius: state.toroidMajorRadius, toroidTubeRadius: state.toroidTubeRadius };
+                case 'Cylinder': return { cylinderRadius: state.cylinderRadius, cylinderHeight: state.cylinderHeight };
+                case 'Lissajous Knot': return { lissajousScale: state.lissajousScale, lissajousNx: state.lissajousNx, lissajousNy: state.lissajousNy, lissajousNz: state.lissajousNz, lissajousTubeRadius: state.lissajousTubeRadius };
+                case 'Trefoil Knot': return { trefoilScale: state.trefoilScale, trefoilTubeRadius: state.trefoilTubeRadius };
+                default: return { boxSize: { ...state.boxSize } };
+            }
+        }
+        function canonicalSeed(s) {
+            const nodes = s.nodes.slice().sort((a, b) => a.i - b.i).map(n => `${n.i}:${n.w}`).join('|');
+            const ch = s.chains.map(c => c.join(',')).join(';');
+            return `LATTICE-SEED/1|${s.shape}|${JSON.stringify(s.params)}|${s.count}|${s.rngSeed}|${nodes}|${ch}`;
+        }
+        function collectSeed() {
+            const nodes = [];
+            for (const [i, d] of packetData) if (d.formId >= 0) { const n = { i, w: nodeToWord(d) }; if (d.rawWord) n.r = 1; nodes.push(n); }
+            nodes.sort((a, b) => a.i - b.i);
+            const s = { v: 1, shape: state.latticeShape, params: currentShapeParams(), count: state.particleCount, rngSeed: state.rngSeed, nodes, chains: chains.map(c => c.slice()) };
+            s.hash = '0x' + fold32(canonicalSeed(s)).toString(16).padStart(8, '0');
+            return s;
+        }
+        function buildSeed() {
+            const s = collectSeed();
+            document.getElementById('seedBox').value = JSON.stringify(s);
+            const meanChain = s.chains.length ? (s.chains.reduce((a, c) => a + c.length, 0) / s.chains.length).toFixed(1) : 0;
+            setStatus(`Seed built — ${s.nodes.length} packets · ${s.chains.length} chains (mean ${meanChain} links) · hash ${s.hash}. ${s.nodes.length * 64} bits regrow the whole structure.`, 'ok');
+            return s;
+        }
+        function parseSeedBox() {
+            const raw = document.getElementById('seedBox').value.trim();
+            if (!raw) { setStatus('Paste or build a seed first.', 'warn'); return null; }
+            try { return JSON.parse(raw); } catch (e) { setStatus('Seed is not valid JSON: ' + e.message, 'bad'); return null; }
+        }
+        function applySeedParams(s) {
+            state.latticeShape = s.shape; state.particleCount = s.count; state.rngSeed = s.rngSeed;
+            const p = s.params || {};
+            if (p.boxSize) state.boxSize = { ...p.boxSize };
+            Object.assign(state, ['seedWord', 'cubeScale', 'fractalLevel', 'toroidMajorRadius', 'toroidTubeRadius', 'cylinderRadius', 'cylinderHeight',
+                'lissajousScale', 'lissajousNx', 'lissajousNy', 'lissajousNz', 'lissajousTubeRadius', 'trefoilScale', 'trefoilTubeRadius']
+                .reduce((o, k) => (k in p ? (o[k] = p[k], o) : o), {}));
+        }
+        function regrow() {
+            const s = parseSeedBox(); if (!s) return;
+            if (s.kind === 'ENVIRONMENT/1') { loadEnvironment(s); return; }   // an environment wraps a boundary seed
+            const check = collectHashOf(s);
+            applySeedParams(s);
+            setupGenerationGUI();                 // reflect shape/params in the GUI
+            regenerateLattice();                  // deterministic scaffold rebuild
+            let placed = 0, missing = 0;
+            for (const n of (s.nodes || [])) {
+                if (packetData.has(n.i)) { packetData.set(n.i, wordToNode(n.w, !!n.r)); updateNodeVisuals(n.i); placed++; }
+                else missing++;
+            }
+            chains.length = 0; (s.chains || []).forEach(c => chains.push(c.slice()));
+            currentChain = []; rebuildChains();
+            const hashTxt = s.hash ? (check === s.hash ? `hash ${s.hash} ✓` : `hash MISMATCH (${check} ≠ ${s.hash})`) : '';
+            setStatus(`Regrew ${placed} packets · ${chains.length} chains${missing ? ` · ${missing} out-of-range (count changed?)` : ''}. ${hashTxt}`,
+                (s.hash && check !== s.hash) ? 'warn' : 'ok');
+        }
+        function collectHashOf(s) {
+            const clone = { v: s.v, shape: s.shape, params: s.params, count: s.count, rngSeed: s.rngSeed, nodes: s.nodes || [], chains: s.chains || [] };
+            return '0x' + fold32(canonicalSeed(clone)).toString(16).padStart(8, '0');
+        }
+        function verifySeed() {
+            const s = parseSeedBox(); if (!s) return;
+            const recomputed = collectHashOf(s);
+            const hashOk = s.hash ? recomputed === s.hash : null;
+            let parityBad = 0, dataPk = 0;
+            for (const n of (s.nodes || [])) { const u = unpackWord(n.w); if (!u.parityOk) parityBad++; if (u.form > 4) dataPk++; }
+            const parts = [
+                `${(s.nodes || []).length} packets`, `${(s.chains || []).length} chains`, `${dataPk} data-crystals`,
+                hashOk === null ? 'no hash stored' : (hashOk ? `hash ✓ (${s.hash})` : `hash ✗ (${recomputed} ≠ ${s.hash})`),
+                parityBad ? `${parityBad} broken-parity words` : 'all parities ✓',
+            ];
+            setStatus('Verify — ' + parts.join(' · '), (hashOk === false || parityBad) ? 'bad' : 'ok');
+        }
+        function copySeed() {
+            const v = document.getElementById('seedBox').value.trim() || JSON.stringify(collectSeed());
+            document.getElementById('seedBox').value = v;
+            navigator.clipboard?.writeText(v).then(() => setStatus('Seed copied to clipboard.', 'ok'),
+                () => setStatus('Clipboard blocked — select the text box and copy manually.', 'warn'));
+        }
+        function downloadSeed() {
+            const s = collectSeed(); const txt = JSON.stringify(s, null, 0);
+            document.getElementById('seedBox').value = txt;
+            const blob = new Blob([txt], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+            a.download = `latticeforge_${s.hash.replace('0x', '')}.latticeseed.json`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+            setStatus(`Downloaded ${a.download}`, 'ok');
+        }
+        function loadFile() { document.getElementById('seedFile').click(); }
+        function onSeedFile(e) {
+            const f = e.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = () => { document.getElementById('seedBox').value = r.result; setStatus(`Loaded ${f.name}. Click Regrow to rebuild.`, 'ok'); };
+            r.readAsText(f); e.target.value = '';
+        }
+        async function publish() {
+            const s = parseSeedBox() || collectSeed();
+            document.getElementById('seedBox').value = JSON.stringify(s);
+            setStatus('Publishing seed to the mesh…', 'warn');
+            try {
+                const BM = await import('../src/biomesh/biomesh.js');
+                const { auth } = await import('../src/firebase/config.js');
+                const uid = auth?.currentUser?.uid;
+                if (!uid) { setStatus('Sign in to publish. Seed is still exportable as a file/clipboard — that is the portable decentralized artifact.', 'warn'); return; }
+                const seedString = JSON.stringify(s);
+                const chain = await BM.growBiochain(seedString, {});
+                const keys = await BM.listSigningKeys?.(uid).catch(() => []);
+                const keyId = Array.isArray(keys) && keys[0] ? (keys[0].keyId || keys[0].id) : null;
+                await BM.publishBiochain(uid, keyId, chain, { title: 'Lattice Forge lattice ' + s.hash, kind: 'latticeforge.lattice_seed' });
+                setStatus(`Published as biochain ${chain.chainId || ''} — decentralized nodes can fetch it and Regrow the identical lattice. hash ${s.hash}`, 'ok');
+            } catch (err) {
+                setStatus('Publish unavailable here (' + (err?.message || err) + '). The Download/Copy seed IS the portable standard — any node imports and regrows it offline.', 'warn');
+            }
+        }
+        function setStatus(msg, cls) {
+            const el = document.getElementById('seedStatus');
+            el.innerHTML = cls ? `<span class="${cls}">${msg}</span>` : msg;
+        }
+
+        // ── GUI ─────────────────────────────────────────────────────────────────
+        function setupGUI() {
+            if (gui) gui.destroy();
+            gui = new GUI(); gui.title("Lattice Forge · SHD-CCP");
+            setupGenerationGUI(); setupBoundaryGUI(); setupFoldGUI(); setupChainGUI(); setupRawGUI(); setupEconGUI(); setupEnvironmentGUI();
+        }
+        let boundaryFolder, foldFolder, econFolder;
+        function setupBoundaryGUI() {
+            if (boundaryFolder) boundaryFolder.destroy();
+            boundaryFolder = gui.addFolder('Boundary designer');
+            const bs = { preset: 'Seed (64-cell · 64 packets)', frontierMode: false,
+                apply: () => applyBoundaryPreset(BOUNDARY_PRESETS[bs.preset]),
+                attachCodex: () => { const t = prompt('Codex source text (distilled into a CODEX/1 prior for this environment):', 'the house remembers where each stream belongs'); if (t) { attachedCodex = buildCodexFromText(t); setStatus(`Codex attached — ${attachedCodex.length / 16} packets (GEAR·PRIME·HALT).`, 'ok'); } },
+                exportEnv: () => downloadEnvironment(), buildEnv: () => envToBox(), loadEnv: () => regrowFromBox() };
+            boundaryFolder.add(bs, 'preset', Object.keys(BOUNDARY_PRESETS)).name('Boundary size');
+            boundaryFolder.add(bs, 'apply').name('◻ Apply starter size');
+            boundaryFolder.add(bs, 'frontierMode').name('Frontier mode (mark growth edge)').onChange(v => { frontierMode = v; if (v) chainMode = false; }).listen();
+            boundaryFolder.add(bs, 'attachCodex').name('Attach codex prior');
+            boundaryFolder.add(bs, 'buildEnv').name('Build ENVIRONMENT → box');
+            boundaryFolder.add(bs, 'exportEnv').name('⬇ Export environment');
+            boundaryFolder.add(bs, 'loadEnv').name('⬆ Load env / seed from box');
+        }
+        function setupFoldGUI() {
+            if (foldFolder) foldFolder.destroy();
+            foldFolder = gui.addFolder('Fold program (gates)');
+            const fs = { expansion: EXPANSION_TIERS.join(' → '), maxCells: foldState.maxCells,
+                run: () => runFoldProgram(),
+                help: () => setStatus('Program vertices with gate forms (⟳ROT ⊕XFOLD ⇋MIRROR ⧈SPLIT ⧉MERGE ⛓LINK ●SEED ⊗HALT); Run executes them in index order over the cubic expansion tiers.', 'warn') };
+            foldFolder.add(fs, 'expansion').name('Expansion tiers').disable();
+            foldFolder.add(fs, 'maxCells', 64, 4000, 64).name('Energy cap (cells)').onChange(v => foldState.maxCells = v);
+            foldFolder.add(fs, 'run').name('▶ Run fold program');
+            foldFolder.add(fs, 'help').name('? gate legend');
+        }
+        function setupEconGUI() {
+            if (econFolder) econFolder.destroy();
+            econFolder = gui.addFolder('Economy · FLUX / CRYST');
+            econFolder.add(FLUX, 'frames').name('FLUX frames (free)').listen().disable();
+            econFolder.add(FLUX, 'folds').name('FLUX folds (free)').listen().disable();
+            econFolder.add(CRYST, 'window').name('CRYST window open').listen().disable();
+            const es = { crystallize: () => crystallizeCommit() };
+            econFolder.add(es, 'crystallize').name('◈ Crystallize (spend CRYST)');
+        }
+        function setupGenerationGUI() {
+            if (generationFolder) generationFolder.destroy();
+            generationFolder = gui.addFolder('Lattice');
+            const shapeCtrl = generationFolder.add(state, 'latticeShape', ['64-Cell', 'Box', 'Toroid', 'Cylinder', 'Lissajous Knot', 'Trefoil Knot']).name('Shape');
+            const seedF = generationFolder.addFolder('64-Cell seed');
+            seedF.add(state, 'seedWord').name('Seed word (16 hex)').onFinishChange(v => reseed64Cell(v));
+            seedF.add(state, 'cubeScale', 4, 30, 1).name('Cube scale').onChange(() => { if (state.latticeShape === '64-Cell') regenerateLattice(); });
+            seedF.add({ reseed: () => reseed64Cell(state.seedWord) }, 'reseed').name('↻ Re-seed 64-cell');
+            seedF.add({ random: () => { let h = ''; for (let k = 0; k < 16; k++) h += '0123456789ABCDEF'[Math.floor(Math.random() * 16)]; reseed64Cell(h); } }, 'random').name('🎲 Vary seed');
+            seedF.add({ up: () => tessellate(1) }, 'up').name('⧈ Fractal step + (tessellate)');
+            seedF.add({ dn: () => tessellate(-1) }, 'dn').name('⧉ Fractal step − (collapse)');
+            const boxF = generationFolder.addFolder('Box');
+            boxF.add(state.boxSize, 'x', 10, 500, 1).name('Width'); boxF.add(state.boxSize, 'y', 10, 500, 1).name('Height'); boxF.add(state.boxSize, 'z', 10, 500, 1).name('Depth');
+            const torF = generationFolder.addFolder('Toroid');
+            torF.add(state, 'toroidMajorRadius', 10, 250, 1).name('Major R'); torF.add(state, 'toroidTubeRadius', 1, 100, 1).name('Tube R');
+            const cylF = generationFolder.addFolder('Cylinder');
+            cylF.add(state, 'cylinderRadius', 10, 250, 1).name('Radius'); cylF.add(state, 'cylinderHeight', 10, 500, 1).name('Height');
+            const lisF = generationFolder.addFolder('Lissajous');
+            lisF.add(state, 'lissajousScale', 10, 100, 1).name('Scale'); lisF.add(state, 'lissajousNx', 1, 10, 1).name('Nx'); lisF.add(state, 'lissajousNy', 1, 10, 1).name('Ny'); lisF.add(state, 'lissajousNz', 1, 10, 1).name('Nz'); lisF.add(state, 'lissajousTubeRadius', 1, 20, 1).name('Tube R');
+            const treF = generationFolder.addFolder('Trefoil');
+            treF.add(state, 'trefoilScale', 10, 100, 1).name('Scale'); treF.add(state, 'trefoilTubeRadius', 1, 20, 1).name('Tube R');
+            const countCtrl = generationFolder.add(state, 'particleCount', 1000, 120000, 1000).name('Packet count');
+            const upd = (shape) => {
+                seedF.domElement.style.display = shape === '64-Cell' ? '' : 'none';
+                boxF.domElement.style.display = shape === 'Box' ? '' : 'none';
+                torF.domElement.style.display = shape === 'Toroid' ? '' : 'none';
+                cylF.domElement.style.display = shape === 'Cylinder' ? '' : 'none';
+                lisF.domElement.style.display = shape === 'Lissajous Knot' ? '' : 'none';
+                treF.domElement.style.display = shape === 'Trefoil Knot' ? '' : 'none';
+                countCtrl.domElement.style.display = shape === '64-Cell' ? 'none' : '';
+            };
+            shapeCtrl.onChange(upd); upd(state.latticeShape);
+            generationFolder.add(state, 'rngSeed', 1, 999999, 1).name('RNG seed (knots)');
+            generationFolder.add(state, 'regenerate').name('⟳ Generate lattice');
+            generationFolder.open();
+        }
+        function setupChainGUI() {
+            if (chainFolder) chainFolder.destroy();
+            chainFolder = gui.addFolder('Chain');
+            chainFolder.add(chainState, 'chainMode').name('Chain mode (G)').onChange(v => { chainMode = v; updateChainBadge(); });
+            chainFolder.add(chainState, 'finishChain').name('Finish chain (Enter)');
+            chainFolder.add(chainState, 'newChain').name('Start new chain');
+            chainFolder.add(chainState, 'undoLink').name('Undo last link');
+            chainFolder.add(chainState, 'clearAll').name('Clear all chains');
+            chainFolder.open();
+        }
+        function setupRawGUI() {
+            if (rawFolder) rawFolder.destroy();
+            rawFolder = gui.addFolder('Raw data → packets');
+            rawFolder.add(rawState, 'data').name('Data');
+            rawFolder.add(rawState, 'mode', ['Text (UTF-8)', 'Hex bytes']).name('Interpret as');
+            const n = particleSystem ? particleSystem.geometry.attributes.position.count - 1 : 99999;
+            rawFolder.add(rawState, 'startIndex', 0, n, 1).name('Start index').listen();
+            rawFolder.add(rawState, 'autoChain').name('Auto-chain');
+            rawFolder.add(rawState, 'inject').name('⇢ Crystallize & place');
+            rawFolder.open();
+        }
+        function setupEnvironmentGUI() {
+            if (environmentFolder) environmentFolder.destroy();
+            environmentFolder = gui.addFolder('Environment');
+            environmentFolder.add(environmentState, 'isPlaying').name('Flow (Space)').listen();
+            environmentFolder.add(environmentState, 'nullNodeOpacity', 0, 1, 0.01).name('Null opacity').onChange(v => { if (particleSystem) particleSystem.material.opacity = v; });
+            environmentFolder.addColor(environmentState, 'nullNodeColor').name('Null color').onChange(v => {
+                if (!particleSystem) return;
+                const colors = particleSystem.geometry.attributes.color; const bc = new THREE.Color(v);
+                for (let i = 0; i < colors.count; i++) if (!activeNodes.has(i)) colors.setXYZ(i, bc.r, bc.g, bc.b);
+                colors.needsUpdate = true;
+            });
+        }
+        function updateEditorGUI() {
+            if (editorGUI) { editorGUI.destroy(); editorGUI = null; }
+            if (selectedNodes.size === 0) {
+                document.getElementById('packet-details').style.display = 'none';
+                if (selectionHighlight) selectionHighlight.visible = false; return;
+            }
+            const first = selectedNodes.values().next().value;
+            const d = packetData.get(first); if (!d) return;
+            const { r, g, b } = quaternionToRgba(d.quaternion);
+            editorState.color = new THREE.Color(r / 255, g / 255, b / 255).getStyle();
+            editorState.formId = d.formId === -1 ? 1 : d.formId;
+            editorState.amplitudeId = d.amplitudeId; editorState.frequencyId = d.frequencyId;
+            editorState.spinClassId = d.spinClassId; editorState.isWireframe = d.isWireframe;
+            editorGUI = gui.addFolder(`Node editor (${selectedNodes.size} selected)`);
+            const shapeNames = {};
+            for (let f = 0; f <= 7; f++) shapeNames[`${GEOMETRY[f].name} (geom)`] = f;
+            for (let f = 8; f <= 15; f++) shapeNames[`${GATES[f].sym} ${GATES[f].name} (gate)`] = f;
+            editorGUI.add(editorState, 'formId', shapeNames).name('Form (geom / gate)').onChange(applyEditorChanges);
+            editorGUI.addColor(editorState, 'color').name('Quaternion (color)').onChange(applyEditorChanges);
+            editorGUI.add(editorState, 'amplitudeId', 0, 7, 1).name('Amplitude').onChange(applyEditorChanges);
+            editorGUI.add(editorState, 'frequencyId', 0, 31, 1).name('Frequency').onChange(applyEditorChanges);
+            editorGUI.add(editorState, 'spinClassId', 0, 7, 1).name('Spin class').onChange(applyEditorChanges);
+            editorGUI.add(editorState, 'isWireframe').name('Wireframe').onChange(applyEditorChanges);
+            editorGUI.open();
+        }
+        function applyEditorChanges() {
+            selectedNodes.forEach(index => {
+                const d = packetData.get(index); if (!d) return;
+                const color = new THREE.Color(editorState.color);
+                const { a } = quaternionToRgba(d.quaternion);
+                d.quaternion = rgbaToQuaternion(color.r * 255, color.g * 255, color.b * 255, a);
+                d.formId = parseInt(editorState.formId); d.amplitudeId = editorState.amplitudeId;
+                d.frequencyId = editorState.frequencyId; d.spinClassId = editorState.spinClassId;
+                d.isWireframe = editorState.isWireframe;
+                delete d.rawWord;                    // editing turns a data-crystal into a designed packet
+                packetData.set(index, d); updateNodeVisuals(index);
+            });
+            if (selectedNodes.size > 0) { updateSelectionHighlight(); updatePacketInfoPanel(Array.from(selectedNodes).pop()); }
+            rebuildChains();
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  SYNCHRONIZATION PUMP — torsional Markov one-way "breath" (Loom_Weave port)
+        //  Every programmed SHD-CCP packet is a participant. Over a cycle of `frames`
+        //  the substrate breathes out from the zero-point center — breath = 1+sin(pi t)*amp —
+        //  while a one-way Markov charge pulse pumps inside→out through radial shells with a
+        //  torsional twist (inner shells spin faster). When two packets' breathing positions
+        //  fall within `reach`, they INTERACT: coupling = charge × field-affinity / (1+quadrance),
+        //  accumulating a scalar field on each packet (the matrix field → scalar field). A
+        //  phase-conjugate backprop pass returns quadrance-weighted gradients inward to the
+        //  zero point, growing the central scalar. Deterministic → same packets+params give
+        //  the same cycle hash, so a run is auditable/replayable like everything else here.
+        // ══════════════════════════════════════════════════════════════════════
+        const pump = {
+            on: false, started: false, frame: 0, frames: 720, speed: 1,
+            breath: 0.5, torsion: 3, reach: 12, backprop: true, maxR: 1,
+            parts: [], charge: null, scalar: null, frameLinks: [],
+            maxScalar: 0, interactions: 0, cycleHash: '',
+            ledgerEl: null, linkGroup: null, tess: null,
+            _a: new THREE.Vector3(),
+        };
+        function hammingWords(a, b) { let x = BigInt('0x' + a) ^ BigInt('0x' + b), d = 0; while (x) { d += Number(x & 1n); x >>= 1n; } return d; }
+        function pumpLog(html, cls) {
+            const box = pump.ledgerEl; if (!box) return;
+            const d = document.createElement('div'); d.innerHTML = cls ? `<span class="${cls}">${html}</span>` : html;
+            box.appendChild(d); while (box.children.length > 60) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight;
+        }
+        function pumpEnsureGroups() {
+            if (!pump.linkGroup) { pump.linkGroup = new THREE.Group(); scene.add(pump.linkGroup); }
+            if (!pump.tess) {
+                const g = new THREE.Group();
+                const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1));
+                for (let s = 1; s <= 4; s++) {                     // 4×4×4 nested tessellation shells
+                    const c = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x2dd4bf, transparent: true, opacity: 0.22 }));
+                    c.scale.setScalar(s / 4); g.add(c);
+                }
+                g.visible = false; scene.add(g); pump.tess = g;
+            }
+        }
+        function pumpClearLinks() { if (!pump.linkGroup) return; while (pump.linkGroup.children.length) { const c = pump.linkGroup.children.pop(); c.geometry.dispose(); c.material.dispose(); } }
+        function pumpCapture() {
+            pump.parts = [];
+            for (const [i, d] of packetData) if (d.formId >= 0) { const p = nodePos(i); pump.parts.push({ i, base: p.clone(), r: p.length(), pos: new THREE.Vector3(), word: nodeToWord(d) }); }
+            pump.parts.sort((a, b) => a.r - b.r);                  // inner → outer shells
+            pump.maxR = pump.parts.length ? (pump.parts[pump.parts.length - 1].r || 1) : 1;
+            const n = pump.parts.length;
+            pump.charge = new Float32Array(n); pump.scalar = new Float32Array(n);
+            pump.maxScalar = 0; pump.interactions = 0; pump.cycleHash = ''; pump.frameLinks = [];
+            return n;
+        }
+        function pumpPos(part, t, out) {
+            const breath = 1 + Math.sin(Math.PI * t) * pump.breath;   // one inhale/exhale per cycle
+            out.copy(part.base).multiplyScalar(breath);
+            const shellF = 1 - Math.min(1, part.r / (pump.maxR || 1)); // 1 inner … 0 outer
+            const ang = t * Math.PI * 2 * pump.torsion * (0.25 + shellF);
+            const x = out.x, z = out.z, c = Math.cos(ang), s = Math.sin(ang);
+            out.x = x * c - z * s; out.z = x * s + z * c;
+            return out;
+        }
+        function pumpAccumulate(t, quiet) {
+            const n = pump.parts.length; if (!n) return; const di = pump.parts;
+            // 1) one-way Markov charge pump: inject at zero-point (innermost), flow outward, irreversible
+            pump.charge[0] += Math.max(0, Math.sin(Math.PI * t)) * 0.5;
+            for (let k = n - 1; k > 0; k--) { const flow = pump.charge[k - 1] * 0.35; pump.charge[k] += flow; pump.charge[k - 1] -= flow; }
+            for (let k = 0; k < n; k++) pump.charge[k] *= 0.985;
+            // 2) breathing positions
+            for (let k = 0; k < n; k++) pumpPos(di[k], t, di[k].pos);
+            // 3) interactions → scalar field (matrix field of pairwise couplings)
+            if (!quiet) pump.frameLinks = [];
+            const reach2 = pump.reach * pump.reach;
+            for (let a = 0; a < n; a++) for (let b = a + 1; b < n; b++) {
+                const Q = di[a].pos.distanceToSquared(di[b].pos); if (Q > reach2) continue;   // quadrance
+                const aff = 1 - hammingWords(di[a].word, di[b].word) / 64;                     // field affinity
+                const flow = (pump.charge[a] + pump.charge[b]) * aff / (1 + Q); if (flow < 1e-4) continue;
+                pump.scalar[a] += flow; pump.scalar[b] += flow; pump.interactions++;
+                if (!quiet) {
+                    pump.frameLinks.push([a, b, flow, aff]);
+                    if (pump.interactions % 40 === 0) pumpLog(`[F-${String(Math.round(pump.frame)).padStart(3, '0')}] pkt ${di[a].i} ⚡ pkt ${di[b].i} · Q=${Q.toFixed(1)} aff=${aff.toFixed(2)}`, 'spark');
+                }
+            }
+            // 4) implied-quadrance backprop: outer scalar returns inward to the zero point
+            if (pump.backprop) for (let k = n - 1; k > 0; k--) { const Q = di[k - 1].pos.distanceToSquared(di[k].pos); pump.scalar[k - 1] += pump.scalar[k] * 0.04 / (1 + Q); }
+            for (let k = 0; k < n; k++) if (pump.scalar[k] > pump.maxScalar) pump.maxScalar = pump.scalar[k];
+        }
+        function pumpChainUpdate() {
+            let k = 0;
+            const set = (idxs) => { if (idxs.length < 2) return; const pts = idxs.filter(i => activeNodes.has(i)).map(i => activeNodes.get(i).position.clone()); const line = chainGroup.children[k++]; if (!line || pts.length < 2) return; line.geometry.setFromPoints(pts); };
+            chains.forEach(set); if (currentChain.length >= 2) set(currentChain);
+        }
+        function pumpRender(t) {
+            const n = pump.parts.length; if (!n) return; const di = pump.parts;
+            for (let k = 0; k < n; k++) {
+                const nd = activeNodes.get(di[k].i); if (!nd) continue;
+                nd.position.copy(di[k].pos);
+                const m = nd.children[0]; if (m && m.material) { const s = pump.maxScalar > 0 ? pump.scalar[k] / pump.maxScalar : 0; m.material.color.setHSL(0.75 - s * 0.45, 0.85, 0.45 + s * 0.28); }
+            }
+            pumpClearLinks();
+            for (const [a, b, flow, aff] of (pump.frameLinks || [])) {
+                const geo = new THREE.BufferGeometry().setFromPoints([di[a].pos, di[b].pos]);
+                const col = new THREE.Color().setHSL(0.5 - aff * 0.5, 0.9, 0.6);
+                pump.linkGroup.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: Math.min(0.9, flow * 5), depthTest: false })));
+            }
+            pumpChainUpdate();
+            if (pump.tess) { pump.tess.visible = true; pump.tess.scale.setScalar(90 * (1 + Math.sin(Math.PI * t) * pump.breath)); pump.tess.rotation.y = t * Math.PI * 2 * 0.1; }
+        }
+        function pumpRestore() {
+            for (const [i, nd] of activeNodes) { nd.position.copy(nodePos(i)); const d = packetData.get(i); const m = nd.children[0]; if (m && m.material && d) m.material.color = quaternionToColor(d.quaternion); }
+            pumpClearLinks(); if (pump.tess) pump.tess.visible = false; rebuildChains();
+        }
+        function updatePumpUI() {
+            const fs = document.getElementById('frameSlider'); if (fs) { fs.max = pump.frames; fs.value = Math.round(pump.frame); }
+            const ro = document.getElementById('frameReadout'); if (ro) ro.textContent = `${Math.round(pump.frame)} / ${pump.frames}`;
+            const t = pump.frames ? pump.frame / pump.frames : 0;
+            const bb = document.getElementById('breathBar'); if (bb) bb.style.width = (Math.sin(Math.PI * t) * 100).toFixed(0) + '%';
+        }
+        function pumpReset() {
+            pump.on = false; pump.frame = 0; pumpEnsureGroups(); pumpCapture(); pump.started = true; pumpRestore();
+            if (pump.ledgerEl) pump.ledgerEl.innerHTML = '';
+            pumpLog(`Cycle armed — ${pump.parts.length} packets over ${pump.frames} frames.`, 'sys');
+            document.getElementById('pumpPlay').textContent = '⏯ Pump'; updatePumpUI();
+        }
+        function pumpToggle() {
+            if (!pump.on) {
+                if (!pump.started || !pump.parts.length || pump.frame >= pump.frames) pumpReset();
+                if (!pump.parts.length) { pumpLog('No programmed packets to pump — program some vertices first.', 'sys'); return; }
+                pump.on = true; document.getElementById('pumpPlay').textContent = '⏸ Pause';
+            } else { pump.on = false; document.getElementById('pumpPlay').textContent = '⏯ Pump'; }
+        }
+        function pumpSpeed(s, el) { pump.speed = s; document.querySelectorAll('#pumpCtl .speed').forEach(e => e.classList.remove('on')); if (el) el.classList.add('on'); }
+        function pumpSimTo(target) {
+            pumpEnsureGroups(); if (!pump.parts.length) pumpCapture();
+            pump.charge.fill(0); pump.scalar.fill(0); pump.interactions = 0; pump.maxScalar = 0;
+            const F = Math.max(0, Math.min(pump.frames, Math.round(target)));
+            for (let f = 1; f <= F; f++) { pump.frame = f; pumpAccumulate(f / pump.frames, true); }
+            pump.frame = F; if (F > 0) pumpAccumulate(F / pump.frames, false); pumpRender(F / pump.frames); updatePumpUI();
+        }
+        function pumpFinishCycle() {
+            let acc = '';
+            for (let k = 0; k < pump.parts.length; k++) acc += pump.parts[k].i + ':' + pump.scalar[k].toFixed(3) + '|';
+            acc += `#${pump.interactions}@${pump.frames}b${pump.breath}t${pump.torsion}r${pump.reach}${pump.backprop ? 'B' : ''}`;
+            pump.cycleHash = '0x' + fold32(acc).toString(16).padStart(8, '0');
+            document.getElementById('pumpPlay').textContent = '⏯ Pump';
+            pumpLog(`cycle complete · ${pump.interactions} interactions · max scalar ${pump.maxScalar.toFixed(2)} · hash ${pump.cycleHash}`, 'scal');
+        }
+        function pumpBake() {
+            if (!pump.parts.length || pump.maxScalar <= 0) { pumpLog('Run a cycle first — nothing to bake.', 'sys'); return; }
+            let baked = 0;
+            for (let k = 0; k < pump.parts.length; k++) { const d = packetData.get(pump.parts[k].i); if (!d) continue; const s = pump.scalar[k] / pump.maxScalar; d.payloadScalingFactor = +(s * 327).toFixed(2); delete d.rawWord; packetData.set(pump.parts[k].i, d); baked++; }
+            pumpLog(`baked scalar field into ${baked} packets' payload — now captured by the seed.`, 'scal');
+            if (selectedNodes.size) updatePacketInfoPanel(Array.from(selectedNodes).pop());
+        }
+        function pumpExport() {
+            const out = { v: 1, frames: pump.frames, breath: pump.breath, torsion: pump.torsion, reach: pump.reach, backprop: pump.backprop, interactions: pump.interactions, maxScalar: +pump.maxScalar.toFixed(4), cycleHash: pump.cycleHash, parts: pump.parts.map((p, k) => ({ i: p.i, scalar: +pump.scalar[k].toFixed(4) })) };
+            const blob = new Blob([JSON.stringify(out, null, 0)], { type: 'application/json' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `latticeforge_pump_${(pump.cycleHash || '0x0').replace('0x', '')}.json`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+            pumpLog(`exported interaction ledger (${pump.parts.length} packets).`, 'sys');
+        }
+        function pumpInit() {
+            pump.ledgerEl = document.getElementById('pumpLedger'); pumpEnsureGroups();
+            const bind = (id, ev, fn) => { const el = document.getElementById(id); if (el) el.addEventListener(ev, () => fn(el)); };
+            bind('pumpFrames', 'change', el => { pump.frames = Math.max(12, Math.min(4320, parseInt(el.value) || 720)); if (!pump.on) pumpReset(); });
+            bind('pumpBreath', 'input', el => pump.breath = parseFloat(el.value));
+            bind('pumpTorsion', 'input', el => pump.torsion = parseFloat(el.value));
+            bind('pumpReach', 'input', el => pump.reach = parseFloat(el.value));
+            bind('pumpBackprop', 'change', el => pump.backprop = el.checked);
+            bind('frameSlider', 'input', el => { pump.on = false; document.getElementById('pumpPlay').textContent = '⏯ Pump'; pumpSimTo(+el.value); });
+        }
+
+        // ══════════════════════════════════════════════════════════════════════
+        //  FRONTIER · FOLD PROGRAM (cubic expansion) · ENVIRONMENT/1 · FLUX/CRYST
+        // ══════════════════════════════════════════════════════════════════════
+
+        // ── frontier: where new biochains may attach (the growth boundary) ──────
+        function toggleFrontierMode() { frontierMode = !frontierMode; if (frontierMode) chainMode = false; setStatus(frontierMode ? 'Frontier mode — click vertices to mark the growth boundary.' : 'Frontier mode off.', frontierMode ? 'warn' : ''); }
+        function markFrontier(index) { if (frontier.has(index)) frontier.delete(index); else frontier.add(index); renderFrontier(); }
+        function renderFrontier() {
+            if (!frontierGroup) { frontierGroup = new THREE.Group(); scene.add(frontierGroup); }
+            while (frontierGroup.children.length) { const c = frontierGroup.children.pop(); c.geometry.dispose(); c.material.dispose(); }
+            const geo = new THREE.TorusGeometry(0.9, 0.16, 6, 14);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffc94a, transparent: true, opacity: 0.85, depthTest: false });
+            for (const i of frontier) { if (!packetData.has(i)) continue; const m = new THREE.Mesh(geo, mat); m.position.copy(nodePos(i)); frontierGroup.add(m); }
+        }
+
+        // ── the cubic expansion grammar + fold-gate execution ───────────────────
+        //  Each gate packet is one fold; the ordered gate packets are the program.
+        //  Bounded (≤ maxCells) + halting (finite program, HALT stops) + deterministic.
+        function foldLog(msg) { foldState.ledger.push(msg); if (foldState.ledger.length > 200) foldState.ledger.shift(); }
+        function freeIndicesNear(i, n) {
+            const out = []; const N = particleSystem.geometry.attributes.position.count;
+            for (let step = 1; step < N && out.length < n; step++) {
+                const a = i + step, b = i - step;
+                if (a < N) { const d = packetData.get(a); if (d && d.formId === -1) out.push(a); }
+                if (out.length >= n) break;
+                if (b >= 0) { const d = packetData.get(b); if (d && d.formId === -1) out.push(b); }
+            }
+            return out;
+        }
+        function programCellFromWord(index, hex) { packetData.set(index, wordToNode(hex, false)); updateNodeVisuals(index); }
+        function runFoldProgram() {
+            const program = [];
+            for (const [i, d] of packetData) if (d.formId >= 0 && isGateForm(d.formId)) program.push(i);
+            program.sort((a, b) => a - b);
+            let live = [];
+            for (const [i, d] of packetData) if (d.formId >= 0 && !isGateForm(d.formId)) live.push(i);
+            live.sort((a, b) => a - b);
+            foldState.ledger = []; FLUX.folds = 0;
+            if (!program.length) { foldLog('No gate packets — a fold program needs at least one gate.'); return { folds: 0, cells: live.length, halted: false }; }
+            if (!live.length && program.length) { live = [program[0]]; }   // seed a cell at the first gate site
+            let tier = 0, halted = false;
+            const tierRatio = () => { const cur = EXPANSION_TIERS[Math.min(tier, EXPANSION_TIERS.length - 1)] || 1; const nxt = EXPANSION_TIERS[Math.min(tier + 1, EXPANSION_TIERS.length - 1)] || cur; return Math.max(1, Math.min(8, Math.round(nxt / cur))); };
+            for (const gi of program) {
+                const g = packetData.get(gi); if (!g) continue;
+                const op = g.formId; FLUX.folds++;
+                if (op === 8) { foldLog(`fold ${FLUX.folds}: ⊗ HALT`); halted = true; break; }
+                else if (op === 9) { foldLog(`fold ${FLUX.folds}: ● SEED (${live.length} cells anchored)`); }
+                else if (op === 10) { for (const i of live) { const d = packetData.get(i); d.spinClassId = (d.spinClassId + 1) & 7; delete d.rawWord; packetData.set(i, d); updateNodeVisuals(i); } foldLog(`fold ${FLUX.folds}: ⟳ ROT (spin+1 on ${live.length} cells)`); }
+                else if (op === 11) { for (let k = 0; k < live.length; k++) { const d = packetData.get(live[k]), e = packetData.get(live[(k + 1) % live.length]); const w = (BigInt('0x' + nodeToWord(d)) ^ (BigInt('0x' + nodeToWord(e)) & 0x00FFFFFFFFFFFF00n)).toString(16).toUpperCase().padStart(16, '0'); programCellFromWord(live[k], w); } foldLog(`fold ${FLUX.folds}: ⊕ XFOLD (annihilation across ${live.length} cells)`); }
+                else if (op === 12) { for (const i of live) { const d = packetData.get(i); const { r, g2, b, a } = { r: 255 - ((d.quaternion >> 24) & 255), g2: 255 - ((d.quaternion >> 16) & 255), b: 255 - ((d.quaternion >> 8) & 255), a: d.quaternion & 255 }; d.quaternion = rgbaToQuaternion(r, g2, b, a); delete d.rawWord; packetData.set(i, d); updateNodeVisuals(i); } foldLog(`fold ${FLUX.folds}: ⇋ MIRROR (phase-conjugate ${live.length} cells)`); }
+                else if (op === 13) {
+                    const ratio = tierRatio(); tier = Math.min(tier + 1, EXPANSION_TIERS.length - 1);
+                    const added = [];
+                    for (const i of live) {
+                        if (live.length + added.length >= foldState.maxCells) { foldLog(`fold ${FLUX.folds}: ⧈ SPLIT hit energy cap (${foldState.maxCells} cells)`); break; }
+                        const kids = freeIndicesNear(i, ratio - 1);
+                        for (const c of kids) { if (live.length + added.length >= foldState.maxCells) break; const pd = packetData.get(i); const child = { ...pd, formId: geomIdOf(pd.formId), amplitudeId: Math.min(7, pd.amplitudeId + 1) }; delete child.rawWord; packetData.set(c, child); updateNodeVisuals(c); chains.push([i, c]); added.push(c); }
+                    }
+                    live = live.concat(added);
+                    if (added.length === 0) foldLog(`fold ${FLUX.folds}: ⧈ SPLIT — manifold saturated (no free vertices). Tessellate ↑ to a larger substrate to expand further.`);
+                    else foldLog(`fold ${FLUX.folds}: ⧈ SPLIT → tier ${EXPANSION_TIERS[tier]} · +${added.length} cells (${live.length} total)`);
+                }
+                else if (op === 14) {
+                    const byR = live.map(i => ({ i, r: nodePos(i).length() })).sort((a, b) => b.r - a.r);
+                    const cut = byR.slice(0, Math.floor(byR.length / 3)).map(o => o.i);
+                    cut.forEach(i => deactivateNode(i));
+                    live = live.filter(i => !cut.includes(i)); tier = Math.max(0, tier - 1);
+                    foldLog(`fold ${FLUX.folds}: ⧉ MERGE → collapsed ${cut.length} outer cells (tier ${EXPANSION_TIERS[tier]})`);
+                }
+                else if (op === 15) { let linked = 0; const fr = [...frontier]; for (const i of live) { let best = -1, bd = Infinity; const pi = nodePos(i); const pool = fr.length ? fr : live.filter(x => x !== i); for (const f of pool) { if (f === i) continue; const dd = pi.distanceToSquared(nodePos(f)); if (dd < bd) { bd = dd; best = f; } } if (best >= 0) { chains.push([i, best]); linked++; } } foldLog(`fold ${FLUX.folds}: ⛓ LINK (${linked} entanglements to ${fr.length ? 'frontier' : 'peers'})`); }
+            }
+            rebuildChains(); renderFrontier();
+            const cells = live.length;
+            let acc = ''; for (const i of [...packetData.keys()].filter(k => packetData.get(k).formId >= 0).sort((a, b) => a - b)) acc += i + ':' + nodeToWord(packetData.get(i)) + '|';
+            const hash = '0x' + fold32(acc).toString(16).padStart(8, '0');
+            foldLog(`— program ${halted ? 'HALTed' : 'ran to end'}: ${FLUX.folds} folds · ${cells} live cells · tier ${EXPANSION_TIERS[tier]} · hash ${hash}`);
+            setStatus(`Fold program: ${FLUX.folds} folds · ${cells} cells · tier ${EXPANSION_TIERS[tier]} · ${halted ? 'HALTed' : 'complete'} · hash ${hash}`, 'ok');
+            return { folds: FLUX.folds, cells, tier: EXPANSION_TIERS[tier], halted, hash };
+        }
+
+        // ── ENVIRONMENT/1: boundary + codex + pump + frontier as one loadable object ──
+        function buildCodexFromText(text, chunk = 720, topN = 64) {
+            const data = [...new TextEncoder().encode(text)]; if (!data.length) return null;
+            const counts = new Map(); let c0 = 0, c1 = 0;
+            for (const b of data) { const k = ((c0 << 16) | (c1 << 8) | b); counts.set(k, (counts.get(k) || 0) + 1); c0 = c1; c1 = b; }
+            const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]).slice(0, topN);
+            let s = packWord(1, 2, [0, 0, 0, 0], chunk, 0, 0);          // GEAR (order 2)
+            for (const [k, count] of top) { const ctx16 = (k >> 8) & 0xFFFF, byte = k & 0xFF; s += packWord(2, 2, [byte >> 4, byte & 15, Math.min(count, 127), 0], ctx16, 0, 0); }  // PRIME
+            s += packWord(0, 0, [0, 0, 0, 0], 0, 0, 0);                 // HALT
+            return s;
+        }
+        function collectEnvironment() {
+            const boundary = collectSeed();
+            const env = {
+                kind: 'ENVIRONMENT/1', v: 1, boundary,
+                codex: attachedCodex || null,
+                pump: { frames: pump.frames, breath: pump.breath, torsion: pump.torsion, reach: pump.reach, backprop: pump.backprop, expansion: EXPANSION_TIERS.join('-') },
+                frontier: [...frontier].sort((a, b) => a - b),
+            };
+            env.hash = '0x' + fold32(JSON.stringify({ b: boundary.hash, c: env.codex, p: env.pump, f: env.frontier })).toString(16).padStart(8, '0');
+            return env;
+        }
+        function syncPumpControls() {
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+            set('pumpFrames', pump.frames); set('pumpBreath', pump.breath); set('pumpTorsion', pump.torsion); set('pumpReach', pump.reach);
+            const bp = document.getElementById('pumpBackprop'); if (bp) bp.checked = pump.backprop;
+        }
+        function loadEnvironment(env) {
+            if (!env || env.kind !== 'ENVIRONMENT/1' || !env.boundary) { setStatus('Not an ENVIRONMENT/1 object.', 'bad'); return; }
+            document.getElementById('seedBox').value = JSON.stringify(env.boundary);
+            regrow();                                                   // regenerate boundary + program packets + chains
+            if (env.pump) { pump.frames = env.pump.frames || 720; pump.breath = env.pump.breath ?? 0.5; pump.torsion = env.pump.torsion ?? 3; pump.reach = env.pump.reach ?? 12; pump.backprop = env.pump.backprop ?? true; syncPumpControls(); }
+            attachedCodex = env.codex || null;
+            frontier.clear(); (env.frontier || []).forEach(i => frontier.add(i)); renderFrontier();
+            setStatus(`Environment loaded — ${env.boundary.nodes.length} boundary packets · ${(env.frontier || []).length} frontier · codex ${env.codex ? 'attached' : 'none'} · hash ${env.hash}`, 'ok');
+        }
+        function envToBox() { document.getElementById('seedBox').value = JSON.stringify(collectEnvironment()); setStatus('Environment built into the seed box — Copy/Download or Regrow-as-env.', 'ok'); }
+        function downloadEnvironment() {
+            const env = collectEnvironment(); const txt = JSON.stringify(env);
+            document.getElementById('seedBox').value = txt;
+            const blob = new Blob([txt], { type: 'application/json' }); const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob); a.download = `latticeforge_env_${env.hash.replace('0x', '')}.environment.json`;
+            document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+            setStatus(`Downloaded ${a.download}`, 'ok');
+        }
+        function regrowFromBox() {
+            const raw = document.getElementById('seedBox').value.trim(); if (!raw) { setStatus('Paste an environment or seed first.', 'warn'); return; }
+            let obj; try { obj = JSON.parse(raw); } catch (e) { setStatus('Not valid JSON: ' + e.message, 'bad'); return; }
+            if (obj && obj.kind === 'ENVIRONMENT/1') loadEnvironment(obj); else regrow();
+        }
+        const BOUNDARY_PRESETS = { 'Seed (64-cell · 64 packets)': 64, 'Small (8k)': 8000, 'Medium (20k)': 20000, 'Large (40k)': 40000 };
+        function applyBoundaryPreset(n) {
+            if (n === 64) { state.latticeShape = '64-Cell'; regenerateLattice(); setupGenerationGUI(); setStatus('Boundary: one 64-bit seed → 4×4×4 cell (64 SHD-CCP packets). The frugal default — run the fold program to tessellate.', 'ok'); return; }
+            state.latticeShape = 'Box'; state.particleCount = n; state.boxSize = { x: 70, y: 70, z: 70 };
+            regenerateLattice(); setupGenerationGUI(); setStatus(`Boundary preset: ${n.toLocaleString()} vertices. Program a starter area and mark its frontier.`, 'ok');
+        }
+
+        // ── FLUX (free) / CRYST (scarce, compute-backed) economy ────────────────
+        function crystWindowFor(frame, frames) { const tol = Math.max(1, frames * 0.02); return frame <= tol || Math.abs(frame - frames / 2) <= tol || Math.abs(frame - frames) <= tol; }
+        function updateCrystWindow() { CRYST.window = crystWindowFor(pump.frame, pump.frames); }
+        function crystEstimate() {
+            const packets = [...packetData.values()].filter(d => d.formId >= 0).length;
+            const shipped = packets * 8 + (attachedCodex ? attachedCodex.length / 2 : 0);
+            return Math.max(1, Math.ceil(packets * 1 + pump.interactions * 0.01 + shipped * 0.002 + FLUX.folds));
+        }
+        async function crystallizeCommit() {
+            updateCrystWindow();
+            if (!CRYST.window) { pumpLog(`✗ CRYST refused — outside a crystallization window. Pump to the half (${Math.round(pump.frames / 2)}) or full (${pump.frames}) cycle (tri-gear sync).`, 'sys'); return; }
+            const env = collectEnvironment(); const cost = crystEstimate(); CRYST.lastCost = cost;
+            pumpLog(`◈ CRYST commit — window OK · cost ≈ ${cost} CRYST · env ${env.hash}. FLUX simulation was free.`, 'scal');
+            try {
+                const BM = await import('../src/biomesh/biomesh.js');
+                const { auth } = await import('../src/firebase/config.js');
+                const uid = auth?.currentUser?.uid;
+                if (uid) {
+                    const chain = await BM.growBiochain(JSON.stringify(env), {});
+                    const keys = await BM.listSigningKeys?.(uid).catch(() => []);
+                    const keyId = Array.isArray(keys) && keys[0] ? (keys[0].keyId || keys[0].id) : null;
+                    await BM.publishBiochain(uid, keyId, chain, { title: 'Lattice Forge environment ' + env.hash, kind: 'latticeforge.environment', crystCost: cost });
+                    pumpLog(`◈ crystallized as biochain ${chain.chainId || ''} · ${cost} CRYST issued against compute.`, 'scal');
+                } else {
+                    pumpLog('◈ signed-out: environment ready to crystallize; export it or sign in to spend CRYST on the mesh.', 'sys');
+                }
+            } catch (err) { pumpLog('◈ CRYST commit staged locally (mesh unavailable: ' + (err?.message || err) + ').', 'sys'); }
+        }
+
+        // ── RENDER LOOP ──────────────────────────────────────────────────────────
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now(); const delta = (time - prevTime) / 1000;
+            if (pointerLockControls.isLocked) {
+                velocity.x -= velocity.x * 10.0 * delta; velocity.y -= velocity.y * 10.0 * delta; velocity.z -= velocity.z * 10.0 * delta;
+                direction.z = Number(moveForward) - Number(moveBackward); direction.x = Number(moveRight) - Number(moveLeft); direction.normalize();
+                if (moveForward || moveBackward) velocity.z -= direction.z * 400.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 400.0 * delta;
+                if (moveUp || moveDown) velocity.y -= (Number(moveDown) - Number(moveUp)) * 400.0 * delta;
+                pointerLockControls.moveRight(-velocity.x * delta); pointerLockControls.moveForward(-velocity.z * delta);
+                pointerLockControls.getObject().position.y -= velocity.y * delta;
+            } else orbitControls.update();
+
+            if (!pump.on && environmentState.isPlaying && particleSystem) {
+                const positions = particleSystem.geometry.attributes.position;
+                if (state.latticeShape === 'Toroid') {
+                    const a = 0.5 * delta, cos = Math.cos(a), sin = Math.sin(a);
+                    for (let i = 0; i < positions.count; i++) {
+                        const x = positions.getX(i), z = positions.getZ(i);
+                        const nx = x * cos - z * sin, nz = x * sin + z * cos;
+                        positions.setX(i, nx); positions.setZ(i, nz);
+                        if (activeNodes.has(i)) { const nd = activeNodes.get(i); nd.position.set(nx, nd.position.y, nz); nd.rotation.y += a; }
+                        if (selectedNodes.has(i)) { selectionHighlight.position.set(nx, selectionHighlight.position.y, nz); selectionHighlight.rotation.y += a; }
+                    }
+                } else if (state.latticeShape === 'Lissajous Knot' || state.latticeShape === 'Trefoil Knot') {
+                    const flow = 0.2, isL = state.latticeShape === 'Lissajous Knot';
+                    const { lissajousScale: ls, lissajousNx: nx, lissajousNy: ny, lissajousNz: nz, trefoilScale: ts } = state;
+                    for (let i = 0; i < positions.count; i++) {
+                        const pr = particleParams[i]; pr.u += flow * delta; if (pr.u > 2 * Math.PI) pr.u -= 2 * Math.PI;
+                        const fp = isL
+                            ? knotFrame(lissajousPoint(pr.u, ls, nx, ny, nz), lissajousDerivative(pr.u, ls, nx, ny, nz), lissajousSecondDerivative(pr.u, ls, nx, ny, nz), pr.r, pr.v)
+                            : knotFrame(trefoilPoint(pr.u, ts), trefoilDerivative(pr.u, ts), trefoilSecondDerivative(pr.u, ts), pr.r, pr.v);
+                        positions.setXYZ(i, fp.x, fp.y, fp.z);
+                        if (activeNodes.has(i)) activeNodes.get(i).position.copy(fp);
+                        if (selectedNodes.has(i)) selectionHighlight.position.copy(fp);
+                    }
+                } else {
+                    const flow = 10.0; const bounds = state.latticeShape === 'Cylinder' ? state.cylinderHeight : state.boxSize.y; const hb = bounds / 2;
+                    for (let i = 0; i < positions.count; i++) {
+                        let y = positions.getY(i) + flow * delta; if (y > hb) y = -hb; positions.setY(i, y);
+                        if (activeNodes.has(i)) activeNodes.get(i).position.y = y;
+                        if (selectedNodes.has(i)) selectionHighlight.position.y = y;
+                    }
+                }
+                positions.needsUpdate = true;
+                if (chainGroup.children.length) updateChainLinePositions();
+            }
+
+            if (pump.on) {
+                pump.frame += pump.speed; FLUX.frames += pump.speed;    // free meter: simulation costs only time
+                if (pump.frame >= pump.frames) {
+                    pump.frame = pump.frames; pumpAccumulate(1, false); pumpRender(1); pump.on = false; pumpFinishCycle();
+                } else {
+                    const t = pump.frame / pump.frames; pumpAccumulate(t, false); pumpRender(t);
+                }
+                FLUX.interactions = pump.interactions; updateCrystWindow(); updatePumpUI();
+            }
+
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // expose the seed/panel API for the HTML buttons + headless testing
+        window.ME = {
+            buildSeed, regrow, verifySeed, copySeed, downloadSeed, loadFile, publish,
+            injectRawData, toggleChainMode, addToChain, finishChain,
+            pumpToggle, pumpReset, pumpSpeed, pumpExport, pumpBake, pumpSimTo,
+            toggleFrontierMode, markFrontier, runFoldProgram, collectEnvironment, loadEnvironment,
+            envToBox, downloadEnvironment, regrowFromBox, applyBoundaryPreset, crystallizeCommit,
+            seed64Cell, reseed64Cell, vertexFromSeed, tessellate, fractalActive,
+            buildCodexFromText, isGateForm, geomIdOf, GATES, GEOMETRY, updateCrystWindow, crystEstimate,
+            _state: state, _packetData: packetData, _chains: chains, _rawState: rawState, _pump: pump,
+            _frontier: frontier, _flux: FLUX, _cryst: CRYST, _fold: foldState,
+            set _codex(v) { attachedCodex = v; }, get _codex() { return attachedCodex; },
+            crystallize, packWord, unpackWord, nodeToWord, wordToNode, fold32, canonicalSeed, collectSeed,
+        };
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioChain AI — Lattice Forge Guide</title>
+
+    <script type="module" src="../../src/ui/node-network-bg.js" data-accent="#00d4ff"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --cyan:#00d4ff; --green:#00ff88; --amber:#f5a623; --red:#f87171; --bg:#04060a; }
+        * { box-sizing: border-box; }
+        body { background: var(--bg); color:#e2e8f0; font-family:'Inter',sans-serif; margin:0; min-height:100vh; }
+        h1,h2,h3,h4,.mystical { font-family:'Cinzel',serif; }
+        .mono { font-family:'JetBrains Mono',monospace; }
+        .glass { background:rgba(8,12,22,0.82); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.112); border-radius:1rem; box-shadow:0 8px 32px -4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.04); }
+        .panel-cyan { border-color:rgba(0,212,255,0.25); }
+        .panel-green { border-color:rgba(0,255,136,0.25); }
+        .panel-amber { border-color:rgba(245,166,35,0.28); }
+        .cyan-grad { background:linear-gradient(135deg,#007a99,#00d4ff,#c9f4ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .green-grad { background:linear-gradient(135deg,#00a85c,#00ff88,#d6ffe9); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .amber-grad { background:linear-gradient(135deg,#a06c10,#f5a623,#ffe3b0); -webkit-background-clip:text; background-clip:text; color:transparent; }
+        .section-label { display:inline-flex; align-items:center; gap:0.5rem; padding:0.2rem 0.75rem; border-radius:9999px; font-size:10px; letter-spacing:0.2em; text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+        .sl-cyan { background:rgba(0,212,255,0.10); border:1px solid rgba(0,212,255,0.3); color:#00d4ff; }
+        .sl-green { background:rgba(0,255,136,0.12); border:1px solid rgba(0,255,136,0.35); color:#00ff88; }
+        .sl-amber { background:rgba(245,166,35,0.10); border:1px solid rgba(245,166,35,0.35); color:#f5a623; }
+        .step-num { width:2rem; height:2rem; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:700; flex-shrink:0; }
+        .step-cyan { background:rgba(0,212,255,0.12); border:1px solid rgba(0,212,255,0.4); color:#00d4ff; }
+        .step-green { background:rgba(0,255,136,0.14); border:1px solid rgba(0,255,136,0.5); color:#00ff88; }
+        pre { background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:0.5rem; padding:1rem; overflow-x:auto; font-size:12px; line-height:1.7; color:#a8b8c8; }
+        code { font-family:'JetBrains Mono',monospace; }
+        .hl { color:#00ff88; } .hl-c { color:#00d4ff; } .hl-a { color:#f5a623; } kbd { background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.2); border-radius:4px; padding:0 6px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#cbd5e1; }
+        table { width:100%; border-collapse:collapse; font-size:13px; }
+        th { text-align:left; padding:0.5rem 0.75rem; font-size:10px; text-transform:uppercase; letter-spacing:0.15em; color:#64748b; font-family:'JetBrains Mono',monospace; border-bottom:1px solid rgba(255,255,255,0.08); }
+        td { padding:0.6rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.05); color:#cbd5e1; vertical-align:top; }
+        tr:last-child td { border-bottom:none; } tr:hover td { background:rgba(255,255,255,0.02); }
+        .nav-link { padding:0.4rem 1rem; border-radius:0.5rem; font-size:11px; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:0.1em; color:#94a3b8; border:1px solid transparent; text-decoration:none; transition:all 0.2s; display:inline-block; }
+        .nav-link:hover { border-color:rgba(0,212,255,0.3); color:#00d4ff; background:rgba(0,212,255,0.06); }
+        .callout { border-left:3px solid; border-radius:0 0.5rem 0.5rem 0; padding:0.75rem 1rem; font-size:13px; }
+        .callout-cyan { border-color:#00d4ff; background:rgba(0,212,255,0.05); }
+        .callout-green { border-color:#00ff88; background:rgba(0,255,136,0.06); }
+        .callout-amber { border-color:#f5a623; background:rgba(245,166,35,0.06); }
+        .callout-red { border-color:#ff5f5f; background:rgba(255,80,80,0.05); }
+        @media(min-width:1280px){ .toc-sticky { position:sticky; top:2rem; } }
+        .divider { border:none; border-top:1px solid rgba(255,255,255,0.07); margin:3rem 0; }
+        .bitcell { font-family:'JetBrains Mono',monospace; font-size:10px; text-align:center; padding:0.35rem 0.15rem; border:1px solid rgba(255,255,255,0.08); }
+    </style>
+</head>
+<body class="antialiased">
+
+<div class="max-w-7xl mx-auto px-4 md:px-8 py-12">
+
+    <div class="text-center mb-14">
+        <div class="section-label sl-cyan mx-auto mb-4">🧠 BioMesh · Lattice Forge</div>
+        <h1 class="text-4xl md:text-6xl font-bold mystical cyan-grad mb-4">The Lattice Forge — 3D Lattice Guide</h1>
+        <p class="text-slate-400 max-w-2xl mx-auto">
+            A navigable 3D space where every vertex is a programmable SHD-CCP packet. Build a lattice,
+            chain packets together, turn any data into crystals, and crystallize one compact <em>seed</em>
+            that regrows the whole structure — the shared standard decentralized nodes build on.
+        </p>
+        <div class="flex flex-wrap justify-center gap-3 mt-6">
+            <a href="../Lattice_Forge.html" class="nav-link">🧠 Open the Lattice Forge →</a>
+            <a href="../Operations_Console.html" class="nav-link">Operations Console</a>
+            <a href="../../Index.html" class="nav-link">← Home</a>
+        </div>
+    </div>
+
+    <div class="xl:grid xl:grid-cols-[260px_1fr] gap-10">
+        <aside class="hidden xl:block">
+            <div class="toc-sticky glass panel-cyan p-5 text-sm">
+                <p class="mono text-[10px] text-cyan-500 uppercase tracking-widest mb-4">Contents</p>
+                <nav class="space-y-1">
+                    <a href="#overview" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Overview</a>
+                    <a href="#navigate" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Navigating the space</a>
+                    <a href="#packet" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">The 64-bit packet</a>
+                    <a href="#program" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">Programming a vertex</a>
+                    <a href="#chains" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Chaining packets</a>
+                    <a href="#rawdata" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Raw data → packets</a>
+                    <a href="#seed" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">The seed</a>
+                    <a href="#seed-anatomy" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">Seed anatomy</a>
+                    <a href="#regrow" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">Regrow & verify</a>
+                    <a href="#decentralized" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">The shared standard</a>
+                    <a href="#pump" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">The synchronization pump</a>
+                    <a href="#pump-mech" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">How the breath works</a>
+                    <a href="#pump-use" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">Running a cycle</a>
+                    <a href="#env" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Codex environments</a>
+                    <a href="#env-seed" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">The 64-cell seed</a>
+                    <a href="#env-form" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">The FORM split &amp; gates</a>
+                    <a href="#env-fold" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">Fold programs &amp; expansion</a>
+                    <a href="#env-object" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">ENVIRONMENT/1 &amp; the designer</a>
+                    <a href="#env-econ" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition pl-3 border-l border-white/10">FLUX &amp; CRYST</a>
+                    <a href="#workflow" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Full workflow</a>
+                    <a href="#reference" class="block text-slate-400 hover:text-cyan-300 py-1 text-xs transition">Controls reference</a>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="space-y-16 min-w-0">
+
+            <!-- OVERVIEW -->
+            <section id="overview">
+                <div class="section-label sl-cyan mb-4">01 — Overview</div>
+                <h2 class="text-3xl mystical cyan-grad mb-6">What Is the Lattice Forge?</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    The <strong class="text-slate-100">Lattice Forge</strong> is a first-person 3D environment. It opens on
+                    the smallest possible manifold: a <strong class="text-green-300">64-cell seed</strong> — one 64-bit
+                    SHD-CCP word unfolded into a 4×4×4 cube where <em>every one of the 64 vertices is a packet</em>
+                    (energy-frugal by design; you grow larger only when you need to). Fly through it, click any vertex,
+                    and program it into a real <strong class="text-cyan-300">SHD-CCP packet</strong>: a 64-bit word
+                    carrying a form, a color quaternion, amplitude, frequency, spin, and a parity bit. You can also
+                    switch to larger blank lattices (Box, Toroid, knots) of many thousands of null vertices when a build
+                    calls for it. Link programmed packets into
+                    <strong class="text-amber-300">chains</strong> that thread through 3D space, and when you're done,
+                    crystallize the whole construction into one compact, tamper-evident
+                    <strong class="text-green-300">seed</strong> that regrows it exactly.
+                </p>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    The packet format isn't a toy — it's the <em>same</em> 64-bit SHD-CCP word the rest of the
+                    BioMesh uses (defined in <code class="mono text-cyan-300">src/biomesh/biomesh.js</code> and
+                    <code class="mono text-cyan-300">BioChain_Enterprise/shdccp_kernel.py</code>). So a lattice you
+                    build here is made of the same atoms as a biochain, and any data — text, bytes, an existing
+                    SHD-CCP stream — can be crystallized into packets and studied in the same space. That shared
+                    format is the point: it's a standard that decentralized nodes can all speak.
+                </p>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="glass panel-cyan p-5"><div class="text-3xl mb-3">🕹️</div><h3 class="mystical text-base text-cyan-300 mb-2">Navigate</h3><p class="text-xs text-slate-400 leading-relaxed">FPS or orbit through a lattice of null nodes. Click any vertex to select and program it.</p></div>
+                    <div class="glass panel-amber p-5"><div class="text-3xl mb-3">⛓</div><h3 class="mystical text-base text-amber-300 mb-2">Chain</h3><p class="text-xs text-slate-400 leading-relaxed">Link packets into ordered chains that render as glowing polylines and flow with the lattice.</p></div>
+                    <div class="glass panel-green p-5"><div class="text-3xl mb-3">🌱</div><h3 class="mystical text-base text-green-300 mb-2">Seed</h3><p class="text-xs text-slate-400 leading-relaxed">Crystallize the whole build into one hash-stamped seed that regrows it bit-for-bit.</p></div>
+                </div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- NAVIGATE -->
+            <section id="navigate">
+                <div class="section-label sl-cyan mb-4">02 — Navigate</div>
+                <h2 class="text-3xl mystical cyan-grad mb-6">Navigating the Space</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    There are two camera modes. <strong class="text-cyan-300">Orbit</strong> is the default: drag to
+                    rotate, scroll to zoom, always looking at your last selection. Click the canvas to enter
+                    <strong class="text-cyan-300">FPS mode</strong> (pointer-lock) and fly:
+                </p>
+                <div class="glass panel-cyan p-5 mb-4 grid grid-cols-2 md:grid-cols-3 gap-y-2 gap-x-6 text-sm text-slate-300">
+                    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — move</div>
+                    <div><kbd>Z</kbd> / <kbd>C</kbd> — ascend / descend</div>
+                    <div><kbd>Space</kbd> — play/pause flow</div>
+                    <div><kbd>G</kbd> — toggle chain mode</div>
+                    <div><kbd>Shift</kbd>+click — multi-select</div>
+                    <div><kbd>Esc</kbd> — back to orbit</div>
+                </div>
+                <p class="text-slate-400 text-sm">
+                    The <strong>Lattice</strong> panel (top-right) picks the shape — Box, Toroid, Cylinder, Lissajous
+                    Knot, or Trefoil Knot — its dimensions, the approximate packet count, and an RNG seed (used only
+                    by the two knot shapes, so their vertex layout is reproducible). <strong>Generate lattice</strong>
+                    rebuilds the scaffold. <strong class="text-cyan-300">Flow</strong> (<kbd>Space</kbd>) animates the
+                    whole lattice — packets and chains move with it.
+                </p>
+            </section>
+
+            <hr class="divider">
+
+            <!-- PACKET -->
+            <section id="packet">
+                <div class="section-label sl-green mb-4">03 — Packet</div>
+                <h2 class="text-3xl mystical green-grad mb-6">The 64-bit SHD-CCP Packet</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    Every programmed vertex is exactly one 64-bit word. The bit layout is the canonical BioMesh
+                    SHD-CCP format — identical to <code class="mono text-green-300">crystallize()</code> /
+                    <code class="mono text-green-300">packWord()</code> in
+                    <code class="mono text-green-300">src/biomesh/biomesh.js</code>:
+                </p>
+                <div class="glass panel-green overflow-x-auto mb-4 p-1">
+                    <div class="flex min-w-[560px]">
+                        <div class="bitcell flex-[4] text-cyan-300">form<br>63..60</div>
+                        <div class="bitcell flex-[1] text-red-300">par<br>59</div>
+                        <div class="bitcell flex-[3] text-amber-300">spin<br>58..56</div>
+                        <div class="bitcell flex-[8] text-green-300">quat32 (RGBA color)<br>55..24</div>
+                        <div class="bitcell flex-[4] text-slate-300">payload16<br>23..8</div>
+                        <div class="bitcell flex-[3] text-cyan-300">freq<br>7..3</div>
+                        <div class="bitcell flex-[2] text-amber-300">amp<br>2..0</div>
+                    </div>
+                </div>
+                <div class="glass panel-green overflow-hidden mb-4">
+                    <table>
+                        <thead><tr><th>Field</th><th>Bits</th><th>In the Lattice Forge</th></tr></thead>
+                        <tbody>
+                            <tr><td class="mono text-cyan-300">form</td><td>4</td><td class="text-xs">Structural shape: 0 Tetra · 1 Cube · 2 Octa · 3 Icosa · 4 Dodeca. Crystallized data packets carry form <span class="mono">9</span> and render as a folded shape.</td></tr>
+                            <tr><td class="mono text-red-300">parity</td><td>1</td><td class="text-xs">Even parity over the other 63 bits — the tamper check. Set automatically.</td></tr>
+                            <tr><td class="mono text-amber-300">spin</td><td>3</td><td class="text-xs">Spin class 0–7 → rotates the shape by <span class="mono">spin×45°</span>.</td></tr>
+                            <tr><td class="mono text-green-300">quat32</td><td>32</td><td class="text-xs">The color quaternion, packed RGBA (<span class="mono">r&lt;&lt;24 | g&lt;&lt;16 | b&lt;&lt;8 | a</span>).</td></tr>
+                            <tr><td class="mono text-slate-300">payload16</td><td>16</td><td class="text-xs">Top bit = wireframe flag; low 15 = scaling factor ×100. For data crystals this holds the chunk length.</td></tr>
+                            <tr><td class="mono text-cyan-300">freq</td><td>5</td><td class="text-xs">Frequency ID 0–31.</td></tr>
+                            <tr><td class="mono text-amber-300">amp</td><td>3</td><td class="text-xs">Amplitude 0–7 → scales the shape by <span class="mono">φ^amp</span> (golden-ratio powers).</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-green mb-6">
+                    <p class="text-xs text-green-200 font-semibold mb-1">Why it matters</p>
+                    <p class="text-xs text-slate-400">Because the word is the canonical format, a chain of programmed vertices is literally a stream of SHD-CCP words — the same wire format a biochain body uses. That's what lets a lattice you build here be published, traded, and regrown anywhere in the mesh.</p>
+                </div>
+
+                <h3 id="program" class="text-xl mystical text-green-200 mb-4">Programming a Vertex</h3>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3"><div class="step-num step-green">1</div><div><p class="text-sm text-slate-200 font-semibold">Click a null node</p><p class="text-xs text-slate-500">It becomes selected (a yellow highlight) and the <strong>Node editor</strong> folder appears in the panel.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-green">2</div><div><p class="text-sm text-slate-200 font-semibold">Set the fields</p><p class="text-xs text-slate-500">Choose a Form (anything but "Null"), pick the Quaternion color, and dial amplitude / frequency / spin / wireframe. The vertex renders as a solid shape immediately.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-green">3</div><div><p class="text-sm text-slate-200 font-semibold">Inspect the word</p><p class="text-xs text-slate-500">The <strong>SHD-CCP Packet</strong> readout (bottom-right) shows the exact 64-bit word, decoded fields, and whether its parity is valid.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-green">4</div><div><p class="text-sm text-slate-200 font-semibold">Multi-select to program in bulk</p><p class="text-xs text-slate-500"><kbd>Shift</kbd>+click adds more vertices to the selection; editor changes apply to all of them at once.</p></div></div>
+                </div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- CHAINS -->
+            <section id="chains">
+                <div class="section-label sl-amber mb-4">04 — Chains</div>
+                <h2 class="text-3xl mystical amber-grad mb-6">Chaining Packets</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    A <strong class="text-amber-300">chain</strong> is an ordered path through packets — the structure
+                    that turns a scatter of vertices into a <em>lattice system</em>. Chains render as glowing
+                    polylines and stay glued to their packets while the lattice flows.
+                </p>
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">1</div><div><p class="text-sm text-slate-200 font-semibold">Enter chain mode</p><p class="text-xs text-slate-500">Press <kbd>G</kbd> or toggle <strong>Chain mode</strong> in the Chain panel. A badge appears top-left.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">2</div><div><p class="text-sm text-slate-200 font-semibold">Click vertices in order</p><p class="text-xs text-slate-500">Each click appends that vertex to the current chain. A null node clicked in chain mode is auto-programmed with the editor's current form, so a chain is always made of real packets.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">3</div><div><p class="text-sm text-slate-200 font-semibold">Finish or start a new chain</p><p class="text-xs text-slate-500"><kbd>Enter</kbd> or <strong>Finish chain</strong> commits the current chain; <strong>Start new chain</strong> commits it and begins another. <strong>Undo last link</strong> and <strong>Clear all chains</strong> are there too.</p></div></div>
+                </div>
+                <div class="callout callout-amber"><p class="text-xs text-amber-200 font-semibold mb-1">Chains are part of the seed</p><p class="text-xs text-slate-400">Chains are stored in the seed as ordered lists of vertex indices, so regrowing a seed rebuilds every chain exactly as you drew it.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- RAW DATA -->
+            <section id="rawdata">
+                <div class="section-label sl-cyan mb-4">05 — Raw data</div>
+                <h2 class="text-3xl mystical cyan-grad mb-6">Raw Data → SHD-CCP Packets</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    The Lattice Forge can ingest <em>any</em> data and crystallize it into packets you can then study in
+                    the space. Open the <strong>Raw data → packets</strong> panel, paste your data, choose how to
+                    interpret it, and place it:
+                </p>
+                <div class="glass panel-cyan overflow-hidden mb-4">
+                    <table>
+                        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+                        <tbody>
+                            <tr><td class="mono text-cyan-300">Data</td><td class="text-xs">The raw input — a sentence, a hex dump, anything.</td></tr>
+                            <tr><td class="mono text-cyan-300">Interpret as</td><td class="text-xs"><strong>Text (UTF-8)</strong> encodes the string to bytes; <strong>Hex bytes</strong> parses space/comma-separated hex.</td></tr>
+                            <tr><td class="mono text-cyan-300">Start index</td><td class="text-xs">The vertex to begin laying packets from (defaults to your last click).</td></tr>
+                            <tr><td class="mono text-cyan-300">Auto-chain</td><td class="text-xs">Automatically links the laid packets into one chain.</td></tr>
+                            <tr><td class="mono text-cyan-300">Crystallize &amp; place</td><td class="text-xs">Chunks the bytes into 8-byte groups, runs each through <code class="mono">crystallize()</code> (a real form-9 word with valid parity), and programs consecutive vertices with them.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <pre class="mb-4"><code><span class="text-slate-500">// each 8-byte chunk becomes one canonical crystal word</span>
+bytes  = UTF-8("decentralized shd-ccp standard")   <span class="text-slate-500">// 30 bytes</span>
+chunks = 8-byte groups                              <span class="text-slate-500">// → 4 chunks</span>
+word   = <span class="hl">crystallize</span>(chunk)                       <span class="text-slate-500">// form 9, payload = length, parity set</span>
+place  at index, index+1, …  + auto-chain</code></pre>
+                <div class="callout callout-cyan"><p class="text-xs text-cyan-200 font-semibold mb-1">This is how "any input becomes a standard"</p><p class="text-xs text-slate-400">The crystal words are byte-identical to what the Python kernel and every other BioMesh surface would produce for the same bytes. So data crystallized in the Lattice Forge is portable to any node — the packets, and the seed that captures them, are the shared representation.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- SEED -->
+            <section id="seed">
+                <div class="section-label sl-green mb-4">06 — Seed</div>
+                <h2 class="text-3xl mystical green-grad mb-6">The Seed</h2>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    A <strong class="text-green-300">seed</strong> is the compact, self-describing recipe for the
+                    entire lattice system you built — the scaffold shape, every programmed packet, and every chain —
+                    plus a hash that fingerprints it. It does <em>not</em> store the tens of thousands of empty null
+                    nodes; it stores what you <em>created</em>, referenced by index, so it stays tiny and regrows
+                    deterministically.
+                </p>
+
+                <h3 id="seed-anatomy" class="text-xl mystical text-green-200 mb-4">Seed Anatomy</h3>
+                <pre class="mb-4"><code>{
+  <span class="hl-c">"v"</span>: 1,
+  <span class="hl-c">"shape"</span>: <span class="hl">"Box"</span>,                <span class="text-slate-500">// scaffold shape…</span>
+  <span class="hl-c">"params"</span>: { "boxSize": {"x":100,"y":100,"z":100} },
+  <span class="hl-c">"count"</span>: 40000,                <span class="text-slate-500">// …+ params + count + rngSeed fully</span>
+  <span class="hl-c">"rngSeed"</span>: 1337,               <span class="text-slate-500">// determine every vertex position</span>
+  <span class="hl-c">"nodes"</span>: [                     <span class="text-slate-500">// programmed packets, by index</span>
+    { "i": 10, "w": <span class="hl">"12FF7828FF000030"</span> },
+    { "i": 100, "w": <span class="hl">"90663A6FB100081C"</span> }  <span class="text-slate-500">// ← a data crystal (form 9)</span>
+  ],
+  <span class="hl-c">"chains"</span>: [ [10, 20, 30], [100, 101, 102, 103] ],
+  <span class="hl-c">"hash"</span>: <span class="hl-a">"0xaf5f0a3e"</span>          <span class="text-slate-500">// fold32 over the canonical form</span>
+}</code></pre>
+                <p class="text-slate-400 text-sm mb-6">
+                    Because Box / Toroid / Cylinder generation is deterministic, and the two knot shapes use the
+                    stored <code class="mono text-green-300">rngSeed</code>, regenerating the scaffold from
+                    <code class="mono">shape + params + count + rngSeed</code> reproduces the <em>exact same</em>
+                    vertex at every index. That's why storing packets by index (not by position) is enough to
+                    regrow them precisely.
+                </p>
+
+                <h3 id="regrow" class="text-xl mystical text-green-200 mb-4">Regrow &amp; Verify</h3>
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div class="glass panel-green p-5"><h4 class="text-sm text-green-300 mono uppercase tracking-widest mb-2">Build / Regrow</h4><p class="text-xs text-slate-400 leading-relaxed"><strong>Build</strong> serializes the current scene into the seed box. <strong>Regrow</strong> parses a seed (built, pasted, or loaded from a file), regenerates the deterministic scaffold, and re-programs every packet and chain — the whole system reappears, and the recomputed hash is checked against the stored one.</p></div>
+                    <div class="glass panel-green p-5"><h4 class="text-sm text-green-300 mono uppercase tracking-widest mb-2">Verify</h4><p class="text-xs text-slate-400 leading-relaxed"><strong>Verify</strong> recomputes the seed hash and checks every packet's parity bit without touching the scene. A single flipped character anywhere in the seed changes the hash — so tampering is caught immediately.</p></div>
+                </div>
+                <div class="callout callout-green"><p class="text-xs text-green-200 font-semibold mb-1">Copy · Download · Load file</p><p class="text-xs text-slate-400">A seed is just text. Copy it, download it as a <code class="mono">.latticeseed.json</code>, or load one from disk. That file is the portable artifact — hand it to anyone running the Lattice Forge and they regrow your exact lattice offline.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- DECENTRALIZED -->
+            <section id="decentralized">
+                <div class="section-label sl-amber mb-4">07 — Standard</div>
+                <h2 class="text-3xl mystical amber-grad mb-6">The Shared Standard</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    The whole design points at one goal: <strong class="text-amber-300">decentralized nodes working
+                    from a shared Lattice Forge standard.</strong> Three layers make that real:
+                </p>
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">1</div><div><p class="text-sm text-slate-200 font-semibold">The packet is canonical</p><p class="text-xs text-slate-500">Every word is the exact 64-bit SHD-CCP format shared by <code class="mono">biomesh.js</code> and <code class="mono">shdccp_kernel.py</code>. Two independent nodes crystallize the same bytes into the same word.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">2</div><div><p class="text-sm text-slate-200 font-semibold">The seed is portable</p><p class="text-xs text-slate-500">A seed is plain, hash-stamped JSON. Downloaded or copied, it regrows an identical lattice on any node — no server required.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">3</div><div><p class="text-sm text-slate-200 font-semibold">Publish onto the mesh</p><p class="text-xs text-slate-500"><strong>Publish</strong> grows the seed string into a biochain via <code class="mono">biomesh.js</code> and certifies it with your signing key, so it becomes tradable and traceable like any other biochain. Another node fetches that biochain, recreates the seed text, and regrows the lattice.</p></div></div>
+                </div>
+                <div class="callout callout-amber"><p class="text-xs text-amber-200 font-semibold mb-1">Offline-first, mesh-optional</p><p class="text-xs text-slate-400">The build / chain / raw-data / seed / regrow core runs entirely in your browser with no backend. Publishing is the optional bridge onto the shared mesh — and if it's unavailable, the Download/Copy seed is still the full standard, ready for any node to import.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- PUMP -->
+            <section id="pump">
+                <div class="section-label" style="background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.4);color:#c084fc;">08 — Pump</div>
+                <h2 class="text-3xl mystical mb-6" style="background:linear-gradient(135deg,#7c3aed,#c084fc,#e9d5ff);-webkit-background-clip:text;background-clip:text;color:transparent;">The Synchronization Pump</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    A static lattice is a snapshot. The <strong style="color:#c084fc;">synchronization pump</strong> makes it
+                    <em>breathe</em> — a torsional, Markov, one-way "zero-point pump" (ported from Department V's
+                    <code class="mono" style="color:#c084fc;">Loom_Weave</code>) that drives the whole substrate through a
+                    720-frame cycle (or any length you set) so that <strong>every SHD-CCP packet interacts with every other</strong>.
+                    Out of those interactions a scalar field grows, which you can bake back into the packets themselves.
+                </p>
+                <div class="grid md:grid-cols-3 gap-4 mb-6">
+                    <div class="glass p-5" style="border-color:rgba(168,85,247,.3);"><div class="text-3xl mb-3">🫁</div><h3 class="mystical text-base mb-2" style="color:#c084fc;">Breath</h3><p class="text-xs text-slate-400 leading-relaxed">The substrate inhales and exhales from the zero-point center once per cycle, unfolding a 4×4×4 tessellation.</p></div>
+                    <div class="glass p-5" style="border-color:rgba(168,85,247,.3);"><div class="text-3xl mb-3">🌀</div><h3 class="mystical text-base mb-2" style="color:#c084fc;">Torsional pump</h3><p class="text-xs text-slate-400 leading-relaxed">A one-way Markov charge pulse travels inside→out through radial shells; inner shells spin faster — a torsional twist.</p></div>
+                    <div class="glass p-5" style="border-color:rgba(168,85,247,.3);"><div class="text-3xl mb-3">📈</div><h3 class="mystical text-base mb-2" style="color:#c084fc;">Scalar field</h3><p class="text-xs text-slate-400 leading-relaxed">Pairwise packet couplings (the matrix field) accumulate; implied-quadrance backprop returns them inward as a scalar field.</p></div>
+                </div>
+
+                <h3 id="pump-mech" class="text-xl mystical mb-4" style="color:#d8b4fe;">How the Breath Works</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    Each frame has a cycle-time <code class="mono" style="color:#c084fc;">t = frame / frames</code>. Five things happen, in order:
+                </p>
+                <div class="space-y-3 mb-4">
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">1</div><div><p class="text-sm text-slate-200 font-semibold">Breath</p><p class="text-xs text-slate-500"><code class="mono">breath = 1 + sin(π·t)·amp</code> pushes every packet radially out from the zero-point center and back — one inhale/exhale per cycle. The tessellation shell scales with it.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">2</div><div><p class="text-sm text-slate-200 font-semibold">Torsional one-way Markov pump</p><p class="text-xs text-slate-500">Charge is injected at the innermost packet and flows strictly outward, shell by shell — irreversible, Markov. Inner shells also rotate faster, twisting the substrate.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">3</div><div><p class="text-sm text-slate-200 font-semibold">Interaction (the matrix field)</p><p class="text-xs text-slate-500">Any two packets whose breathing positions fall within <em>reach</em> couple: <code class="mono">coupling = charge × affinity / (1 + Q)</code>, where <code class="mono">Q</code> is the quadrance (squared distance) and <em>affinity</em> is <code class="mono">1 − hamming(word_a, word_b)/64</code> — near, charged, and alike packets interact most. Each coupling adds to both packets' scalar.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">4</div><div><p class="text-sm text-slate-200 font-semibold">Implied-quadrance backprop</p><p class="text-xs text-slate-500">The phase-conjugate return: each shell's scalar flows back inward, quadrance-weighted (<code class="mono">/(1+Q)</code>), so the field concentrates toward the zero point — matrix field → scalar field.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">5</div><div><p class="text-sm text-slate-200 font-semibold">Render</p><p class="text-xs text-slate-500">Packets recolor by their scalar value, interaction links draw between coupled pairs, and chains follow the breathing packets.</p></div></div>
+                </div>
+                <div class="callout" style="border-color:#c084fc;background:rgba(168,85,247,.06);"><p class="text-xs font-semibold mb-1" style="color:#d8b4fe;">Deterministic → auditable</p><p class="text-xs text-slate-400">The whole cycle is a pure function of the packets and the pump parameters, so the same setup always yields the same interaction count and scalar field. At cycle end the pump prints a <code class="mono" style="color:#c084fc;">cycleHash</code> (a fold32 fingerprint of the scalar field + parameters) — the breath is replayable and verifiable, exactly like a seed.</p></div>
+
+                <h3 id="pump-use" class="text-xl mystical mb-4 mt-8" style="color:#d8b4fe;">Running a Cycle</h3>
+                <div class="glass overflow-hidden mb-4" style="border-color:rgba(168,85,247,.3);">
+                    <table>
+                        <thead><tr><th>Control</th><th>What it does</th></tr></thead>
+                        <tbody>
+                            <tr><td class="mono" style="color:#c084fc;">⏯ Pump / slider</td><td class="text-xs">Play/pause the cycle, or scrub to any frame (the state is re-derived deterministically from frame 0).</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">frames</td><td class="text-xs">Cycle length — 720 by default, any value 12–4320.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">breath</td><td class="text-xs">Amplitude of the radial inhale/exhale.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">torsion</td><td class="text-xs">Strength of the shell-depth-scaled twist.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">reach</td><td class="text-xs">Interaction radius — how close packets must breathe to couple.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">backprop</td><td class="text-xs">Toggles the implied-quadrance return pass.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">Reset cycle</td><td class="text-xs">Re-arms with the current packets and clears the ledger.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">Export interaction ledger</td><td class="text-xs">Downloads the per-packet scalar field + cycle hash as JSON.</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">Bake scalar → packets</td><td class="text-xs">Writes the normalized scalar into each packet's payload — so what the substrate <em>learned</em> from the breath becomes part of the packet word and is captured by the seed.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="callout callout-cyan"><p class="text-xs text-cyan-200 font-semibold mb-1">The breath teaches the lattice</p><p class="text-xs text-slate-400">Baking closes the loop: run a cycle, let every packet interact, then bake the resulting scalar field back into the packets. Build a seed and the learned field travels with it — another node regrows a lattice that already carries what this one learned from breathing.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- ENVIRONMENTS -->
+            <section id="env">
+                <div class="section-label sl-green mb-4">09 — Environments</div>
+                <h2 class="text-3xl mystical green-grad mb-6">Codex Environments</h2>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    A blank 40,000‑vertex box wastes energy. An <strong class="text-green-300">environment</strong> is a
+                    small, pre‑built <em>starter area</em> — a boundary manifold you design once and load as the default
+                    substrate, so biochains have somewhere meaningful to grow and link. It bundles four things into one
+                    loadable object: a boundary, a codex prior, pump parameters, and a growth frontier. Think of it as
+                    building the rooms of a house so that when new data streams attach, the system already knows roughly
+                    where they belong.
+                </p>
+
+                <h3 id="env-seed" class="text-xl mystical text-green-200 mb-4 mt-8">The 64-Cell Seed (the default manifold)</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    The Lattice Forge opens on a <strong class="text-green-300">64-cell seed</strong>: one 64-bit SHD-CCP
+                    word unfolded into a 4×4×4 cube. Vertex index <code class="mono text-green-300">i = z·16 + y·4 + x</code>
+                    maps to <strong>bit i of the seed word</strong> — a set bit makes that vertex an active Platonic
+                    solid, a clear bit a dim 0D point, and either way it is a full, parity-valid SHD-CCP packet. So a
+                    single 64-bit seed is the whole starting manifold: the tiniest, most energy-frugal substrate there
+                    is, and the first tessellation you actually see.
+                </p>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    From there it grows <strong class="text-green-300">fractally</strong>. <em>Fractal step +</em> raises
+                    the level: level L is a <code class="mono text-green-300">4ᴸ</code>-per-axis grid where a vertex is
+                    active only where the seed's pattern is set at <em>every</em> 4× scale (a self-similar, Cantor-style
+                    intersection). If 33 of the 64 seed bits are set, level 2 has 33² = 1089 active cells inside a
+                    16×16×16 grid — the same pattern nested inside itself, with the rest left as free room for chains and
+                    folds. The 4×4×4 base gives four fractal steps to unfold from one seed before you build into larger
+                    systems. Change the seed word (or 🎲 vary it) and the entire manifold — at every level — re-derives
+                    deterministically.
+                </p>
+                <div class="callout callout-green mb-4"><p class="text-xs text-green-200 font-semibold mb-1">Why start at 64 bits</p><p class="text-xs text-slate-400">Nobody's Lattice Forge should be a giant blank box burning energy. One seed word → 64 packets is enough to see the first tessellation and to carry a complete, shareable idea; you only tessellate up (or switch to a larger blank lattice) when a build genuinely needs the room. A full 64-cell has no spare vertices, so an in-place SPLIT reports "saturated — tessellate up" rather than silently doing nothing.</p></div>
+
+                <h3 id="env-form" class="text-xl mystical text-green-200 mb-4 mt-8">The FORM Split &amp; Gates</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    The 4‑bit FORM field is split by its <strong class="text-green-300">top bit</strong>: clear → a
+                    <em>geometry</em>, set → a <em>gate</em>. That gives eight of each without a new field.
+                </p>
+                <div class="grid md:grid-cols-2 gap-4 mb-4">
+                    <div class="glass panel-green overflow-hidden">
+                        <table>
+                            <thead><tr><th>Geometry (0‑7)</th><th></th></tr></thead>
+                            <tbody>
+                                <tr><td class="mono text-green-300">0</td><td class="text-xs">0D Point</td></tr>
+                                <tr><td class="mono text-green-300">1‑5</td><td class="text-xs">Tetra · Cube · Octa · Dodeca · Icosa (Platonic solids)</td></tr>
+                                <tr><td class="mono text-green-300">6</td><td class="text-xs">4D Hypercube</td></tr>
+                                <tr><td class="mono text-green-300">7</td><td class="text-xs">8D E8 Lattice (also the shape kernel data‑crystals show as)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="glass overflow-hidden" style="border-color:rgba(245,201,66,.35);">
+                        <table>
+                            <thead><tr><th>Gate (8‑15)</th><th></th></tr></thead>
+                            <tbody>
+                                <tr><td class="mono" style="color:#f5c542;">8 ⊗ HALT</td><td class="text-xs">stop the fold program</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">9 ● SEED</td><td class="text-xs">identity / anchor cell</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">10 ⟳ ROT</td><td class="text-xs">rotate by spin (torsional twist)</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">11 ⊕ XFOLD</td><td class="text-xs">XOR‑fold with neighbour (annihilation knot)</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">12 ⇋ MIRROR</td><td class="text-xs">phase‑conjugate reflect (backprop hand)</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">13 ⧈ SPLIT</td><td class="text-xs">expand a cell into the next cubic shell</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">14 ⧉ MERGE</td><td class="text-xs">fold the outer shell inward (collapse)</td></tr>
+                                <tr><td class="mono" style="color:#f5c542;">15 ⛓ LINK</td><td class="text-xs">entangle: bind to the nearest frontier cell</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="callout callout-green"><p class="text-xs text-green-200 font-semibold mb-1">Each seed is a pseudo‑quantum logic gate</p><p class="text-xs text-slate-400">The gate set is deliberately a <em>closed, bounded, halting</em> instruction set — ROT/MIRROR/XFOLD are (near‑)reversible, SPLIT↔MERGE are inverses, and there are no jumps — so a fold program always terminates and its energy is bounded, exactly like the codex ABI it extends. A kernel data‑crystal (form 9 from <code class="mono">crystallize()</code>) is disambiguated from the SEED gate by a raw‑word flag, so all eight gate slots stay usable.</p></div>
+
+                <h3 id="env-fold" class="text-xl mystical text-green-200 mb-4 mt-8">Fold Programs &amp; Cubic Expansion</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    Program some vertices as gates and the ordered gate packets become a <strong class="text-green-300">fold
+                    program</strong>. <em>Run fold program</em> executes them in index order over the cubic expansion
+                    grammar — <code class="mono text-green-300">1 → 3 → 7 → 6 → 12 → 64</code> (singularity → axes →
+                    pivots → faces → edges → cube‑cell), the inverse of the pump's collapse. SPLIT advances a tier and
+                    spawns children on the next shell (bounded by the energy cap); MERGE collapses the outer shell; ROT,
+                    XFOLD, MIRROR and LINK transform or entangle the live cells; HALT stops. The run is deterministic and
+                    prints a hash — it's a reproducible fold, not a one‑off animation.
+                </p>
+
+                <h3 id="env-object" class="text-xl mystical text-green-200 mb-4 mt-8">ENVIRONMENT/1 &amp; the Boundary Designer</h3>
+                <pre class="mb-4"><code>{
+  <span class="hl-c">"kind"</span>: <span class="hl">"ENVIRONMENT/1"</span>,
+  <span class="hl-c">"boundary"</span>: { …a LATTICE-SEED — shape, params, nodes, chains… },
+  <span class="hl-c">"codex"</span>:    <span class="hl">"…CODEX/1 packet stream…"</span>,   <span class="text-slate-500">// GEAR·PRIME·HALT prior</span>
+  <span class="hl-c">"pump"</span>:     { frames, breath, torsion, reach, backprop, expansion },
+  <span class="hl-c">"frontier"</span>: [ 700, 720, 740 ],          <span class="text-slate-500">// where new biochains may attach</span>
+  <span class="hl-c">"hash"</span>: <span class="hl-a">"0x281031b9"</span>
+}</code></pre>
+                <p class="text-slate-400 text-sm mb-4">
+                    The <strong>Boundary designer</strong> folder is where you author one: pick an energy‑frugal boundary
+                    size (8k / 20k / 40k), program the starter area, toggle <strong>Frontier mode</strong> to click the
+                    growth edge (gold rings), <em>Attach codex prior</em>, then <em>Build/Export</em> the environment.
+                    Loading it (or Regrow on an environment) rebuilds the boundary, restores the frontier and pump
+                    parameters, and re‑binds the codex — verified deterministic (wrecking the scene and reloading
+                    reproduces the same hash).
+                </p>
+
+                <h3 id="env-econ" class="text-xl mystical text-green-200 mb-4 mt-8">FLUX &amp; CRYST</h3>
+                <p class="text-slate-300 leading-relaxed mb-4">
+                    Simulation is metered in <strong style="color:#2dd4bf;">FLUX</strong> — the free, infinite meter:
+                    breathe, fold, and iterate codex+biochain combinations in the lower toroidal layer as long as you
+                    like; the only cost is time. When you find a combination worth committing, <strong
+                    style="color:#c084fc;">CRYST</strong> — the scarce, compute‑backed credit — is spent to
+                    crystallize it up the tiers. The <em>Crystallize</em> action is gated to the pump's
+                    <strong>crystallization windows</strong> (start, half, and full cycle — the tri‑gear sync points from
+                    <code class="mono">pump_clock.py</code>); outside a window it's refused. It estimates a CRYST cost
+                    from the committed work and, when signed in, grows the environment into a certified biochain on the
+                    mesh.
+                </p>
+                <div class="callout callout-amber"><p class="text-xs text-amber-200 font-semibold mb-1">Free to explore, pay to commit</p><p class="text-xs text-slate-400">Everything up to crystallization is FLUX‑free and offline. CRYST is only spent at the moment you push a good codex+biochain environment up for permanent crystallization — the one operation whose backing (compute) is genuinely scarce.</p></div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- WORKFLOW -->
+            <section id="workflow">
+                <div class="section-label sl-cyan mb-4">10 — Workflow</div>
+                <h2 class="text-3xl mystical cyan-grad mb-6">Full Workflow</h2>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(0,255,136,.14);border:1px solid rgba(0,255,136,.5);color:#00ff88;">0</div><div><p class="text-sm text-slate-200 font-semibold">Load or design an environment</p><p class="text-xs text-slate-500">Load an <code class="mono">ENVIRONMENT/1</code> starter area, or in the Boundary designer pick an energy‑frugal size, program the starter area, mark the frontier, and attach a codex.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">1</div><div><p class="text-sm text-slate-200 font-semibold">Pick a lattice shape</p><p class="text-xs text-slate-500">Choose Box / Toroid / Cylinder / knot, set size and packet count, and Generate.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">2</div><div><p class="text-sm text-slate-200 font-semibold">Program vertices</p><p class="text-xs text-slate-500">Fly in, click vertices, set their packet fields in the Node editor.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">3</div><div><p class="text-sm text-slate-200 font-semibold">Optionally crystallize raw data</p><p class="text-xs text-slate-500">Paste text or hex and place it as a chained run of crystal packets.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">4</div><div><p class="text-sm text-slate-200 font-semibold">Chain your packets</p><p class="text-xs text-slate-500">Press <kbd>G</kbd> and click through the packets to link them into paths.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num" style="background:rgba(168,85,247,.14);border:1px solid rgba(168,85,247,.5);color:#c084fc;">5</div><div><p class="text-sm text-slate-200 font-semibold">Pump the breath &amp; bake</p><p class="text-xs text-slate-500">Hit ⏯ Pump to run the synchronization cycle so every packet interacts, then <em>Bake scalar → packets</em> to record what the lattice learned.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">6</div><div><p class="text-sm text-slate-200 font-semibold">Build the seed &amp; verify</p><p class="text-xs text-slate-500">Click Build, then Verify to confirm the hash and all parities.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">7</div><div><p class="text-sm text-slate-200 font-semibold">Download or Publish</p><p class="text-xs text-slate-500">Save the <code class="mono">.latticeseed.json</code> to share offline, or Publish it onto the mesh as a biochain.</p></div></div>
+                    <div class="flex items-start gap-3"><div class="step-num step-cyan">8</div><div><p class="text-sm text-slate-200 font-semibold">Regrow anywhere</p><p class="text-xs text-slate-500">On any node, paste or load the seed and click Regrow — the identical lattice system reappears.</p></div></div>
+                </div>
+            </section>
+
+            <hr class="divider">
+
+            <!-- REFERENCE -->
+            <section id="reference">
+                <div class="section-label sl-cyan mb-4">11 — Reference</div>
+                <h2 class="text-3xl mystical cyan-grad mb-6">Controls Reference</h2>
+                <div class="glass panel-cyan overflow-hidden">
+                    <table>
+                        <thead><tr><th>Input</th><th>Action</th></tr></thead>
+                        <tbody>
+                            <tr><td><kbd>click canvas</kbd></td><td class="text-xs">Enter FPS (pointer-lock) mode</td></tr>
+                            <tr><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></td><td class="text-xs">Move in FPS mode</td></tr>
+                            <tr><td><kbd>Z</kbd> / <kbd>C</kbd></td><td class="text-xs">Ascend / descend</td></tr>
+                            <tr><td><kbd>click vertex</kbd></td><td class="text-xs">Select &amp; open the node editor (or add a link in chain mode)</td></tr>
+                            <tr><td><kbd>Shift</kbd>+click</td><td class="text-xs">Multi-select vertices</td></tr>
+                            <tr><td><kbd>G</kbd></td><td class="text-xs">Toggle chain mode</td></tr>
+                            <tr><td><kbd>Enter</kbd></td><td class="text-xs">Finish the current chain (in chain mode)</td></tr>
+                            <tr><td><kbd>Space</kbd></td><td class="text-xs">Play / pause lattice flow</td></tr>
+                            <tr><td><kbd>Esc</kbd></td><td class="text-xs">Return to orbit mode</td></tr>
+                            <tr><td><kbd>scroll</kbd></td><td class="text-xs">Zoom (orbit mode)</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">⏯ Pump</td><td class="text-xs">Play/pause the synchronization breath cycle</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">frame slider</td><td class="text-xs">Scrub to any frame of the cycle (deterministically re-derived)</td></tr>
+                            <tr><td class="mono" style="color:#00ff88;">Seed word / 🎲</td><td class="text-xs">Re-derive the 64-cell from a 64-bit word (deterministic)</td></tr>
+                            <tr><td class="mono" style="color:#00ff88;">Fractal step ± </td><td class="text-xs">Tessellate the seed to the next self-similar level / collapse back</td></tr>
+                            <tr><td class="mono" style="color:#00ff88;">Frontier mode</td><td class="text-xs">Click vertices to mark the growth boundary (gold rings)</td></tr>
+                            <tr><td class="mono" style="color:#00ff88;">Run fold program</td><td class="text-xs">Execute the gate packets over the cubic expansion grammar</td></tr>
+                            <tr><td class="mono" style="color:#c084fc;">◈ Crystallize</td><td class="text-xs">Spend CRYST to commit — only inside a crystallization window</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="pt-8 border-t border-white/08 flex flex-wrap gap-3 justify-center">
+                <a href="../Lattice_Forge.html" class="nav-link">🧠 Open the Lattice Forge →</a>
+                <a href="../Operations_Console.html" class="nav-link">Operations Console</a>
+                <a href="../../Index.html" class="nav-link">← Home</a>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+</body>
+</html>
