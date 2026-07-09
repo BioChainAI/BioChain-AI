@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioChain AI — Operations Console</title>
+<script type="module" src="../src/ui/auth-guard.js"></script>
+<script type="module" src="../src/ui/node-network-bg.js" data-accent="#00d4ff"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --void:#05030a; --cyan:#00d4ff; --purple:#8A2BE2; --emerald:#10b981; --gold:#D4AF37; --text:#CBD5E1; }
+  body{ color:var(--text); font-family:'Inter',sans-serif; margin:0; }
+  h1,h2,h3{ font-family:'Cinzel',serif; }
+  .mono{ font-family:'Fira Code',monospace; }
+  .glass{ background:rgba(10,6,22,.72); backdrop-filter:blur(18px); border:1px solid rgba(255,255,255,.07); }
+  .tab{ cursor:pointer; padding:.5rem .9rem; border-radius:.5rem; font-size:.9rem; opacity:.6; }
+  .tab.active{ opacity:1; background:rgba(0,212,255,.12); color:#fff; }
+  .btn{ transition:all .15s ease; cursor:pointer; }
+  .btn:hover{ filter:brightness(1.12); transform:translateY(-1px); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; transform:none; }
+  input,textarea,select{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); color:#fff; border-radius:.5rem; }
+  input:focus,textarea:focus,select:focus{ outline:none; border-color:var(--cyan); }
+  .card{ border:1px solid rgba(255,255,255,.08); border-radius:.6rem; background:rgba(255,255,255,.02); }
+  .pill{ font-size:.68rem; padding:.1rem .5rem; border-radius:9999px; border:1px solid rgba(255,255,255,.12); }
+  .hidden{ display:none; }
+</style>
+</head>
+<body>
+<div class="relative z-10 max-w-6xl mx-auto px-5 py-8">
+
+  <header class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-white">Operations Console</h1>
+      <p class="text-xs opacity-60 mono" id="whoami">…</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <span id="roleBadge" class="pill" style="color:var(--gold)">…</span>
+      <button class="btn text-sm px-3 py-1.5 rounded-lg glass" onclick="globalLogout()">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="flex flex-wrap gap-2 mb-6">
+    <div class="tab active" data-tab="keys">Keys</div>
+    <div class="tab" data-tab="grow">Grow &amp; Certify</div>
+    <div class="tab" data-tab="market">Marketplace</div>
+    <div class="tab" data-tab="transfers">Transfers</div>
+    <div class="tab" data-tab="trace">Trace</div>
+  </nav>
+
+  <div id="toast" class="hidden fixed bottom-5 right-5 glass rounded-lg px-4 py-3 text-sm z-50 max-w-sm"></div>
+
+  <!-- KEYS -->
+  <section data-panel="keys" class="space-y-4">
+    <div class="glass rounded-xl p-5">
+      <h2 class="text-lg text-white mb-1">Signing keys</h2>
+      <p class="text-sm opacity-70 mb-3">A signing key issues certifications and transfers. The private key stays in your account; the public key mirrors to the registry. Revoking a key invalidates every attestation it signed.</p>
+      <div class="flex flex-wrap gap-2 items-center">
+        <input id="keyLabel" placeholder="Key label (e.g. Primary)" class="px-3 py-2 text-sm flex-1 min-w-[200px]"/>
+        <button id="createKey" class="btn px-4 py-2 rounded-lg text-black font-medium" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">Create signing key</button>
+      </div>
+    </div>
+    <div id="keyList" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- GROW -->
+  <section data-panel="grow" class="hidden space-y-4">
+    <div class="glass rounded-xl p-5 space-y-3">
+      <h2 class="text-lg text-white">Grow a biochain</h2>
+      <input id="growTitle" placeholder="Title" class="w-full px-3 py-2 text-sm"/>
+      <textarea id="growText" rows="7" placeholder="Paste text to grow into a lossless, certified biochain…" class="w-full px-3 py-2 text-sm mono"></textarea>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button id="growBtn" class="btn px-4 py-2 rounded-lg text-black font-medium" style="background:linear-gradient(90deg,var(--cyan),var(--emerald))">Grow (preview)</button>
+        <select id="growKey" class="px-3 py-2 text-sm"></select>
+        <label class="text-sm flex items-center gap-1"><input type="checkbox" id="growListed"> list on marketplace</label>
+        <button id="publishBtn" class="btn px-4 py-2 rounded-lg glass font-medium" disabled>Certify &amp; publish</button>
+      </div>
+      <div id="growOut" class="text-sm mono opacity-80"></div>
+    </div>
+  </section>
+
+  <!-- MARKETPLACE -->
+  <section data-panel="market" class="hidden space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg text-white">Marketplace</h2>
+      <button id="refreshMarket" class="btn text-sm px-3 py-1.5 rounded-lg glass">Refresh</button>
+    </div>
+    <div id="marketList" class="grid md:grid-cols-2 gap-4"></div>
+  </section>
+
+  <!-- TRANSFERS -->
+  <section data-panel="transfers" class="hidden space-y-4">
+    <div class="glass rounded-xl p-5 space-y-3">
+      <h2 class="text-lg text-white">Send a biochain (free)</h2>
+      <div class="flex flex-wrap gap-2">
+        <input id="xferChain" placeholder="chainId (BC-…)" class="px-3 py-2 text-sm flex-1 min-w-[200px] mono"/>
+        <input id="xferTo" placeholder="recipient uid" class="px-3 py-2 text-sm flex-1 min-w-[200px] mono"/>
+        <select id="xferKey" class="px-3 py-2 text-sm"></select>
+        <button id="sendBtn" class="btn px-4 py-2 rounded-lg text-black font-medium" style="background:linear-gradient(90deg,var(--cyan),var(--emerald))">Send</button>
+      </div>
+    </div>
+    <div class="glass rounded-xl p-5">
+      <div class="flex items-center justify-between mb-2"><h2 class="text-lg text-white">Incoming</h2>
+        <button id="refreshIncoming" class="btn text-sm px-3 py-1.5 rounded-lg glass">Refresh</button></div>
+      <div id="incomingList" class="space-y-2"></div>
+    </div>
+  </section>
+
+  <!-- TRACE -->
+  <section data-panel="trace" class="hidden space-y-4">
+    <div class="glass rounded-xl p-5">
+      <h2 class="text-lg text-white mb-2">Trace lineage</h2>
+      <div class="flex gap-2">
+        <input id="traceChain" placeholder="chainId (BC-…)" class="px-3 py-2 text-sm flex-1 mono"/>
+        <button id="traceBtn" class="btn px-4 py-2 rounded-lg glass font-medium">Trace</button>
+      </div>
+      <div id="traceOut" class="mt-4 text-sm"></div>
+    </div>
+  </section>
+
+</div>
+
+<script type="module">
+import { auth } from "../src/firebase/config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+import { readIdentity } from "../src/identity/identity-registry.js";
+import { resolveRole } from "../src/identity/access-control.js";
+import { createSigningKey, listSigningKeys, revokeSigningKey } from "../src/identity/signing-key.js";
+import { renderKeyIdenticon } from "../src/biomesh/identicon.js";
+import * as BM from "../src/biomesh/biomesh.js";
+
+let UID = null, ROLE = "MEMBER", grown = null;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+function toast(msg, ok = true) {
+  const t = $("#toast"); t.textContent = msg;
+  t.style.borderColor = ok ? "rgba(16,185,129,.5)" : "rgba(248,113,113,.6)";
+  t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 4000);
+}
+const guard = (fn) => async (...a) => { try { return await fn(...a); } catch (e) { toast(e.message || String(e), false); } };
+
+// Tabs
+document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  tab.classList.add("active");
+  document.querySelectorAll("[data-panel]").forEach(p => p.classList.toggle("hidden", p.dataset.panel !== tab.dataset.tab));
+  if (tab.dataset.tab === "market") refreshMarket();
+  if (tab.dataset.tab === "transfers") refreshIncoming();
+});
+
+// ── Keys ──────────────────────────────────────────────────────────────
+async function refreshKeys() {
+  const keys = await listSigningKeys(UID);
+  const opts = keys.filter(k => k.status === "active")
+    .map(k => `<option value="${esc(k.keyId)}">${esc(k.label)} · ${esc(k.keyId)}</option>`).join("");
+  $("#growKey").innerHTML = opts || `<option value="">— no active key —</option>`;
+  $("#xferKey").innerHTML = opts || `<option value="">— no active key —</option>`;
+  $("#keyList").innerHTML = keys.length ? keys.map(k => `
+    <div class="card p-4 flex gap-3 items-center">
+      <div style="width:64px;height:64px;flex:none">${renderKeyIdenticon(k, { size: 64 })}</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-white font-medium">${esc(k.label)}</div>
+        <div class="mono text-xs opacity-60 break-all">${esc(k.keyId)}</div>
+        <div class="mt-1 flex gap-2 items-center">
+          <span class="pill" style="color:${k.status === "active" ? "var(--emerald)" : "#f87171"}">${esc(k.status)}</span>
+          <span class="pill" style="color:var(--gold)">${esc(k.role || "MEMBER")}</span>
+          ${k.status === "active" ? `<button class="btn text-xs px-2 py-0.5 rounded" style="border:1px solid rgba(248,113,113,.5);color:#f87171" data-revoke="${esc(k.keyId)}">revoke</button>` : ""}
+        </div>
+      </div>
+    </div>`).join("") : `<p class="opacity-60 text-sm">No signing keys yet — create one to certify and transfer.</p>`;
+  $("#keyList").querySelectorAll("[data-revoke]").forEach(b => b.onclick = guard(async () => {
+    await revokeSigningKey(UID, b.dataset.revoke); toast("Key revoked — its attestations no longer verify."); refreshKeys();
+  }));
+}
+$("#createKey").onclick = guard(async () => {
+  const label = $("#keyLabel").value.trim() || "Signing Key";
+  await createSigningKey(UID, {}, label); $("#keyLabel").value = ""; toast("Signing key created."); refreshKeys();
+});
+
+// ── Grow & certify ────────────────────────────────────────────────────
+$("#growBtn").onclick = guard(async () => {
+  const text = $("#growText").value;
+  grown = await BM.growBiochain(text);
+  const v = await BM.verifyIntegrity(grown);
+  $("#growOut").innerHTML = `chainId <span style="color:var(--cyan)">${esc(grown.chainId)}</span> · value ${grown.value} · ${grown.origBytes} B · engrams ${grown.engramCount ?? 0}<br>integrity: ${v.ok ? "✅" : "❌"} ${esc(v.reasons[v.reasons.length-1])}`;
+  $("#publishBtn").disabled = !v.ok;
+});
+$("#publishBtn").onclick = guard(async () => {
+  if (!grown) return;
+  const keyId = $("#growKey").value;
+  if (!keyId) return toast("Create a signing key first.", false);
+  await BM.publishBiochain(UID, keyId, grown, { title: $("#growTitle").value.trim() || "Untitled Biochain", listed: $("#growListed").checked });
+  toast("Certified & published: " + grown.chainId); $("#publishBtn").disabled = true; grown = null; $("#growText").value = "";
+});
+
+// ── Marketplace ───────────────────────────────────────────────────────
+async function refreshMarket() {
+  const chains = await BM.listBiochains(50);
+  $("#marketList").innerHTML = chains.length ? (await Promise.all(chains.map(async c => {
+    const ratings = await BM.listRatings(c.chainId);
+    const transfers = await BM.listTransfersForChain(c.chainId);
+    const s = BM.successScore(c, ratings, transfers.filter(t => t.status === "accepted").length);
+    const mine = c.ownerUid === UID;
+    return `<div class="card p-4">
+      <div class="flex justify-between items-start gap-2">
+        <div><div class="text-white font-medium">${esc(c.title || "Untitled")}</div>
+          <div class="mono text-xs opacity-60 break-all">${esc(c.chainId)}</div></div>
+        <span class="pill" style="color:var(--emerald)">score ${s.total}</span>
+      </div>
+      <div class="text-xs opacity-70 mt-2">value ${s.parts.value} · integrity ${s.parts.integrity} · stars ${s.parts.stars} · adoption ${s.parts.adoption} · ${s.ratingCount} ratings</div>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button class="btn text-xs px-2 py-1 rounded glass" data-verify="${esc(c.chainId)}">verify</button>
+        <button class="btn text-xs px-2 py-1 rounded glass" data-rate="${esc(c.chainId)}">rate ★</button>
+        ${mine ? `<button class="btn text-xs px-2 py-1 rounded glass" data-list="${esc(c.chainId)}" data-listed="${c.status === "listed"}">${c.status === "listed" ? "unlist" : "list"}</button>` : ""}
+        <span class="pill">${esc(c.status)}</span>
+      </div>
+      <div class="text-xs mt-2 opacity-80" data-out="${esc(c.chainId)}"></div>
+    </div>`;
+  }))).join("") : `<p class="opacity-60 text-sm">No biochains yet.</p>`;
+
+  $("#marketList").querySelectorAll("[data-verify]").forEach(b => b.onclick = guard(async () => {
+    const c = await BM.getBiochain(b.dataset.verify);
+    const v = await BM.verifyIntegrity(c);
+    const g = await BM.verifyGrown(c);
+    document.querySelector(`[data-out="${CSS.escape(b.dataset.verify)}"]`).innerHTML =
+      `integrity ${v.ok ? "✅" : "❌"} · certification ${g.valid ? "✅ " + esc(g.reason) : "❌ " + esc(g.reason)}`;
+    b.dataset._ok = v.ok;
+  }));
+  $("#marketList").querySelectorAll("[data-rate]").forEach(b => b.onclick = guard(async () => {
+    const stars = parseInt(prompt("Stars 1–5?", "5"), 10);
+    if (!stars) return;
+    const c = await BM.getBiochain(b.dataset.rate);
+    const v = await BM.verifyIntegrity(c);
+    await BM.rateBiochain(UID, b.dataset.rate, stars, "", v.ok);
+    toast("Rated " + stars + "★ (verified: " + v.ok + ")"); refreshMarket();
+  }));
+  $("#marketList").querySelectorAll("[data-list]").forEach(b => b.onclick = guard(async () => {
+    await BM.setListing(UID, b.dataset.list, b.dataset.listed !== "true"); refreshMarket();
+  }));
+}
+$("#refreshMarket").onclick = refreshMarket;
+
+// ── Transfers ─────────────────────────────────────────────────────────
+$("#sendBtn").onclick = guard(async () => {
+  const keyId = $("#xferKey").value;
+  if (!keyId) return toast("Create a signing key first.", false);
+  const id = await BM.sendBiochain(UID, keyId, $("#xferChain").value.trim(), $("#xferTo").value.trim());
+  toast("Sent (free). Transfer " + id); $("#xferChain").value = ""; $("#xferTo").value = "";
+});
+async function refreshIncoming() {
+  const incoming = await BM.listIncoming(UID);
+  $("#incomingList").innerHTML = incoming.length ? incoming.map(t => `
+    <div class="card p-3 flex justify-between items-center gap-2">
+      <div class="mono text-xs opacity-80 break-all">${esc(t.chainId)} <span class="opacity-50">from ${esc(t.fromUid)}</span></div>
+      <div class="flex gap-2">
+        <button class="btn text-xs px-2 py-1 rounded text-black" style="background:var(--emerald)" data-accept="${esc(t.id)}">accept</button>
+        <button class="btn text-xs px-2 py-1 rounded glass" data-decline="${esc(t.id)}">decline</button>
+      </div>
+    </div>`).join("") : `<p class="opacity-60 text-sm">No incoming transfers.</p>`;
+  $("#incomingList").querySelectorAll("[data-accept]").forEach(b => b.onclick = guard(async () => {
+    await BM.acceptBiochain(UID, b.dataset.accept); toast("Accepted — ownership moved to you."); refreshIncoming();
+  }));
+  $("#incomingList").querySelectorAll("[data-decline]").forEach(b => b.onclick = guard(async () => {
+    await BM.declineBiochain(UID, b.dataset.decline); toast("Declined."); refreshIncoming();
+  }));
+}
+$("#refreshIncoming").onclick = refreshIncoming;
+
+// ── Trace ─────────────────────────────────────────────────────────────
+$("#traceBtn").onclick = guard(async () => {
+  const t = await BM.traceBiochain($("#traceChain").value.trim());
+  const hops = t.hops.map(h => `<li class="mono text-xs">→ ${esc(h.toUid)} · attestation ${h.attestationValid ? "✅" : "❌"} · ${esc(h.status)}</li>`).join("");
+  $("#traceOut").innerHTML = `
+    <div class="card p-3">
+      <div class="text-white">${esc(t.chain.title || "Untitled")} <span class="mono opacity-60">${esc(t.chain.chainId)}</span></div>
+      <div class="mt-2">certification: ${t.grown.valid ? "✅ " + esc(t.grown.reason) : "❌ " + esc(t.grown.reason)}</div>
+      <div class="mt-1">integrity: ${t.integrity.ok ? "✅ " + esc(t.integrity.reasons[t.integrity.reasons.length-1]) : "❌"}</div>
+      <div class="mt-2">${t.hops.length ? "lineage:<ul class='mt-1 space-y-0.5'>" + hops + "</ul>" : "no transfers — original grower still owns it."}</div>
+    </div>`;
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return;                       // auth-guard handles redirect
+  UID = user.uid;
+  const id = await readIdentity(UID);
+  if (!id || !id.identityId) { location.replace("../login.html?redirect=console/Operations_Console.html"); return; }
+  ROLE = await resolveRole(UID).catch(() => "MEMBER");
+  $("#whoami").textContent = "uid " + UID + " · " + id.identityId;
+  $("#roleBadge").textContent = ROLE;
+  refreshKeys();
+});
+</script>
+</body>
+</html>

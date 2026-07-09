@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioChain AI — Sign in</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{ --void:#05030a; --cyan:#00d4ff; --purple:#8A2BE2; --emerald:#10b981; --gold:#D4AF37; --text:#CBD5E1; }
+  body{ background-color:var(--void); color:var(--text); font-family:'Inter',sans-serif;
+    background:radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--purple) 12%, var(--void)), var(--void) 100%);
+    min-height:100vh; margin:0; display:flex; align-items:center; justify-content:center; }
+  h1,h2{ font-family:'Cinzel',serif; }
+  .mono{ font-family:'Fira Code',monospace; }
+  .glass{ background:rgba(10,6,22,.72); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.07);
+    box-shadow:0 10px 40px -10px rgba(0,0,0,.8); }
+  .btn{ transition:all .16s ease; }
+  .btn:hover{ transform:translateY(-1px); filter:brightness(1.1); }
+  input{ background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); color:#fff; }
+  input:focus{ outline:none; border-color:var(--cyan); }
+</style>
+</head>
+<body>
+<main class="glass rounded-2xl p-8 w-[min(94vw,460px)]">
+  <div class="flex items-center gap-2 mb-1">
+    <span class="text-xs mono px-2 py-0.5 rounded-full" style="border:1px solid rgba(0,212,255,.3);color:var(--cyan)">BioChain AI</span>
+  </div>
+  <h1 class="text-2xl font-bold text-white mt-2">Standalone Platform</h1>
+  <p class="text-sm opacity-75 mt-1">Sign in to grow, certify, transfer, and trace biochains on the SHD-CCP protocol.</p>
+
+  <div id="stage" class="mt-6"><p class="opacity-60 text-sm">Resolving session…</p></div>
+
+  <p class="text-[11px] opacity-40 mt-6 leading-relaxed">
+    Client-side ECDSA credentials, verified against Firestore rules. Your signing keys never leave your account;
+    the public key registry is the only shared surface.
+  </p>
+</main>
+
+<script type="module">
+import { signInWithGoogle, onAuthChange } from "./src/firebase/auth.js";
+import { readIdentity, registerIdentity, computeIdentityId, renderIdentityIcon } from "./src/identity/identity-registry.js";
+import { ROOT_ADMIN_UIDS } from "./src/identity/access-control.js";
+
+const stage = document.getElementById("stage");
+const params = new URLSearchParams(location.search);
+const dest = params.get("redirect") || "console/Operations_Console.html";
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
+
+function signedOut() {
+  stage.innerHTML = `
+    <button id="google" class="btn w-full py-3 rounded-lg font-medium text-black" style="background:linear-gradient(90deg,var(--cyan),var(--emerald))">
+      Continue with Google
+    </button>`;
+  document.getElementById("google").onclick = async () => {
+    try { await signInWithGoogle(); } catch (e) { stage.insertAdjacentHTML("beforeend", `<p class="text-red-400 text-sm mt-3">${esc(e.message)}</p>`); }
+  };
+}
+
+function needsIdentity(uid) {
+  const isAdmin = ROOT_ADMIN_UIDS.includes(uid);
+  stage.innerHTML = `
+    <p class="text-sm opacity-80 mb-2">One-time setup: commit your <strong class="text-white">Identity</strong>.
+      Your Identity ID is derived from a private seed and your account — immutable once committed.</p>
+    <input id="seed" type="text" placeholder="Identity seed (a private phrase only you know)" class="w-full rounded-lg px-3 py-2.5 text-sm mono"/>
+    <div id="preview" class="flex items-center gap-3 mt-3 min-h-[64px]"></div>
+    <button id="commit" class="btn w-full py-3 rounded-lg font-medium text-black mt-3" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">
+      Commit Identity ${isAdmin ? "· ADMIN" : "· MEMBER"}
+    </button>
+    <p class="text-[11px] opacity-50 mt-2">Role: <span class="mono">${isAdmin ? "ADMIN (root admin uid)" : "MEMBER"}</span></p>`;
+  const seed = document.getElementById("seed"), preview = document.getElementById("preview");
+  seed.oninput = async () => {
+    if (!seed.value.trim()) { preview.innerHTML = ""; return; }
+    try {
+      const { identityId } = await computeIdentityId(seed.value.trim(), uid);
+      preview.innerHTML = `<div style="width:56px;height:56px">${renderIdentityIcon(identityId, 56)}</div>
+        <span class="mono text-xs opacity-70 break-all">${esc(identityId)}</span>`;
+    } catch { preview.innerHTML = ""; }
+  };
+  document.getElementById("commit").onclick = async () => {
+    const s = seed.value.trim();
+    if (!s) return;
+    try {
+      await registerIdentity(uid, s, { role: isAdmin ? "ADMIN" : "MEMBER" });
+      location.replace(dest);
+    } catch (e) { preview.insertAdjacentHTML("afterend", `<p class="text-red-400 text-sm mt-2">${esc(e.message)}</p>`); }
+  };
+}
+
+onAuthChange(async (user) => {
+  if (!user) return signedOut();
+  const id = await readIdentity(user.uid);
+  if (id && id.identityId) location.replace(dest);
+  else needsIdentity(user.uid);
+});
+</script>
+</body>
+</html>
