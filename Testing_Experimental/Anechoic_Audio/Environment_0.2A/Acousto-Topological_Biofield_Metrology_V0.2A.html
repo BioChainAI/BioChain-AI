@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3,200-Coil Virtual Anechoic Chamber</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #020617; color: #e2e8f0; font-family: 'Inter', monospace; user-select: none; }
+        #glcanvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        .glass-panel {
+            position: absolute; background: rgba(10, 15, 25, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); z-index: 10;
+            display: flex; flex-direction: column; overflow: hidden; width: 340px;
+        }
+        
+        .drag-header { padding: 10px 15px; background: rgba(2, 6, 23, 0.7); border-bottom: 1px solid #1e293b; font-size: 0.75rem; font-weight: bold; color: #38bdf8; text-transform: uppercase; letter-spacing: 2px; display: flex; justify-content: space-between; align-items: center; cursor: grab;}
+        .drag-header:active { cursor: grabbing; }
+        .panel-content { padding: 15px; display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; }
+        
+        .btn { background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn:hover { background: #1e293b; border-color: #38bdf8; color: #38bdf8; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #334155 !important; color: #64748b !important; }
+        .btn.active { background: rgba(56, 189, 248, 0.15); border-color: #38bdf8; color: #38bdf8; }
+        
+        .data-readout { background: #020617; border: 1px solid #1e293b; padding: 6px; border-radius: 4px; font-size: 0.7rem; text-align: center; font-weight: bold; letter-spacing: 1px; font-family: 'Courier New', monospace; }
+        
+        input[type="file"] { display: none; }
+        
+        #controls-panel { top: 20px; left: 20px; }
+        #telemetry-panel { top: 20px; right: 20px; }
+        #topology-panel { top: 250px; left: 20px; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+        .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; }
+
+        /* Panel Minimize Styles */
+        .glass-panel.minimized .panel-content { display: none; }
+        .min-btn { cursor: pointer; color: #94a3b8; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; background: transparent; border: none; outline: none; }
+        .min-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .header-controls { display: flex; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. CHAMBER CONTROLS -->
+    <div class="glass-panel" id="controls-panel">
+        <div class="drag-header">
+            <span>Anechoic Chamber Control</span>
+            <div class="header-controls">
+                <i class="fa-solid fa-cube"></i>
+                <button class="min-btn" onclick="toggleMin('controls-panel')" title="Minimize"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="text-[10px] text-slate-400 mb-2 text-justify">
+                Inject audio to drive the moving sound source (Ochre Orb). The acoustic displacement will warp the 3,200 helical coils.
+            </div>
+            
+            <label for="audio-upload" class="btn active" id="btn-upload-label"><i class="fa-solid fa-file-audio"></i> Inject 32-Bit AmbiX WAV</label>
+            <input type="file" id="audio-upload" accept="audio/*">
+            
+            <div id="custom-player" class="hidden flex-col gap-2 mt-3 border border-slate-700 bg-slate-900/50 p-2 rounded">
+                <div class="flex justify-between text-[9px] font-mono text-slate-400">
+                    <span id="player-time">00:00</span>
+                    <span id="player-duration">00:00</span>
+                </div>
+                <input type="range" id="player-scrub" min="0" max="100" value="0" class="w-full h-1 bg-slate-700 rounded appearance-none cursor-pointer">
+                <div class="flex gap-2 mt-1">
+                    <button class="btn flex-1 !py-1 !text-[9px]" id="btn-play-custom"><i class="fa-solid fa-play"></i> Play</button>
+                    <button class="btn flex-1 danger !py-1 !text-[9px]" id="btn-stop-custom"><i class="fa-solid fa-stop"></i> Stop</button>
+                </div>
+            </div>
+            
+            <label class="flex items-center gap-2 text-[10px] text-emerald-400 font-bold cursor-pointer mt-2 mb-1 border-t border-slate-700 pt-2">
+                <input type="checkbox" id="toggle-ambix"> Enable Native AmbiX (4-Channel)
+            </label>
+
+            <div class="mt-3 border-t border-slate-700 pt-3">
+                <div class="text-[10px] font-bold text-slate-300 mb-2">CHAMBER VISIBILITY</div>
+                <label class="flex items-center gap-2 text-[10px] text-slate-400 cursor-pointer mb-1">
+                    <input type="checkbox" id="toggle-coils" checked onchange="updateVisibility()"> Show 3,200-Coil Matrix
+                </label>
+                <label class="flex items-center gap-2 text-[10px] text-slate-400 cursor-pointer mb-1">
+                    <input type="checkbox" id="toggle-source" checked onchange="updateVisibility()"> Show Ochre Orb (Sound Source)
+                </label>
+                <label class="flex items-center gap-2 text-[10px] text-slate-400 cursor-pointer">
+                    <input type="checkbox" id="toggle-mic" checked onchange="updateVisibility()"> Show Virtual Tetrahedral Mic
+                </label>
+                <label class="flex items-center gap-2 text-[10px] text-cyan-400 cursor-pointer mt-2 pt-2 border-t border-slate-700">
+                    <input type="checkbox" id="toggle-conjugate" onchange="updateVisibility()"> Show Conjugate Wave (Inverse Field)
+                </label>
+            </div>
+            
+            <div class="mt-3 border-t border-slate-700 pt-3">
+                <div class="text-[10px] font-bold text-amber-500 mb-2">BIFILAR SCALAR SYNTHESIZER</div>
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Carrier Frequency</span> <span id="read-carrier" class="text-amber-400 font-mono">432 Hz</span>
+                </div>
+                <input type="range" id="slider-carrier" min="20" max="1000" value="432" style="width: 100%; margin-bottom: 8px;">
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Isochronic Pulse Rate</span> <span id="read-pulse" class="text-emerald-400 font-mono">8.0 Hz</span>
+                </div>
+                <input type="range" id="slider-pulse" min="0.5" max="40" step="0.5" value="8.0" style="width: 100%; margin-bottom: 12px;">
+                
+                <div class="flex flex-col gap-1 mb-3">
+                    <label class="flex items-center gap-2 text-[9px] text-slate-400 cursor-pointer">
+                        <input type="checkbox" id="chk-mix-carrier" checked> Mix Carrier Tone
+                    </label>
+                    <label class="flex items-center gap-2 text-[9px] text-slate-400 cursor-pointer">
+                        <input type="checkbox" id="chk-pulse-ambix"> Apply Pulse to AmbiX
+                    </label>
+                </div>
+                
+                <button class="btn" id="btn-toggle-synth" style="width: 100%;"><i class="fa-solid fa-bolt"></i> Engage Isochronic Pump</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. TOPOLOGY CONTROLS -->
+    <div class="glass-panel" id="topology-panel">
+        <div class="drag-header">
+            <span>Manifold Topology</span>
+            <div class="header-controls">
+                <i class="fa-solid fa-shapes"></i>
+                <button class="min-btn" onclick="toggleMin('topology-panel')" title="Minimize"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="text-[10px] text-slate-400 mb-2 text-justify">Morph the 3,200-coil boundary matrix into different geometric containment fields.</div>
+            <div class="grid grid-cols-1 gap-2">
+                <button class="btn active topo-btn" id="btn-topo-linear" onclick="setTopology('linear')">Linear Array</button>
+                <button class="btn topo-btn" id="btn-topo-cubic" onclick="setTopology('cubic')">4x4x4 Cubic Matrix</button>
+                <button class="btn topo-btn" id="btn-topo-toroid" onclick="setTopology('toroid')">Toroidal Wrap</button>
+                <button class="btn topo-btn" id="btn-topo-braid" onclick="setTopology('braid')">Braided Toroid</button>
+                <button class="btn topo-btn" id="btn-topo-nested" onclick="setTopology('nested')">Nested Cylinders</button>
+            </div>
+
+            <div class="mt-3 border-t border-slate-700 pt-3">
+                <div class="text-[10px] font-bold text-slate-300 mb-2">MANUAL MATRIX MODIFIERS</div>
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Matrix Density (Coils)</span> <span id="read-topo-density" class="text-emerald-400 font-mono">3200</span>
+                </div>
+                <input type="range" id="slider-topo-density" min="1000" max="50000" value="3200" step="100" style="width: 100%; margin-bottom: 8px;">
+
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Footprint Scale (X/Z)</span> <span id="read-topo-xz" class="text-sky-400 font-mono">1.0x</span>
+                </div>
+                <input type="range" id="slider-topo-xz" min="0.5" max="500.0" value="1.0" step="0.5" style="width: 100%; margin-bottom: 8px;">
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Vertical Dispersion (Y)</span> <span id="read-topo-y" class="text-fuchsia-400 font-mono">1.0x</span>
+                </div>
+                <input type="range" id="slider-topo-y" min="0.1" max="500.0" value="1.0" step="0.5" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. VECTOR TELEMETRY -->
+    <div class="glass-panel" id="telemetry-panel">
+        <div class="drag-header">
+            <span>Tetrahedral Mic Telemetry</span>
+            <div class="header-controls">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <button class="min-btn" onclick="toggleMin('telemetry-panel')" title="Minimize"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="text-[10px] text-slate-400 mb-3 text-justify">
+                The central tetrahedron at (0,0,0) measures the spatial vector velocities (W,X,Y,Z) resulting from the coil deformation.
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 mb-2">
+                <div>
+                    <div class="text-[9px] text-sky-400 font-bold mb-1 uppercase">W (Scalar Field / Omni)</div>
+                    <div class="data-readout text-sky-400" id="val-w">0.000</div>
+                </div>
+                <div>
+                    <div class="text-[9px] text-fuchsia-400 font-bold mb-1 uppercase">Z (Up/Down Vel)</div>
+                    <div class="data-readout text-fuchsia-400" id="val-z">0.000</div>
+                </div>
+                <div>
+                    <div class="text-[9px] text-emerald-400 font-bold mb-1 uppercase">Y (Left/Right Vel)</div>
+                    <div class="data-readout text-emerald-400" id="val-y">0.000</div>
+                </div>
+                <div>
+                    <div class="text-[9px] text-amber-400 font-bold mb-1 uppercase">X (Front/Back Vel)</div>
+                    <div class="data-readout text-amber-400" id="val-x">0.000</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. PUCK POSITIONING -->
+    <div class="glass-panel" id="puck-panel" style="top: 250px; right: 20px;">
+        <div class="drag-header">
+            <span>Bifilar Puck Source</span>
+            <div class="header-controls">
+                <i class="fa-solid fa-crosshairs"></i>
+                <button class="min-btn" onclick="toggleMin('puck-panel')" title="Minimize"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="text-[10px] text-slate-400 mb-2 text-justify">Manually translate the Bifilar Meditation Puck through the chamber to measure localized scalar nodes.</div>
+            
+            <label class="flex items-center gap-2 text-[10px] text-emerald-400 font-bold cursor-pointer mb-3 border-b border-slate-700 pb-2">
+                <input type="checkbox" id="toggle-manual-puck" onchange="togglePuckMode()"> Enable Manual Override
+            </label>
+
+            <div id="puck-sliders" style="opacity: 0.5; pointer-events: none;">
+                <div class="flex justify-between text-[9px] text-slate-400 font-bold mb-1"><span>X (Width)</span> <span id="read-px">0</span></div>
+                <input type="range" id="slider-px" min="-300" max="300" value="0" style="width: 100%; margin-bottom: 8px;">
+
+                <div class="flex justify-between text-[9px] text-slate-400 font-bold mb-1"><span>Y (Height)</span> <span id="read-py">0</span></div>
+                <input type="range" id="slider-py" min="-150" max="150" value="0" style="width: 100%; margin-bottom: 8px;">
+
+                <div class="flex justify-between text-[9px] text-slate-400 font-bold mb-1"><span>Z (Depth)</span> <span id="read-pz">0</span></div>
+                <input type="range" id="slider-pz" min="-200" max="200" value="0" style="width: 100%;">
+            </div>
+
+            <div class="mt-3 border-t border-slate-700 pt-3">
+                <div class="text-[10px] font-bold text-amber-500 mb-2">LOCAL AMBIX GOVERNANCE</div>
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Helical Torsion (Wave Spin)</span> <span id="read-puck-torsion" class="text-sky-400">5.0</span>
+                </div>
+                <input type="range" id="slider-puck-torsion" min="0" max="20" value="5" step="0.5" style="width: 100%; margin-bottom: 8px;">
+                
+                <div class="flex justify-between text-[9px] text-slate-400 mb-1">
+                    <span>Radial Tension (AmbiX Gain)</span> <span id="read-puck-tension" class="text-rose-400">1.0x</span>
+                </div>
+                <input type="range" id="slider-puck-tension" min="0.1" max="5.0" value="1.0" step="0.1" style="width: 100%;">
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. GOVERNANCE TOPOLOGY TUNING -->
+    <div class="glass-panel" id="governance-panel" style="bottom: 20px; left: 20px;">
+        <div class="drag-header">
+            <span>Governance Helix Systems</span>
+            <div class="header-controls">
+                <i class="fa-solid fa-dna"></i>
+                <button class="min-btn" onclick="toggleMin('governance-panel')" title="Minimize"><i class="fa-solid fa-minus"></i></button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="text-[10px] text-slate-400 mb-3 text-justify">
+                Modulate the propagation of the complex scalar wave through the 3,200-coil lattice using helical torsion and radial tension algorithms.
+            </div>
+            
+            <div class="flex justify-between text-[9px] text-slate-400 font-bold mb-1"><span>Helical Torsion (Spatial Freq)</span> <span id="read-torsion" class="text-sky-400">10.0</span></div>
+            <input type="range" id="slider-torsion" min="1" max="40" value="10" step="0.5" style="width: 100%; margin-bottom: 12px;">
+
+            <div class="flex justify-between text-[9px] text-slate-400 font-bold mb-1"><span>Radial Tension (Amplitude Gain)</span> <span id="read-tension" class="text-rose-400">20.0</span></div>
+            <input type="range" id="slider-tension" min="1" max="60" value="20" step="1" style="width: 100%;">
+        </div>
+    </div>
+
+    <div class="absolute bottom-5 right-5 text-[10px] text-slate-300 bg-slate-900/80 px-4 py-3 rounded border border-slate-700 backdrop-blur z-20 pointer-events-none">
+        <div class="font-bold text-white mb-2 tracking-wider">VISUAL LEGEND</div>
+        <div class="mb-1"><span class="legend-dot bg-slate-400"></span> Slate Coils: Resting Acoustic Boundary</div>
+        <div class="mb-1"><span class="legend-dot bg-rose-600"></span> Crimson Coils: Acoustic Displacement</div>
+        <div class="mb-1"><span class="legend-dot bg-cyan-400"></span> Cyan Coils: Conjugate Wave (Inverse)</div>
+        <div class="mb-1"><span class="legend-dot" style="background: #b45309;"></span> Bifilar Meditation Puck: Scalar Pump</div>
+        <div><span class="legend-dot bg-red-700"></span> Red Tetrahedron: Virtual Vector Microphone</div>
+    </div>
+
+    <div id="glcanvas"></div>
+
+    <script>
+        window.toggleMin = function(panelId) {
+            const panel = document.getElementById(panelId);
+            if(panel) panel.classList.toggle('minimized');
+        };
+
+        function makeDraggable(panelId) {
+            const panel = document.getElementById(panelId);
+            if(!panel) return;
+            const header = panel.querySelector('.drag-header');
+            if(!header) return;
+            let isDragging = false, startX, startY, initX, initY;
+            header.addEventListener('mousedown', e => {
+                if(e.target.closest('button')) return; // Ignore buttons in the header
+                isDragging = true; startX = e.clientX; startY = e.clientY;
+                initX = panel.offsetLeft; initY = panel.offsetTop;
+                
+                // Clear opposing anchors so panel doesn't stretch when moved
+                panel.style.bottom = 'auto'; 
+                panel.style.right = 'auto';
+                
+                panel.style.left = initX + 'px'; panel.style.top = initY + 'px';
+            });
+            window.addEventListener('mousemove', e => {
+                if(!isDragging) return;
+                panel.style.left = (initX + (e.clientX - startX)) + 'px'; panel.style.top = (initY + (e.clientY - startY)) + 'px';
+            });
+            window.addEventListener('mouseup', () => isDragging = false);
+        }
+
+        makeDraggable('controls-panel'); makeDraggable('telemetry-panel'); makeDraggable('topology-panel'); makeDraggable('puck-panel'); makeDraggable('governance-panel');
+
+        // --- PUCK POSITIONING STATE ---
+        const puckState = {
+            manual: false,
+            x: 0, y: 0, z: 0,
+            torsion: 5.0, tension: 1.0
+        };
+
+        function togglePuckMode() {
+            puckState.manual = document.getElementById('toggle-manual-puck').checked;
+            const sliders = document.getElementById('puck-sliders');
+            sliders.style.opacity = puckState.manual ? '1.0' : '0.5';
+            sliders.style.pointerEvents = puckState.manual ? 'all' : 'none';
+        }
+
+        ['x', 'y', 'z'].forEach(axis => {
+            document.getElementById(`slider-p${axis}`).addEventListener('input', (e) => {
+                puckState[axis] = parseFloat(e.target.value);
+                document.getElementById(`read-p${axis}`).innerText = puckState[axis].toFixed(1);
+            });
+        });
+
+        document.getElementById('slider-puck-torsion').addEventListener('input', (e) => {
+            puckState.torsion = parseFloat(e.target.value);
+            document.getElementById('read-puck-torsion').innerText = puckState.torsion.toFixed(1);
+        });
+
+        document.getElementById('slider-puck-tension').addEventListener('input', (e) => {
+            puckState.tension = parseFloat(e.target.value);
+            document.getElementById('read-puck-tension').innerText = puckState.tension.toFixed(1) + 'x';
+        });
+
+        // --- AUDIO INGESTION & ANALYSIS ---
+        const state = {
+            audioContext: null, sourceNode: null, analyser: null, masterGain: null,
+            ambixGain: null, carrierGain: null, ambixLfoGain: null, carrierLfoGain: null,
+            audioBuffer: null,
+            bufferSource: null,
+            playbackTime: 0,
+            startTime: 0,
+            isPlaying: false,
+            ambixMode: false,
+            simTime: 0,
+            audioAmp: 0,
+            quat: { X: 0, Y: 0, Z: 0 },
+            analysers: { W: null, X: null, Y: null, Z: null },
+            floatDataArray: new Float32Array(256),
+            dataArray: new Uint8Array(256),
+            synth: { active: false, carrier: null, lfo: null },
+            gov: { torsion: 10.0, tension: 20.0 }
+        };
+
+        const UI = {
+            upload: document.getElementById('audio-upload'),
+            uploadLabel: document.getElementById('btn-upload-label'),
+            customPlayer: document.getElementById('custom-player'),
+            playerTime: document.getElementById('player-time'),
+            playerDuration: document.getElementById('player-duration'),
+            playerScrub: document.getElementById('player-scrub'),
+            btnPlayCustom: document.getElementById('btn-play-custom'),
+            btnStopCustom: document.getElementById('btn-stop-custom'),
+            chkAmbix: document.getElementById('toggle-ambix'),
+            valW: document.getElementById('val-w'), valX: document.getElementById('val-x'),
+            valY: document.getElementById('val-y'), valZ: document.getElementById('val-z'),
+            chkCoils: document.getElementById('toggle-coils'),
+            chkSource: document.getElementById('toggle-source'),
+            chkMic: document.getElementById('toggle-mic'),
+            chkConj: document.getElementById('toggle-conjugate'),
+            btnSynth: document.getElementById('btn-toggle-synth'),
+            sliderCarrier: document.getElementById('slider-carrier'),
+            sliderPulse: document.getElementById('slider-pulse'),
+            chkMixCarrier: document.getElementById('chk-mix-carrier'),
+            chkPulseAmbix: document.getElementById('chk-pulse-ambix'),
+            sliderTorsion: document.getElementById('slider-torsion'),
+            sliderTension: document.getElementById('slider-tension'),
+            readCarrier: document.getElementById('read-carrier'),
+            readPulse: document.getElementById('read-pulse'),
+            readTorsion: document.getElementById('read-torsion'),
+            readTension: document.getElementById('read-tension')
+        };
+
+        UI.chkAmbix.addEventListener('change', (e) => {
+            state.ambixMode = e.target.checked;
+        });
+
+        UI.sliderTorsion.addEventListener('input', (e) => {
+            state.gov.torsion = parseFloat(e.target.value);
+            UI.readTorsion.innerText = state.gov.torsion.toFixed(1);
+        });
+
+        UI.sliderTension.addEventListener('input', (e) => {
+            state.gov.tension = parseFloat(e.target.value);
+            UI.readTension.innerText = state.gov.tension.toFixed(1);
+        });
+
+        UI.sliderCarrier.addEventListener('input', (e) => {
+            UI.readCarrier.innerText = `${e.target.value} Hz`;
+            if (state.synth.active && state.audioContext) state.synth.carrier.frequency.setValueAtTime(parseFloat(e.target.value), state.audioContext.currentTime);
+        });
+
+        UI.sliderPulse.addEventListener('input', (e) => {
+            UI.readPulse.innerText = `${parseFloat(e.target.value).toFixed(1)} Hz`;
+            if (state.synth.active && state.audioContext) state.synth.lfo.frequency.setValueAtTime(parseFloat(e.target.value), state.audioContext.currentTime);
+        });
+
+        UI.chkMixCarrier.addEventListener('change', (e) => {
+            if (state.synth.active && state.audioContext) {
+                const val = e.target.checked ? 0.5 : 0.0;
+                state.carrierGain.gain.setTargetAtTime(val, state.audioContext.currentTime, 0.1);
+                state.carrierLfoGain.gain.setTargetAtTime(val, state.audioContext.currentTime, 0.1);
+            }
+        });
+
+        UI.chkPulseAmbix.addEventListener('change', (e) => {
+            if (state.synth.active && state.audioContext) {
+                const baseVal = e.target.checked ? 0.5 : 1.0;
+                const lfoVal = e.target.checked ? 0.5 : 0.0;
+                state.ambixGain.gain.setTargetAtTime(baseVal, state.audioContext.currentTime, 0.1);
+                state.ambixLfoGain.gain.setTargetAtTime(lfoVal, state.audioContext.currentTime, 0.1);
+            }
+        });
+
+        UI.btnSynth.addEventListener('click', () => {
+            setupAudioNodes();
+            if (state.audioContext.state === 'suspended') state.audioContext.resume();
+
+            if (state.synth.active) {
+                // Halt Synth
+                if (state.synth.carrier) {
+                    state.synth.carrier.stop();
+                    state.synth.lfo.stop();
+                }
+                
+                if (state.carrierGain) {
+                    state.carrierGain.gain.cancelScheduledValues(state.audioContext.currentTime);
+                    state.carrierGain.gain.value = 0.0;
+                }
+                if (state.ambixGain) {
+                    state.ambixGain.gain.cancelScheduledValues(state.audioContext.currentTime);
+                    state.ambixGain.gain.value = 1.0; // restore ambix volume
+                }
+                
+                state.synth.active = false;
+                if (!state.bufferSource) state.isPlaying = false;
+                
+                UI.btnSynth.innerHTML = '<i class="fa-solid fa-bolt"></i> Engage Isochronic Pump';
+                UI.btnSynth.classList.remove('active', 'danger');
+                UI.btnSynth.style.borderColor = '#334155';
+            } else {
+                // Engage Synth
+                if (!state.carrierGain) {
+                    state.carrierGain = state.audioContext.createGain();
+                    state.carrierGain.connect(state.masterGain);
+                }
+                if (!state.ambixLfoGain) {
+                    state.ambixLfoGain = state.audioContext.createGain();
+                    state.ambixLfoGain.connect(state.ambixGain.gain);
+                }
+                if (!state.carrierLfoGain) {
+                    state.carrierLfoGain = state.audioContext.createGain();
+                    state.carrierLfoGain.connect(state.carrierGain.gain);
+                }
+
+                state.synth.carrier = state.audioContext.createOscillator();
+                state.synth.lfo = state.audioContext.createOscillator();
+
+                // Setup Bifilar Carrier (Sine wave)
+                state.synth.carrier.type = 'sine';
+                state.synth.carrier.frequency.value = parseFloat(UI.sliderCarrier.value);
+
+                // Setup Isochronic LFO
+                state.synth.lfo.type = 'sine';
+                state.synth.lfo.frequency.value = parseFloat(UI.sliderPulse.value);
+
+                // Apply routing
+                state.synth.lfo.connect(state.carrierLfoGain);
+                state.synth.lfo.connect(state.ambixLfoGain);
+                state.synth.carrier.connect(state.carrierGain);
+
+                const mixCarrier = UI.chkMixCarrier.checked;
+                const pulseAmbix = UI.chkPulseAmbix.checked;
+
+                state.carrierGain.gain.value = mixCarrier ? 0.5 : 0.0;
+                state.carrierLfoGain.gain.value = mixCarrier ? 0.5 : 0.0;
+
+                state.ambixGain.gain.value = pulseAmbix ? 0.5 : 1.0;
+                state.ambixLfoGain.gain.value = pulseAmbix ? 0.5 : 0.0;
+
+                state.synth.carrier.start();
+                state.synth.lfo.start();
+
+                state.synth.active = true;
+                state.isPlaying = true;
+                UI.btnSynth.innerHTML = '<i class="fa-solid fa-stop"></i> Halt Isochronic Pump';
+                UI.btnSynth.classList.add('active', 'danger');
+                UI.btnSynth.style.borderColor = '#f43f5e';
+            }
+        });
+
+        function formatTime(s) {
+            const m = Math.floor(s / 60);
+            const secs = Math.floor(s % 60).toString().padStart(2, '0');
+            return `${m}:${secs}`;
+        }
+
+        function playBuffer(offset = 0) {
+            if (!state.audioBuffer || !state.audioContext) return;
+            if (state.bufferSource) {
+                state.bufferSource.disconnect();
+                try { state.bufferSource.stop(); } catch(e){}
+            }
+            
+            state.bufferSource = state.audioContext.createBufferSource();
+            state.bufferSource.buffer = state.audioBuffer;
+            
+            if (!state.ambixGain) {
+                state.ambixGain = state.audioContext.createGain();
+                state.ambixGain.connect(state.masterGain);
+                state.ambixGain.gain.value = 1.0;
+            }
+            state.bufferSource.connect(state.ambixGain);
+            
+            state.bufferSource.start(0, offset);
+            state.startTime = state.audioContext.currentTime - offset;
+            state.isPlaying = true;
+            UI.btnPlayCustom.innerHTML = '<i class="fa-solid fa-pause"></i> Pause';
+            UI.btnPlayCustom.classList.add('active');
+        }
+
+        function stopBuffer() {
+            if (state.bufferSource) {
+                try { state.bufferSource.stop(); } catch(e){}
+                state.bufferSource.disconnect();
+                state.bufferSource = null;
+            }
+            state.isPlaying = false;
+            UI.btnPlayCustom.innerHTML = '<i class="fa-solid fa-play"></i> Play';
+            UI.btnPlayCustom.classList.remove('active');
+        }
+
+        UI.btnPlayCustom.addEventListener('click', () => {
+            if (state.audioContext && state.audioContext.state === 'suspended') state.audioContext.resume();
+            if (state.isPlaying) stopBuffer();
+            else playBuffer(state.playbackTime);
+        });
+
+        UI.btnStopCustom.addEventListener('click', () => {
+            stopBuffer();
+            state.playbackTime = 0;
+            UI.playerTime.innerText = "0:00";
+            UI.playerScrub.value = 0;
+        });
+
+        UI.playerScrub.addEventListener('input', (e) => {
+            if (!state.audioBuffer) return;
+            const targetTime = (e.target.value / 100) * state.audioBuffer.duration;
+            if (state.isPlaying) {
+                playBuffer(targetTime);
+            } else {
+                state.playbackTime = targetTime;
+                UI.playerTime.innerText = formatTime(targetTime);
+            }
+        });
+
+        UI.upload.addEventListener('change', async (e) => {
+            const file = e.target.files[0]; if(!file) return;
+            
+            if (!state.audioContext) state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (state.audioContext.state === 'suspended') state.audioContext.resume();
+            
+            UI.uploadLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Decoding Geometry...';
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const decodedData = await state.audioContext.decodeAudioData(arrayBuffer);
+                
+                state.audioBuffer = decodedData;
+                setupAudioNodes();
+                
+                if (decodedData.numberOfChannels >= 4) {
+                    state.ambixMode = true;
+                    UI.chkAmbix.checked = true;
+                    UI.uploadLabel.innerHTML = '<i class="fa-solid fa-cube"></i> AmbiX Loaded';
+                    UI.uploadLabel.style.borderColor = '#10b981'; UI.uploadLabel.style.color = '#10b981';
+                } else {
+                    state.ambixMode = false;
+                    UI.chkAmbix.checked = false;
+                    UI.uploadLabel.innerHTML = '<i class="fa-solid fa-music"></i> Stereo Loaded';
+                    UI.uploadLabel.style.borderColor = '#38bdf8'; UI.uploadLabel.style.color = '#38bdf8';
+                }
+                
+                UI.customPlayer.classList.remove('hidden');
+                UI.customPlayer.classList.add('flex');
+                UI.playerDuration.innerText = formatTime(decodedData.duration);
+                
+                stopBuffer();
+                state.playbackTime = 0;
+                UI.playerScrub.value = 0;
+                UI.playerTime.innerText = "0:00";
+                
+            } catch (err) {
+                console.error("Error decoding audio:", err);
+                UI.uploadLabel.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Decode Failed';
+                UI.uploadLabel.style.borderColor = '#f43f5e'; UI.uploadLabel.style.color = '#f43f5e';
+            }
+        });
+
+        function setupAudioNodes() {
+            if (!state.masterGain) {
+                if (!state.audioContext) state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                state.masterGain = state.audioContext.createGain();
+                
+                state.ambixGain = state.audioContext.createGain();
+                state.ambixGain.connect(state.masterGain);
+                state.ambixGain.gain.value = 1.0;
+                
+                // AmbiX 4-Channel Routing
+                state.splitter = state.audioContext.createChannelSplitter(4);
+                const createAn = () => { const a = state.audioContext.createAnalyser(); a.fftSize = 256; return a; };
+                
+                state.analysers.W = createAn(); state.splitter.connect(state.analysers.W, 0);
+                state.analysers.Y = createAn(); state.splitter.connect(state.analysers.Y, 1);
+                state.analysers.Z = createAn(); state.splitter.connect(state.analysers.Z, 2);
+                state.analysers.X = createAn(); state.splitter.connect(state.analysers.X, 3);
+                
+                // Standard FFT Routing
+                state.analyser = createAn();
+                
+                // The masterGain applies the Isochronic Pulse to ALL downstream branches
+                state.masterGain.connect(state.analyser);
+                state.masterGain.connect(state.splitter);
+                
+                // Custom Stereo Downmix for Speakers
+                const downmixMerger = state.audioContext.createChannelMerger(2);
+                const gW = state.audioContext.createGain(); gW.gain.value = 0.5;
+                const gY = state.audioContext.createGain(); gY.gain.value = 0.5;
+                
+                state.splitter.connect(gW, 0); // W
+                state.splitter.connect(gY, 1); // Y
+                
+                gW.connect(downmixMerger, 0, 0); // W to Left
+                gW.connect(downmixMerger, 0, 1); // W to Right
+                
+                gY.connect(downmixMerger, 0, 0); // Y to Left
+                // Inverse Y to Right for stereo spread
+                const gYinv = state.audioContext.createGain(); gYinv.gain.value = -0.5;
+                state.splitter.connect(gYinv, 1);
+                gYinv.connect(downmixMerger, 0, 1);
+                
+                downmixMerger.connect(state.audioContext.destination);
+            }
+        }
+
+        // --- 3D VISUALIZATION ENGINE ---
+        const container = document.getElementById('glcanvas');
+        const scene = new THREE.Scene();
+        // Light fog to give depth to the chamber
+        scene.fog = new THREE.FogExp2(0x020617, 0.002);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        // Position camera to look down the length of the chamber
+        camera.position.set(200, 100, 400);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; controls.dampingFactor = 0.05;
+        controls.target.set(0, 0, 0);
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(100, 200, 50);
+        scene.add(dirLight);
+
+        // --- 1. The Virtual Tetrahedral Microphone (Center) ---
+        const micGeo = new THREE.TetrahedronGeometry(15, 0);
+        // Reddish hue matching the reference image
+        const micMat = new THREE.MeshStandardMaterial({ color: 0x991b1b, roughness: 0.3, metalness: 0.8 });
+        const micMesh = new THREE.Mesh(micGeo, micMat);
+        scene.add(micMesh);
+
+        // Axis Lines originating from the mic
+        const axisMat = new THREE.LineBasicMaterial({ color: 0x475569, transparent: true, opacity: 0.5 });
+        const axisSize = 1000;
+        const xAxis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-axisSize, 0, 0), new THREE.Vector3(axisSize, 0, 0)]), axisMat);
+        const yAxis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -axisSize, 0), new THREE.Vector3(0, axisSize, 0)]), axisMat);
+        const zAxis = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, -axisSize), new THREE.Vector3(0, 0, axisSize)]), axisMat);
+        scene.add(xAxis); scene.add(yAxis); scene.add(zAxis);
+
+        // --- 2. The Bifilar Meditation Puck (Scalar Pump) ---
+        const sourceGroup = new THREE.Group();
+
+        // The main puck body
+        const puckGeo = new THREE.CylinderGeometry(15, 15, 6, 32);
+        const puckMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.2, metalness: 0.8 });
+        const puckMesh = new THREE.Mesh(puckGeo, puckMat);
+        puckMesh.rotation.x = Math.PI / 2; // Face forward
+        sourceGroup.add(puckMesh);
+
+        // Bifilar Windings (Double Toroidal Pulse System with Custom Shaders)
+        const puckShaderVert = `
+            uniform float u_time;
+            uniform float u_amp;
+            uniform float u_torsion;
+            uniform float u_tension;
+            uniform float u_dir;
+            varying vec3 vColor;
+            
+            void main() {
+                // Calculate a localized ripple effect based on the angle and local governance
+                float angle = atan(position.y, position.x);
+                float zWave = sin(angle * u_torsion + u_time * 10.0 * u_dir) * (u_tension * 0.5);
+                
+                // Displace outward along the normal
+                vec3 newPos = position + normal * (zWave * u_amp * 3.0);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
+                
+                // Dynamic coloring mixing between Amber and Cyan based on chirality and amplitude
+                vec3 baseColor = u_dir > 0.0 ? vec3(1.0, 0.6, 0.0) : vec3(0.0, 0.8, 1.0);
+                vec3 peakColor = vec3(1.0, 1.0, 1.0);
+                vColor = mix(baseColor, peakColor, abs(zWave) * u_amp);
+            }
+        `;
+
+        const puckShaderFrag = `
+            varying vec3 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor, 0.8);
+            }
+        `;
+
+        const puckUniforms1 = {
+            u_time: { value: 0 }, u_amp: { value: 0 }, u_torsion: { value: 5.0 },
+            u_tension: { value: 1.0 }, u_dir: { value: 1.0 }
+        };
+        const puckUniforms2 = {
+            u_time: { value: 0 }, u_amp: { value: 0 }, u_torsion: { value: 5.0 },
+            u_tension: { value: 1.0 }, u_dir: { value: -1.0 }
+        };
+
+        const windMat1 = new THREE.ShaderMaterial({ vertexShader: puckShaderVert, fragmentShader: puckShaderFrag, uniforms: puckUniforms1, wireframe: true, transparent: true, blending: THREE.AdditiveBlending });
+        const windMat2 = new THREE.ShaderMaterial({ vertexShader: puckShaderVert, fragmentShader: puckShaderFrag, uniforms: puckUniforms2, wireframe: true, transparent: true, blending: THREE.AdditiveBlending });
+        
+        const windingOuter = new THREE.Mesh(new THREE.TorusGeometry(10, 1.5, 16, 64), windMat1);
+        const windingInner = new THREE.Mesh(new THREE.TorusGeometry(6, 1.5, 16, 64), windMat2);
+        
+        sourceGroup.add(windingOuter);
+        sourceGroup.add(windingInner);
+        
+        // Add light to glow onto coils
+        const sourceLight = new THREE.PointLight(0xffaa00, 2, 150);
+        sourceGroup.add(sourceLight);
+        
+        scene.add(sourceGroup);
+
+        // --- 3. The 3,200 Parallel Helical Coils (Chamber Matrix) ---
+        const MAX_COILS = 50000;
+        let ACTIVE_COILS = 3200;
+        
+        // We use a Line segments geometry to draw the coils efficiently
+        // Each coil is a vertical helix.
+        const PTS_PER_COIL = 60;
+        const baseCoilGeo = new THREE.BufferGeometry();
+        const coilPosArr = new Float32Array(PTS_PER_COIL * 3);
+        const coilUvArr = new Float32Array(PTS_PER_COIL); // 0 to 1 along the coil
+
+        // Generate base vertical helix
+        for(let i=0; i<PTS_PER_COIL; i++) {
+            const t = i / (PTS_PER_COIL - 1);
+            const y = (t - 0.5) * 100; // Coils are 100 units tall
+            const angle = t * Math.PI * 2 * 10; // 10 wraps
+            const r = 2.5; // Coil radius
+            coilPosArr[i*3] = r * Math.cos(angle);
+            coilPosArr[i*3+1] = y;
+            coilPosArr[i*3+2] = r * Math.sin(angle);
+            coilUvArr[i] = t;
+        }
+        baseCoilGeo.setAttribute('position', new THREE.BufferAttribute(coilPosArr, 3));
+        baseCoilGeo.setAttribute('coilUv', new THREE.BufferAttribute(coilUvArr, 1));
+
+        // Setup Instanced Buffer for MAX_COILS
+        const instCoilGeo = new THREE.InstancedBufferGeometry().copy(baseCoilGeo);
+        instCoilGeo.instanceCount = ACTIVE_COILS;
+
+        const offsetArr = new Float32Array(MAX_COILS * 3);
+        const targetOffsetArr = new Float32Array(MAX_COILS * 3); // For smooth morphing
+        
+        let currentTopology = 'linear';
+        const topoParams = { scaleXZ: 1.0, scaleY: 1.0 };
+
+        document.getElementById('slider-topo-density').addEventListener('input', (e) => {
+            ACTIVE_COILS = parseInt(e.target.value);
+            document.getElementById('read-topo-density').innerText = ACTIVE_COILS;
+            instCoilGeo.instanceCount = ACTIVE_COILS;
+            setTopology(currentTopology);
+        });
+
+        document.getElementById('slider-topo-xz').addEventListener('input', (e) => {
+            topoParams.scaleXZ = parseFloat(e.target.value);
+            document.getElementById('read-topo-xz').innerText = topoParams.scaleXZ.toFixed(1) + 'x';
+            setTopology(currentTopology);
+        });
+
+        document.getElementById('slider-topo-y').addEventListener('input', (e) => {
+            topoParams.scaleY = parseFloat(e.target.value);
+            document.getElementById('read-topo-y').innerText = topoParams.scaleY.toFixed(1) + 'x';
+            setTopology(currentTopology);
+        });
+        
+        window.setTopology = function(type) {
+            currentTopology = type;
+            document.querySelectorAll('.topo-btn').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById('btn-topo-' + type);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            let cIdx = 0;
+            if (type === 'linear') {
+                const chamberWidth = 600, chamberDepth = 400;
+                // Dynamically calculate grid dimensions based on active coil count
+                const cols = Math.ceil(Math.sqrt(ACTIVE_COILS * 2));
+                const rows = Math.ceil(ACTIVE_COILS / cols);
+                
+                for(let x=0; x<cols; x++) {
+                    for(let z=0; z<rows; z++) {
+                        if(cIdx >= ACTIVE_COILS) break;
+                        targetOffsetArr[cIdx*3] = (x / (cols-1) - 0.5) * chamberWidth;
+                        targetOffsetArr[cIdx*3+1] = 0;
+                        targetOffsetArr[cIdx*3+2] = (z / (rows-1) - 0.5) * chamberDepth;
+                        cIdx++;
+                    }
+                }
+            } else if (type === 'cubic') {
+                const dim = Math.ceil(Math.pow(ACTIVE_COILS, 1/3)); 
+                const spacing = 30;
+                for(let x=0; x<dim; x++) {
+                    for(let y=0; y<dim; y++) {
+                        for(let z=0; z<dim; z++) {
+                            if(cIdx >= ACTIVE_COILS) break;
+                            targetOffsetArr[cIdx*3] = (x - dim/2) * spacing;
+                            targetOffsetArr[cIdx*3+1] = (y - dim/2) * spacing;
+                            targetOffsetArr[cIdx*3+2] = (z - dim/2) * spacing;
+                            cIdx++;
+                        }
+                    }
+                }
+            } else if (type === 'toroid') {
+                const R = 200, r = 60;
+                const u_steps = Math.floor(Math.sqrt(ACTIVE_COILS * 2));
+                const v_steps = Math.ceil(ACTIVE_COILS / u_steps);
+                
+                for(let i=0; i<ACTIVE_COILS; i++) {
+                    const u = (i % u_steps) / u_steps * Math.PI * 2;
+                    const v = Math.floor(i / u_steps) / v_steps * Math.PI * 2;
+                    targetOffsetArr[i*3] = (R + r * Math.cos(v)) * Math.cos(u);
+                    targetOffsetArr[i*3+1] = r * Math.sin(v);
+                    targetOffsetArr[i*3+2] = (R + r * Math.cos(v)) * Math.sin(u);
+                }
+            } else if (type === 'braid') {
+                const R = 200, r = 50;
+                const u_steps = Math.floor(Math.sqrt(ACTIVE_COILS * 2));
+                const v_steps = Math.ceil(ACTIVE_COILS / u_steps);
+                
+                for(let i=0; i<ACTIVE_COILS; i++) {
+                    const u = (i % u_steps) / u_steps * Math.PI * 2;
+                    const v = Math.floor(i / u_steps) / v_steps * Math.PI * 2;
+                    const braid = Math.sin(u * 6) * 20; // Braiding wave
+                    targetOffsetArr[i*3] = (R + (r+braid) * Math.cos(v)) * Math.cos(u);
+                    targetOffsetArr[i*3+1] = (r+braid) * Math.sin(v);
+                    targetOffsetArr[i*3+2] = (R + (r+braid) * Math.cos(v)) * Math.sin(u);
+                }
+            } else if (type === 'nested') {
+                const layers = Math.max(4, Math.floor(Math.pow(ACTIVE_COILS, 0.3)));
+                for(let i=0; i<ACTIVE_COILS; i++) {
+                    const layer = i % layers;
+                    const radius = 60 + layer * 50;
+                    const angle = (i / (ACTIVE_COILS/layers)) * Math.PI * 2;
+                    targetOffsetArr[i*3] = radius * Math.cos(angle);
+                    targetOffsetArr[i*3+1] = (Math.random() - 0.5) * 250;
+                    targetOffsetArr[i*3+2] = radius * Math.sin(angle);
+                }
+            }
+
+            // Apply Manual Matrix Modifiers
+            for(let i=0; i<ACTIVE_COILS; i++) {
+                targetOffsetArr[i*3] *= topoParams.scaleXZ;
+                targetOffsetArr[i*3+1] *= topoParams.scaleY;
+                targetOffsetArr[i*3+2] *= topoParams.scaleXZ;
+            }
+        };
+
+        // Initialize with linear topology
+        setTopology('linear');
+        // Snap current offsets to target instantly for boot
+        for(let i=0; i<MAX_COILS*3; i++) offsetArr[i] = targetOffsetArr[i];
+        
+        instCoilGeo.setAttribute('coilOffset', new THREE.InstancedBufferAttribute(offsetArr, 3));
+
+        // --- FORWARD SHADER (Crimson Wave) ---
+        const coilVertShader = `
+            attribute float coilUv;
+            attribute vec3 coilOffset;
+            
+            uniform float u_time;
+            uniform vec3 u_sourcePos;
+            uniform vec4 u_quat; // W, X, Y, Z
+            uniform float u_torsion;
+            uniform float u_tension;
+            
+            varying vec3 vColor;
+
+            void main() {
+                vec3 globalPos = position + coilOffset;
+                
+                // Calculate distance to the moving sound source
+                float distToSource = distance(globalPos, u_sourcePos);
+                
+                vec3 wakeDir = normalize(globalPos - u_sourcePos);
+                
+                // Ambisonic Directional Bias (X, Y, Z vectors shift the wave's power directionally)
+                vec3 ambisonicVec = normalize(vec3(u_quat.y, u_quat.z, u_quat.w) + vec3(0.001));
+                float dirBias = dot(wakeDir, ambisonicVec) * 0.5 + 0.5; // 0 to 1
+                
+                // Displacement strength: high near the source, decaying outward
+                float influence = smoothstep(150.0, 0.0, distToSource);
+                
+                // Complex scalar modulation driven by Governance parameters
+                float phase = distToSource * (u_torsion * 0.02) - (u_time * 10.0);
+                float ripple = sin(phase) * u_tension * u_quat.x * (1.0 + dirBias * 2.0);
+                
+                // Displace the coil vertex
+                vec3 displacedPos = globalPos + (wakeDir * influence * ripple);
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPos, 1.0);
+                
+                // Color mapping: Slate Grey (resting) -> Crimson (displaced)
+                vec3 restingColor = vec3(0.5, 0.55, 0.6); // Slate grey/silver
+                vec3 activeColor = vec3(0.8, 0.1, 0.2); // Crimson red
+                
+                vColor = mix(restingColor, activeColor, influence * (0.5 + u_quat.x * 2.0));
+            }
+        `;
+
+        // --- CONJUGATE SHADER (Inverse Field) ---
+        const invCoilVertShader = `
+            attribute float coilUv;
+            attribute vec3 coilOffset;
+            
+            uniform float u_time;
+            uniform vec3 u_sourcePos;
+            uniform vec4 u_quat; // W, X, Y, Z
+            uniform float u_torsion;
+            uniform float u_tension;
+            
+            varying vec3 vColor;
+
+            void main() {
+                // Invert Chirality by flipping local Z
+                vec3 localPos = position;
+                localPos.z = -localPos.z;
+                
+                vec3 globalPos = localPos + coilOffset;
+                float distToSource = distance(globalPos, u_sourcePos);
+                
+                // Inverse direction (pulling inward instead of pushing out)
+                vec3 wakeDir = -normalize(globalPos - u_sourcePos);
+                
+                vec3 ambisonicVec = normalize(vec3(u_quat.y, u_quat.z, u_quat.w) + vec3(0.001));
+                float dirBias = dot(-wakeDir, ambisonicVec) * 0.5 + 0.5; 
+                
+                float influence = smoothstep(150.0, 0.0, distToSource);
+                
+                // Inverse ripple phase (+ PI)
+                float phase = distToSource * (u_torsion * 0.02) - (u_time * 10.0) + 3.14159;
+                float ripple = sin(phase) * u_tension * u_quat.x * (1.0 + dirBias * 2.0);
+                
+                vec3 displacedPos = globalPos + (wakeDir * influence * ripple);
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(displacedPos, 1.0);
+                
+                // Color mapping: Slate -> Cyan/Teal (Conjugate)
+                vec3 restingColor = vec3(0.5, 0.55, 0.6);
+                vec3 activeColor = vec3(0.1, 0.8, 0.8);
+                
+                vColor = mix(restingColor, activeColor, influence * (0.5 + u_quat.x * 2.0));
+            }
+        `;
+
+        const coilFragShader = `
+            varying vec3 vColor;
+            void main() {
+                gl_FragColor = vec4(vColor, 0.6); // Slight transparency for density
+            }
+        `;
+
+        const coilUniforms = {
+            u_time: { value: 0.0 },
+            u_sourcePos: { value: new THREE.Vector3(0,0,0) },
+            u_quat: { value: new THREE.Vector4(0,0,0,0) },
+            u_torsion: { value: 10.0 },
+            u_tension: { value: 20.0 }
+        };
+
+        const coilMat = new THREE.ShaderMaterial({
+            vertexShader: coilVertShader,
+            fragmentShader: coilFragShader,
+            uniforms: coilUniforms,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        const invCoilMat = new THREE.ShaderMaterial({
+            vertexShader: invCoilVertShader,
+            fragmentShader: coilFragShader,
+            uniforms: coilUniforms, // Share uniforms for perfect synchronization
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+
+        // Use Line for coils so they render as continuous wires
+        const coilMesh = new THREE.Line(instCoilGeo, coilMat);
+        scene.add(coilMesh);
+
+        const invCoilMesh = new THREE.Line(instCoilGeo, invCoilMat);
+        invCoilMesh.visible = false; // Off by default
+        scene.add(invCoilMesh);
+
+        // --- VISIBILITY TOGGLES ---
+        window.updateVisibility = function() {
+            coilMesh.visible = UI.chkCoils.checked;
+            invCoilMesh.visible = UI.chkConj.checked;
+            sourceGroup.visible = UI.chkSource.checked;
+            micMesh.visible = UI.chkMic.checked;
+            xAxis.visible = UI.chkMic.checked;
+            yAxis.visible = UI.chkMic.checked;
+            zAxis.visible = UI.chkMic.checked;
+        };
+
+        // --- ANIMATION LOOP ---
+        const clock = new THREE.Clock();
+
+        function extractRMS(analyser) {
+            if(!analyser) return 0;
+            analyser.getFloatTimeDomainData(state.floatDataArray);
+            let sum = 0;
+            for(let i=0; i<state.floatDataArray.length; i++) {
+                sum += state.floatDataArray[i] * state.floatDataArray[i];
+            }
+            return Math.sqrt(sum / state.floatDataArray.length);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            const dt = clock.getDelta();
+            state.simTime += dt;
+
+            // Handle Custom Player Time Updates
+            if (state.isPlaying && state.audioBuffer) {
+                state.playbackTime = state.audioContext.currentTime - state.startTime;
+                if (state.playbackTime >= state.audioBuffer.duration) {
+                    stopBuffer();
+                    state.playbackTime = 0;
+                    UI.playerTime.innerText = "0:00";
+                    UI.playerScrub.value = 0;
+                } else {
+                    UI.playerTime.innerText = formatTime(state.playbackTime);
+                    UI.playerScrub.value = (state.playbackTime / state.audioBuffer.duration) * 100;
+                }
+            }
+
+            if (state.isPlaying && state.analyser) {
+                if (state.ambixMode) {
+                    // Extract absolute geometric telemetry directly from AmbiX audio channels
+                    state.audioAmp = extractRMS(state.analysers.W) * 5.0; // Omni
+                    
+                    // Simple polarity reconstruction for velocity direction
+                    const getPolarity = (an) => { an.getFloatTimeDomainData(state.floatDataArray); return state.floatDataArray[0] >= 0 ? 1 : -1; };
+                    
+                    state.quat.Y = extractRMS(state.analysers.Y) * 5.0 * getPolarity(state.analysers.Y);
+                    state.quat.Z = extractRMS(state.analysers.Z) * 5.0 * getPolarity(state.analysers.Z);
+                    state.quat.X = extractRMS(state.analysers.X) * 5.0 * getPolarity(state.analysers.X);
+                } else {
+                    // Standard FFT extraction simulation
+                    state.analyser.getByteFrequencyData(state.dataArray);
+                    
+                    let s0=0, s1=0, s2=0, s3=0;
+                    let q = Math.floor(state.dataArray.length / 4);
+                    for(let i=0; i<q; i++) s0 += state.dataArray[i];
+                    for(let i=q; i<q*2; i++) s1 += state.dataArray[i];
+                    for(let i=q*2; i<q*3; i++) s2 += state.dataArray[i];
+                    for(let i=q*3; i<q*4; i++) s3 += state.dataArray[i];
+                    
+                    state.audioAmp = (s0 / q) / 255.0; 
+                    state.quat.X = ((s1 / q) / 255.0) * 2.0 - 1.0; 
+                    state.quat.Y = ((s2 / q) / 255.0) * 2.0 - 1.0;
+                    state.quat.Z = ((s3 / q) / 255.0) * 2.0 - 1.0;
+                }
+
+                // LOCAL AMBIX GOVERNANCE (Decoupled from Global Chamber Matrix)
+                // 1. Local Tension (Amplitude Scaling)
+                state.audioAmp *= puckState.tension;
+                state.quat.X *= puckState.tension;
+                state.quat.Y *= puckState.tension;
+                state.quat.Z *= puckState.tension;
+
+                // 2. Local Torsion (Spatial Rotational Twist)
+                if (puckState.torsion > 0) {
+                    // Swirl the Ambisonic soundfield horizontally over time
+                    const twistAngle = state.simTime * puckState.torsion * 0.5;
+                    const cosT = Math.cos(twistAngle);
+                    const sinT = Math.sin(twistAngle);
+                    
+                    const newX = state.quat.X * cosT - state.quat.Z * sinT;
+                    const newZ = state.quat.X * sinT + state.quat.Z * cosT;
+                    state.quat.X = newX;
+                    state.quat.Z = newZ;
+                }
+
+            } else {
+                // Smooth decay to 0 if paused
+                state.audioAmp += (0 - state.audioAmp) * 0.1;
+                state.quat.X *= 0.9; state.quat.Y *= 0.9; state.quat.Z *= 0.9;
+            }
+
+            // Morph Topologies smoothly
+            const currentOffsets = instCoilGeo.attributes.coilOffset.array;
+            let needsMorphUpdate = false;
+            for(let i=0; i<ACTIVE_COILS * 3; i++) {
+                const diff = targetOffsetArr[i] - currentOffsets[i];
+                if (Math.abs(diff) > 0.1) {
+                    currentOffsets[i] += diff * 0.05;
+                    needsMorphUpdate = true;
+                }
+            }
+            if (needsMorphUpdate) instCoilGeo.attributes.coilOffset.needsUpdate = true;
+
+            // 1. Move the Bifilar Puck
+            if (puckState.manual) {
+                // Manual Positioning override
+                sourceGroup.position.set(puckState.x, puckState.y, puckState.z);
+                
+                // Spin bifilar windings to simulate scalar pumping
+                windingOuter.rotation.y += 0.05 + state.audioAmp;
+                windingInner.rotation.y -= 0.05 + state.audioAmp;
+            } else {
+                // Sweeping algorithmic path
+                const sweepTime = state.simTime * 0.5;
+                const srcX = Math.sin(sweepTime) * 200;
+                const srcY = Math.sin(sweepTime * 2.3) * 30;
+                const srcZ = Math.cos(sweepTime * 1.7) * 100;
+                sourceGroup.position.set(srcX, srcY, srcZ);
+                
+                // Update sliders to reflect automated position
+                document.getElementById('slider-px').value = srcX;
+                document.getElementById('slider-py').value = srcY;
+                document.getElementById('slider-pz').value = srcZ;
+                document.getElementById('read-px').innerText = srcX.toFixed(1);
+                document.getElementById('read-py').innerText = srcY.toFixed(1);
+                document.getElementById('read-pz').innerText = srcZ.toFixed(1);
+            }
+            
+            // Pulse puck Double Toroids based on Local Governance
+            puckUniforms1.u_time.value = state.simTime;
+            puckUniforms2.u_time.value = state.simTime;
+            puckUniforms1.u_amp.value = state.audioAmp;
+            puckUniforms2.u_amp.value = state.audioAmp;
+            puckUniforms1.u_torsion.value = puckState.torsion;
+            puckUniforms2.u_torsion.value = puckState.torsion;
+            puckUniforms1.u_tension.value = puckState.tension;
+            puckUniforms2.u_tension.value = puckState.tension;
+
+            windingOuter.rotation.y += 0.02 * puckState.torsion * 0.2;
+            windingInner.rotation.y -= 0.02 * puckState.torsion * 0.2;
+
+            const orbScale = 1.0 + state.audioAmp * 0.3;
+            sourceGroup.scale.set(orbScale, orbScale, orbScale);
+            
+            // Central mic tracks the puck
+            micMesh.lookAt(sourceGroup.position);
+
+            // 2. Update Coil Shader & Governance Tuning
+            coilUniforms.u_time.value = state.simTime;
+            coilUniforms.u_sourcePos.value.copy(sourceGroup.position);
+            coilUniforms.u_quat.value.set(state.audioAmp, state.quat.X, state.quat.Y, state.quat.Z);
+            coilUniforms.u_torsion.value = state.gov.torsion;
+            coilUniforms.u_tension.value = state.gov.tension;
+
+            // 3. Update Mic Telemetry (Simulating Ambisonic capture)
+            // The mic measures the output of the puck
+            const pressure = state.audioAmp * 10.0;
+            const velX = state.quat.X * pressure;
+            const velY = state.quat.Y * pressure;
+            const velZ = state.quat.Z * pressure;
+
+            UI.valW.innerText = pressure.toFixed(3);
+            UI.valX.innerText = velX.toFixed(3);
+            UI.valY.innerText = velY.toFixed(3);
+            UI.valZ.innerText = velZ.toFixed(3);
+
+            // Pulse the mic tetrahedron based on omni pressure
+            const micScale = 1.0 + state.audioAmp * 1.5;
+            micMesh.scale.set(micScale, micScale, micScale);
+            micMesh.rotation.y += 0.01;
+            micMesh.rotation.x += 0.005;
+
+            // Very slow drift of the entire scene for cinematic effect
+            scene.rotation.y = Math.sin(state.simTime * 0.1) * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
