@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHD-CCP Tessellation Crystal: Multi-Cell Interaction</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050508; color: #fff; font-family: 'Inter', sans-serif; user-select: none; }
+        canvas { display: block; }
+        
+        /* HUD OVERLAYS */
+        #hud-top-left { position: absolute; top: 15px; left: 15px; pointer-events: none; z-index: 10; }
+        #hud-top-left h1 { margin: 0; font-size: 18px; color: #10b981; text-transform: uppercase; letter-spacing: 1px; }
+        #hud-top-left p { margin: 5px 0 0 0; font-size: 12px; color: #aaa; }
+        
+        #hud-seed { position: absolute; bottom: 15px; left: 15px; padding: 15px; background: rgba(10, 15, 20, 0.85); border: 1px solid rgba(16, 185, 129, 0.5); border-radius: 8px; font-family: monospace; backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 10; pointer-events: none;}
+        #hud-seed .label { font-size: 10px; color: #10b981; letter-spacing: 2px; text-transform: uppercase; }
+        #hud-seed .hex { font-size: 24px; font-weight: bold; color: #fff; margin-top: 4px; letter-spacing: 4px; text-shadow: 0 0 10px rgba(16,185,129,0.5); }
+        #hud-seed .mode-indicator { font-size: 10px; color: #ec4899; margin-top: 5px; font-weight: bold; }
+        
+        #hud-gov { position: absolute; bottom: 15px; right: 15px; padding: 8px 12px; background: rgba(10, 15, 20, 0.85); border: 1px solid #ec4899; border-radius: 8px; font-size: 11px; font-family: monospace; color: #a855f7; text-align: right; pointer-events: none; z-index: 10; text-transform: uppercase; letter-spacing: 1px; }
+        #hud-gov .h-a { color: #ef4444; font-weight: bold; } 
+        #hud-gov .h-b { color: #22c55e; font-weight: bold; } 
+        #hud-gov .h-c { color: #3b82f6; font-weight: bold; } 
+
+        #hud-polytope { position: absolute; top: 15px; right: 15px; padding: 12px 15px; background: rgba(10, 15, 20, 0.85); border: 1px solid #10b981; border-radius: 8px; font-size: 11px; font-family: monospace; color: #94a3b8; text-align: right; pointer-events: none; z-index: 10; backdrop-filter: blur(5px); }
+        #hud-polytope .title { color: #10b981; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+        #hud-polytope span { color: #fff; font-weight: bold; font-size: 13px; margin-left: 10px;}
+        #hud-polytope .metric-row { margin-bottom: 4px; display: flex; justify-content: space-between; gap: 15px; align-items: center;}
+
+        #btn-kernel-designer { position: absolute; top: 75px; left: 15px; padding: 8px 16px; background: #10b981; color: #000; font-family: 'Inter', sans-serif; font-weight: bold; font-size: 12px; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; z-index: 10; box-shadow: 0 0 10px rgba(16,185,129,0.3); transition: all 0.2s; }
+        #btn-kernel-designer:hover { background: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.6); }
+
+        #btn-visual-settings { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); background: rgba(10,15,20,0.8); border: 1px solid #444; color: #fff; border-radius: 50%; width: 40px; height: 40px; font-size: 18px; cursor: pointer; z-index: 20; display: flex; justify-content: center; align-items: center; transition: all 0.2s;}
+        #btn-visual-settings:hover { border-color: #10b981; color: #10b981; }
+
+        #visual-settings-panel { position: absolute; top: 65px; left: 50%; transform: translateX(-50%); background: rgba(15, 20, 30, 0.95); border: 1px solid #333; border-radius: 8px; padding: 15px; width: 260px; z-index: 20; display: none; flex-direction: column; gap: 10px; backdrop-filter: blur(10px); }
+        .vs-row { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #ccc; }
+        .vs-row input[type="color"] { background: none; border: none; width: 30px; height: 30px; cursor: pointer; padding: 0; }
+        .vs-row input[type="range"] { width: 120px; accent-color: #10b981; }
+
+        #seq-panel { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); width: 380px; background: rgba(12, 16, 26, 0.9); border: 1px solid #2a344a; border-radius: 8px; z-index: 50; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.8); backdrop-filter: blur(8px); }
+        #seq-header { padding: 8px 15px; background: #161d30; border-bottom: 1px solid #2a344a; border-radius: 8px 8px 0 0; cursor: grab; display: flex; justify-content: space-between; align-items: center; }
+        #seq-header:active { cursor: grabbing; }
+        #seq-title { font-size: 11px; font-weight: bold; color: #10b981; text-transform: uppercase; letter-spacing: 1px; }
+        #seq-toggle { background: transparent; border: none; color: #aaa; cursor: pointer; font-size: 12px; }
+        #seq-body { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        
+        .seq-controls { display: flex; justify-content: center; align-items: center; gap: 15px; }
+        .seq-btn { background: #1e293b; border: 1px solid #334155; color: #fff; width: 36px; height: 36px; border-radius: 50%; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; transition: all 0.2s; }
+        .seq-btn:hover { background: #334155; border-color: #10b981; color: #10b981; }
+        .seq-btn.play-btn { width: 44px; height: 44px; font-size: 16px; background: #10b981; color: #000; border: none; }
+        .seq-btn.play-btn:hover { background: #fff; box-shadow: 0 0 10px rgba(16,185,129,0.5); }
+        
+        .seq-timeline { display: flex; align-items: center; gap: 10px; }
+        #seq-slider { flex: 1; accent-color: #10b981; cursor: pointer; }
+        #seq-frame-read { font-family: monospace; font-size: 11px; color: #a855f7; min-width: 65px; text-align: right; }
+        
+        .seq-footer { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #64748b; }
+        #seq-speed { background: #0b0f19; color: #fff; border: 1px solid #2a344a; padding: 2px 6px; border-radius: 3px; font-family: monospace; width: 40px; text-align: center; }
+
+        #kernel-panel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); width: 850px; height: 600px; background: #0f1423; border: 1px solid #2a344a; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); z-index: 100; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transition: all 0.2s ease; }
+        #kernel-panel.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        
+        .kp-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #161d30; border-bottom: 1px solid #2a344a; border-radius: 12px 12px 0 0; }
+        .kp-header h2 { margin: 0; color: #10b981; font-size: 16px; letter-spacing: 1.5px; }
+        .kp-header .preset-select { background: #0b0f19; color: #fff; border: 1px solid #2a344a; padding: 6px 12px; border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; cursor: pointer; }
+        .kp-header .close-btn { background: transparent; border: none; color: #aaa; font-size: 20px; cursor: pointer; }
+        .kp-header .close-btn:hover { color: #fff; }
+
+        .kp-body { display: flex; flex: 1; overflow: hidden; }
+        .kp-sidebar { width: 320px; border-right: 1px solid #2a344a; background: #121826; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .kp-field { display: flex; align-items: center; background: #192033; border: 1px solid #2a344a; border-radius: 6px; padding: 12px; gap: 12px; }
+        .kp-field-color { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+        .kp-field-info { flex: 1; }
+        .kp-field-info .title { font-size: 13px; font-weight: bold; color: #e2e8f0; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+        .kp-field-info .type { font-size: 10px; color: #64748b; background: #0f1423; padding: 1px 4px; border-radius: 3px; border: 1px solid #2a344a; }
+        .kp-field-info .bits { font-size: 11px; color: #94a3b8; }
+        .kp-tag { font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; letter-spacing: 1px; }
+
+        .kp-main { flex: 1; padding: 20px; display: flex; flex-direction: column; align-items: center; background: radial-gradient(circle at center, #161d30 0%, #0f1423 100%); }
+        .kp-tabs { display: flex; gap: 20px; width: 100%; border-bottom: 1px solid #2a344a; padding-bottom: 10px; margin-bottom: 20px; }
+        .kp-tabs span { color: #64748b; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .kp-tabs span.active { color: #10b981; border-bottom: 2px solid #10b981; padding-bottom: 9px; }
+
+        .projector-wrapper { padding: 30px; background: rgba(0,0,0,0.2); border: 2px solid #2a344a; border-radius: 12px; position: relative; margin-top: 10px; }
+        .projector-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+        .grid-block { width: 45px; height: 45px; border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.7); font-family: monospace; transition: all 0.2s; }
+        .grid-block:hover { transform: scale(1.1); color: #fff; box-shadow: 0 0 10px currentColor; }
+        
+        .row-label-top, .row-label-bottom { position: absolute; left: 50%; transform: translateX(-50%); font-family: monospace; font-size: 11px; color: #a855f7; letter-spacing: 2px; font-weight: bold; }
+        .row-label-top { top: -20px; }
+        .row-label-bottom { bottom: -20px; }
+        .cache-box { position: absolute; top: 120px; left: 15px; right: 15px; bottom: 120px; border: 2px solid rgba(236, 72, 153, 0.4); border-radius: 12px; pointer-events: none; }
+        .cache-label { position: absolute; left: -10px; top: 50%; transform: translateY(-50%) rotate(-90deg); font-family: monospace; font-size: 11px; color: #ec4899; white-space: nowrap; }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="hud-top-left">
+        <h1>SHD-CCP Tessellation Crystal</h1>
+        <p>Holographic Moiré Lattices & Soliton Backpropagation</p>
+    </div>
+
+    <!-- POLYTOPE METRICS -->
+    <div id="hud-polytope">
+        <div class="title">Center Node Metrics</div>
+        <div class="metric-row"><span style="color:#ef4444">Phase A (0°)</span> ↔ Edge <span id="metric-edge-a">0.00 µm</span></div>
+        <div class="metric-row"><span style="color:#22c55e">Phase B (+120°)</span> ↔ Edge <span id="metric-edge-b">0.00 µm</span></div>
+        <div class="metric-row"><span style="color:#3b82f6">Phase C (-120°)</span> ↔ Edge <span id="metric-edge-c">0.00 µm</span></div>
+        <div style="border-top: 1px solid #333; margin: 8px 0;"></div>
+        <div class="metric-row"><span style="color:#f59e0b">Residual (ρ)</span> ↔ Core <span id="metric-rho">0.000</span></div>
+        <div class="metric-row"><span style="color:#a855f7">TQF Tension (Loss)</span> ↔ <span id="metric-tqf-loss" style="font-weight: bold;">0.0</span></div>
+    </div>
+
+    <button id="btn-kernel-designer">Kernel Designer</button>
+    <button id="btn-visual-settings">👁</button>
+
+    <!-- Visual Settings Dropdown -->
+    <div id="visual-settings-panel">
+        <div class="vs-row">
+            <span>Background Color</span>
+            <input type="color" id="vs-bg-color" value="#050508">
+        </div>
+        <div class="vs-row">
+            <span>Core Light Intensity</span>
+            <input type="range" id="vs-light" min="0" max="2000" value="800">
+        </div>
+        <div class="vs-row">
+            <span>Particle Size</span>
+            <input type="range" id="vs-psize" min="0.1" max="5.0" step="0.1" value="1.2">
+        </div>
+        <div class="vs-row">
+            <span>Waveform Opacity</span>
+            <input type="range" id="vs-wopac" min="0" max="1" step="0.05" value="0.4">
+        </div>
+        <div class="vs-row">
+            <span>Telemetry Opacity</span>
+            <input type="range" id="vs-telemetry" min="0" max="1" step="0.05" value="0.35">
+        </div>
+        <div class="vs-row">
+            <span>Governance Opacity</span>
+            <input type="range" id="vs-govopac" min="0" max="1" step="0.05" value="0.5">
+        </div>
+    </div>
+
+    <!-- SEQUENCER PANEL -->
+    <div id="seq-panel" style="left: 50%; bottom: 30px;">
+        <div id="seq-header">
+            <span id="seq-title">Sequencer & Playback</span>
+            <button id="seq-toggle">▼</button>
+        </div>
+        <div id="seq-body">
+            <div class="seq-controls">
+                <button class="seq-btn" id="seq-prev">⏮</button>
+                <button class="seq-btn play-btn" id="seq-play">▶</button>
+                <button class="seq-btn" id="seq-next">⏭</button>
+            </div>
+            <div class="seq-timeline">
+                <input type="range" id="seq-slider" min="0" max="719" value="1">
+                <span id="seq-frame-read">001 / 720</span>
+            </div>
+            <div class="seq-footer">
+                <span>Spacebar to Play/Pause</span>
+                <div>
+                    Speed: <input type="number" id="seq-speed" value="1.0" step="0.1" min="0.1" max="10.0">x
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KERNEL DESIGNER PANEL -->
+    <div id="kernel-panel" class="closed">
+        <div class="kp-header">
+            <h2>KERNEL GROUP DESIGN</h2>
+            <select id="kernel-preset" class="preset-select">
+                <option value="Custom">Custom Byte-Aligned</option>
+                <option value="Blackwell Block" selected>Blackwell Block</option>
+            </select>
+            <button class="close-btn" id="close-kernel-btn">&times;</button>
+        </div>
+        <div class="kp-body">
+            <div class="kp-sidebar" id="kp-sidebar"></div>
+            <div class="kp-main">
+                <div class="kp-tabs">
+                    <span class="active">Kernel Projector</span>
+                    <span>Codex Parity</span>
+                    <span>Architecture Flow</span>
+                    <span>Preset Kernel</span>
+                </div>
+                <div class="projector-wrapper">
+                    <div class="row-label-top">NORTH HALO (Row 0)</div>
+                    <div class="projector-grid" id="kp-grid"></div>
+                    <div class="cache-box"><div class="cache-label">L2 Cache Line 0</div></div>
+                    <div class="row-label-bottom">SOUTH HALO (Row 7)</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud-seed">
+        <div class="label">Transmitting Packet Seed</div>
+        <div class="hex" id="seed-display">0x0000000000000000</div>
+        <div class="mode-indicator" id="playback-indicator">MODE: CONTINUOUS</div>
+    </div>
+
+    <div id="hud-gov">
+        Tri-Phase Governance TQF (120° Offsets)<br>
+        <span class="h-a">Phase 0°</span> | <span class="h-b">Phase +120°</span> | <span class="h-c">Phase -120°</span>
+    </div>
+
+    <canvas id="c"></canvas>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import GUI from 'lil-gui';
+
+        // --- GLOBAL VARIABLES ---
+        let scene, camera, renderer, orbitControls, gui, guiKernelFolder, guiPlaylistFolder;
+        
+        let allMacroCells = []; // Array holding the Tessellation Grid
+        let solitonStrutsGroup; // Visualizes the inter-cube soliton bounds
+        
+        // Single central particle system
+        let packetSystem; 
+
+        // Tracers & Barcodes (Center Only)
+        let tqfTrailMesh, trailGeo, trailPos, trailCol;
+        let barcodeInnerMesh, barcodeOuterMesh, barcodeExtMesh;
+        let bInnerPos, bInnerCol, bOuterPos, bOuterCol, bExtPos, bExtCol;
+        let barcodeConnectionsMesh;
+        let bConnPos, bConnCol;
+        const MAX_TRACERS = 100;
+
+        // Boundaries and Emergent Logic
+        let boundaryCoreMesh, boundaryPi6Mesh, boundary2PiMesh;
+        let emergentSphereGroup;
+
+        // --- NEW: Riemann Zeta Resonance Pole ---
+        let zetaPoleMesh;
+
+        // --- MATHEMATICAL TRACEABILITY: Deterministic Prime Generator ---
+        function generateCubedPrimes() {
+            const primes = [];
+            const isPrime = (n) => {
+                if (n<2) return false;
+                for(let i=2; i<=Math.sqrt(n); i++) if(n%i===0) return false;
+                return true;
+            };
+            let count = 0;
+            let current = 2;
+            const targetIndices = [1, 8, 27, 64, 125, 216, 343, 512, 729, 1000, 1331, 1728, 2197];
+            let targetIdx = 0;
+            while(targetIdx < 13) {
+                if(isPrime(current)) {
+                    count++;
+                    if(count === targetIndices[targetIdx]) {
+                        primes.push(current);
+                        targetIdx++;
+                    }
+                }
+                current++;
+            }
+            return primes;
+        }
+        const CUBED_PRIMES = generateCubedPrimes(); 
+        
+        // Escher Hash modulo 945
+        function getEscherHash(x, y, z) {
+            const px = CUBED_PRIMES[Math.abs(x) % 13];
+            const py = CUBED_PRIMES[Math.abs(y) % 13];
+            const pz = CUBED_PRIMES[Math.abs(z) % 13];
+            return (px * py * pz) % 945;
+        }
+
+        const CYCLE_FRAMES = 720;
+        const CONTAINMENT_BOUNDS = 180; 
+        const L_SPACE = 7.5; 
+        const CELL_OFFSET = 360; // Exact flush tessellation distance
+
+        const blackwellFields = [
+            { id: 'ST', name: 'Structural Form ID', bits: 4, type: 'INT4', class: 'HALO', color: '#8b5cf6' },
+            { id: 'PR', name: 'Parity (Invert)', bits: 1, type: 'UINT', class: 'HALO', color: '#9ca3af' },
+            { id: 'SP', name: 'Spin Class', bits: 3, type: 'INT4', class: 'STANDARD', color: '#ef4444' },
+            { id: 'CO', name: 'Comp. Quaternion', bits: 32, type: 'FP4', class: 'CORE', color: '#ec4899' },
+            { id: 'PA', name: 'Payload Scale', bits: 16, type: 'FP16', class: 'STANDARD', color: '#10b981' },
+            { id: 'FR', name: 'Frequency ID', bits: 5, type: 'INT8', class: 'STANDARD', color: '#3b82f6' },
+            { id: 'AM', name: 'Amplitude ID', bits: 3, type: 'INT4', class: 'STANDARD', color: '#f59e0b' }
+        ];
+
+        const blackwellSequence = [
+            'ST','ST','ST','ST','PR','PA','PA','PA',
+            'PA','PA','PA','PA','PA','PA','PA','PA',
+            'CO','CO','CO','CO','CO','CO','CO','CO',
+            'CO','CO','CO','CO','CO','CO','CO','CO',
+            'CO','CO','CO','CO','CO','CO','CO','CO',
+            'CO','CO','CO','CO','CO','CO','CO','CO',
+            'PA','PA','PA','PA','PA','FR','FR','FR',
+            'FR','FR','SP','SP','SP','AM','AM','AM'
+        ];
+
+        const state = {
+            activeKernel: 'Blackwell Block',
+            seedHex: '7F30038000FF00AA',
+            particleCount: 1500,
+            
+            isPlaying: true, 
+            playbackMode: 'Continuous',
+            playbackSpeed: 1.0,
+            currentFrame: 1,
+            currentPlaylistIndex: 0,
+            seedPlaylist: "7F30038000FF00AA\nFF00AA552288CC44\n00000000FFFFFFFF\n8A4B2C1D9E7F3A5B",
+
+            tessellationExtent: '7 Cells (Face Neighbors)', // '1 Cell (Center Only)', '7 Cells (Face Neighbors)', '27 Cells (Full 3x3x3)'
+            topology: 'Trefoil Knot',
+            panning: 0.0,
+            showPhaseWaveforms: true,
+            showCompressionCore: true,
+            
+            showGovernance: true,
+            triPhaseGovernance: true,
+            
+            // 4-Helix Governance Variables
+            govTorsionA: 12, govTensionA: 1.0,
+            govTorsionB: 12, govTensionB: 1.0,
+            govTorsionC: 12, govTensionC: 1.0,
+            metaTorsion: 4,  metaTension: 1.5,
+            showInternalGov: true, showMetaGov: true,
+
+            show24Toroid: true,
+            showCompressionFunnel: true,
+            show5Streams: true,
+
+            // New State Flags
+            showScalarField: true,
+            scalarWebOpacity: 0.3,
+            scalarWebHighlight: true,
+            showInverseBackprop: true,
+            
+            escherMode: 'Spatial Octants',
+            tessellationHalo: true,
+            autoRotate: false,
+            
+            boundaryMode: 'Hidden',
+            boundaryOpacity: 0.15,
+            
+            tqfTracers: true,
+            barcodeTracers: true,
+            tracerLength: 40,
+            tracerSpacing: 0.003,
+            
+            // Golden Trefoil Quadrance Scalers
+            scaleA: 1.0,
+            scaleB: 1.0,
+            scaleC: 1.0,
+            
+            blackwell: {
+                formId: 7, parity: 0, payload: 32768, 
+                quatR: 255, quatG: 0, quatB: 170, 
+                freqId: 15, spinClass: 3, ampId: 3
+            },
+
+            custom: {
+                b0: 127, b1: 127, b2: 127, b3: 127,
+                b4: 127, b5: 255, b6: 0, b7: 170
+            },
+
+            // Re-bind visuals
+            visualWopac: 0.4,
+            visualGovOpac: 0.5,
+
+            regenerateSeed: () => randomizeSeed()
+        };
+
+        class MacroCell {
+            constructor(gx, gy, gz, isCenter) {
+                this.gridX = gx;
+                this.gridY = gy;
+                this.gridZ = gz;
+                this.isCenter = isCenter;
+                
+                this.group = new THREE.Group();
+                this.group.position.set(gx * CELL_OFFSET, gy * CELL_OFFSET, gz * CELL_OFFSET);
+                scene.add(this.group);
+
+                // Modulo-3 Phase lock (120 degree shifts)
+                this.cellPhaseOffset = (Math.abs(gx*3 + gy*5 + gz*7) % 3) * (2 * Math.PI / 3);
+                
+                // Meshes
+                this.coreMatrices = [];
+                this.buildContainmentSystem();
+                this.buildPi6Shell();
+                this.buildWaveforms();
+                this.buildCompressionCore();
+                this.buildTetrahedralSubstrate();
+                
+                this.params = {}; // Populated dynamically
+            }
+
+            buildContainmentSystem() {
+                this.containmentGroup = new THREE.Group();
+                this.group.add(this.containmentGroup);
+
+                const faceDefinitions = [
+                    { dir: new THREE.Vector3(0, 1, 0), polarity: 1 }, { dir: new THREE.Vector3(0, -1, 0), polarity: 1 },
+                    { dir: new THREE.Vector3(1, 0, 0), polarity: 1 }, { dir: new THREE.Vector3(-1, 0, 0), polarity: 1 },
+                    { dir: new THREE.Vector3(0, 0, 1), polarity: -1 }, { dir: new THREE.Vector3(0, 0, -1), polarity: -1 }
+                ];
+                const cellGeo = new THREE.BoxGeometry(L_SPACE*0.8, L_SPACE*0.8, L_SPACE*0.2);
+                const edgeGeo = new THREE.EdgesGeometry(cellGeo);
+
+                faceDefinitions.forEach((def, faceIndex) => {
+                    const group4x4 = new THREE.Group();
+                    const target = def.dir.clone().add(def.dir);
+                    group4x4.up.copy(new THREE.Vector3(0,1,0));
+                    if(Math.abs(def.dir.y) > 0.9) group4x4.up.copy(new THREE.Vector3(0,0,1));
+                    group4x4.lookAt(target);
+                    group4x4.position.copy(def.dir.clone().multiplyScalar(38)); 
+
+                    for(let row=0; row<4; row++) {
+                        for(let col=0; col<4; col++) {
+                            const lx = (col - 1.5) * L_SPACE;
+                            const ly = -(row - 1.5) * L_SPACE;
+                            const mat = new THREE.MeshBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.0, side: THREE.DoubleSide });
+                            const mesh = new THREE.Mesh(cellGeo, mat);
+                            const edgeMat = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.05 });
+                            mesh.add(new THREE.LineSegments(edgeGeo, edgeMat));
+                            mesh.position.set(lx, ly, 0);
+                            
+                            const localBitIndex = row * 4 + col;
+                            let bitOffset = 0;
+                            if (faceIndex === 0) bitOffset = 0; else if (faceIndex === 1) bitOffset = 16; 
+                            else if (faceIndex === 2) bitOffset = 32; else if (faceIndex === 3) bitOffset = 48; 
+                            else if (faceIndex === 4) bitOffset = 0; else if (faceIndex === 5) bitOffset = 16;  
+                            
+                            mesh.userData = { bitIndex: bitOffset + localBitIndex, faceIndex: faceIndex, isInner: (row===1||row===2)&&(col===1||col===2), def: def };
+                            group4x4.add(mesh);
+                            this.coreMatrices.push(mesh);
+                        }
+                    }
+                    this.containmentGroup.add(group4x4);
+                });
+            }
+
+            buildPi6Shell() {
+                // A simplified representation of the Pi6 shell bounds for the grid
+                const pi6Geo = new THREE.WireframeGeometry(new THREE.BoxGeometry(CELL_OFFSET*0.9, CELL_OFFSET*0.9, CELL_OFFSET*0.9, 3, 3, 3));
+                const pi6Mat = new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending });
+                this.pi6Mesh = new THREE.LineSegments(pi6Geo, pi6Mat);
+                this.group.add(this.pi6Mesh);
+            }
+
+            buildWaveforms() {
+                const res = this.isCenter ? 1500 : 360; // High res for center, optimized for neighbors
+                const lineGeom = new THREE.BufferGeometry();
+                lineGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(res * 3), 3));
+                
+                this.waveA = new THREE.Line(lineGeom, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+                this.waveB = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+                this.waveC = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+                
+                this.govA = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending }));
+                this.govB = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending }));
+                this.govC = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending }));
+                this.metaGov = new THREE.Line(lineGeom.clone(), new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+
+                this.group.add(this.waveA, this.waveB, this.waveC);
+                this.group.add(this.govA, this.govB, this.govC, this.metaGov);
+
+                if (this.isCenter) {
+                    const createTQF = (color) => {
+                        const g = new THREE.BufferGeometry();
+                        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(4 * 3), 3)); 
+                        return new THREE.Line(g, new THREE.LineBasicMaterial({ color: color, transparent: true, opacity: 0.9 }));
+                    };
+                    this.tqfA = createTQF(0xef4444); 
+                    this.tqfB = createTQF(0x22c55e); 
+                    this.tqfC = createTQF(0x3b82f6); 
+                    this.group.add(this.tqfA, this.tqfB, this.tqfC);
+
+                    const beamsGeo = new THREE.BufferGeometry();
+                    beamsGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6 * 3), 3));
+                    this.projectionBeams = new THREE.LineSegments(beamsGeo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending }));
+                    this.group.add(this.projectionBeams);
+
+                    const webGeo = new THREE.BufferGeometry();
+                    webGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * 3), 3));
+                    this.scalarWeb = new THREE.Mesh(webGeo, new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.5, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+                    this.group.add(this.scalarWeb);
+
+                    const webEdgeGeo = new THREE.BufferGeometry();
+                    webEdgeGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(4 * 3), 3));
+                    this.scalarWebEdges = new THREE.Line(webEdgeGeo, new THREE.LineBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.9, linewidth: 2 }));
+                    this.group.add(this.scalarWebEdges);
+
+                    this.inverseGroup = new THREE.Group();
+                    this.inverseStreams = [];
+                    for(let i=0; i<12; i++) {
+                        const streamGeo = new THREE.BufferGeometry();
+                        streamGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(2 * 3), 3));
+                        const streamMat = new THREE.LineBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+                        const streamLine = new THREE.Line(streamGeo, streamMat);
+                        this.inverseStreams.push(streamLine);
+                        this.inverseGroup.add(streamLine);
+                    }
+                    this.group.add(this.inverseGroup);
+                }
+            }
+
+            buildCompressionCore() {
+                this.compressionGroup = new THREE.Group();
+                this.group.add(this.compressionGroup);
+
+                // Tier 1: 720 Nodes (Circle)
+                const pts720 = [];
+                for(let i=0; i<=720; i++) pts720.push(new THREE.Vector3(Math.cos(i*Math.PI*2/720)*28, Math.sin(i*Math.PI*2/720)*28, 0));
+                this.ring1_720 = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts720), new THREE.LineBasicMaterial({color: 0x00ffcc, transparent: true, opacity: 0.4}));
+                this.compressionGroup.add(this.ring1_720);
+
+                // Tier 2: 24 Nodes (Two Inverse 12-point Stars)
+                this.tier2Group = new THREE.Group();
+                this.compressionGroup.add(this.tier2Group);
+                
+                const r24 = 18;
+                const p24A=[], p24B=[];
+                for(let i=0; i<=12; i++) {
+                    p24A.push(new THREE.Vector3(Math.cos((i*5)*Math.PI*2/12)*r24, Math.sin((i*5)*Math.PI*2/12)*r24, 0));
+                    p24B.push(new THREE.Vector3(Math.cos(((i*5)+0.5)*Math.PI*2/12)*r24, Math.sin(((i*5)+0.5)*Math.PI*2/12)*r24, 0));
+                }
+                this.ring2_24A = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p24A), new THREE.LineBasicMaterial({color: 0xfde047, transparent: true, opacity: 0.6}));
+                this.ring2_24B = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p24B), new THREE.LineBasicMaterial({color: 0x67e8f9, transparent: true, opacity: 0.6}));
+                
+                const ptsRing2 = [];
+                for(let i=0; i<=120; i++) ptsRing2.push(new THREE.Vector3(Math.cos(i*Math.PI*2/120)*r24, Math.sin(i*Math.PI*2/120)*r24, 0));
+                this.ring2_Bound = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ptsRing2), new THREE.LineBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.25}));
+                
+                this.tier2Group.add(this.ring2_24A, this.ring2_24B, this.ring2_Bound);
+
+                // Tier 3: 12 Nodes (Two Inverse 6-point Stars)
+                this.tier3Group = new THREE.Group();
+                this.compressionGroup.add(this.tier3Group);
+                
+                const r12 = 8;
+                const p12A=[], p12B=[];
+                for(let i=0; i<=6; i++) {
+                    p12A.push(new THREE.Vector3(Math.cos((i*2)*Math.PI*2/6)*r12, Math.sin((i*2)*Math.PI*2/6)*r12, 0));
+                    p12B.push(new THREE.Vector3(Math.cos(((i*2)+0.5)*Math.PI*2/6)*r12, Math.sin(((i*2)+0.5)*Math.PI*2/6)*r12, 0));
+                }
+                this.ring3_12A = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p12A), new THREE.LineBasicMaterial({color: 0xec4899, transparent: true, opacity: 0.7}));
+                this.ring3_12B = new THREE.Line(new THREE.BufferGeometry().setFromPoints(p12B), new THREE.LineBasicMaterial({color: 0x38bdf8, transparent: true, opacity: 0.7}));
+                
+                const ptsRing3 = [];
+                for(let i=0; i<=60; i++) ptsRing3.push(new THREE.Vector3(Math.cos(i*Math.PI*2/60)*r12, Math.sin(i*Math.PI*2/60)*r12, 0));
+                this.ring3_Bound = new THREE.Line(new THREE.BufferGeometry().setFromPoints(ptsRing3), new THREE.LineBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.25}));
+                
+                this.tier3Group.add(this.ring3_12A, this.ring3_12B, this.ring3_Bound);
+
+                // Tier 4: 4 Nodes (Tetrahedron Base / Quaternion Streams)
+                const r4 = 15;
+                const tPts = [
+                    new THREE.Vector3(r4, r4, r4), new THREE.Vector3(-r4, -r4, r4),
+                    new THREE.Vector3(-r4, r4, -r4), new THREE.Vector3(r4, -r4, -r4)
+                ];
+                const tEdges = [];
+                tPts.forEach(c => { tEdges.push(new THREE.Vector3(0, 0, 0), c); });
+                this.ring4_4 = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(tEdges), new THREE.LineBasicMaterial({color: 0xa855f7, transparent: true, opacity: 0.9}));
+                this.compressionGroup.add(this.ring4_4);
+
+                // --- NEW: Golden Strassen Toroid (24 Streams) ---
+                this.toroidGroup = new THREE.Group();
+                const toroidGeo = new THREE.TorusGeometry(20, 4, 16, 24);
+                const toroidMat = new THREE.LineBasicMaterial({color: 0x4f46e5, transparent: true, opacity: 0.3, blending: THREE.AdditiveBlending});
+                this.toroidMesh = new THREE.LineSegments(new THREE.EdgesGeometry(toroidGeo), toroidMat);
+                this.toroidGroup.add(this.toroidMesh);
+                this.compressionGroup.add(this.toroidGroup);
+
+                // --- NEW: 12-6-7-3-1 Chiral Compression Funnel ---
+                this.funnelGroup = new THREE.Group();
+                const createPoly = (pts, color) => {
+                    const geom = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p[0], p[1], 0)));
+                    return new THREE.LineLoop(geom, new THREE.LineBasicMaterial({color: color, transparent: true, opacity: 0.6}));
+                };
+                
+                const pts12 = Array.from({length: 12}, (_, i) => [Math.cos(i*Math.PI/6)*15, Math.sin(i*Math.PI/6)*15]);
+                const pts6 = Array.from({length: 6}, (_, i) => [Math.cos(i*Math.PI/3)*10, Math.sin(i*Math.PI/3)*10]);
+                const pts7 = Array.from({length: 7}, (_, i) => [Math.cos(i*Math.PI*2/7)*7, Math.sin(i*Math.PI*2/7)*7]);
+                const pts3 = Array.from({length: 3}, (_, i) => [Math.cos(i*Math.PI*2/3)*4, Math.sin(i*Math.PI*2/3)*4]);
+                
+                this.f12 = createPoly(pts12, 0x67e8f9);
+                this.f6 = createPoly(pts6, 0x3b82f6);
+                this.f7 = createPoly(pts7, 0xec4899);
+                this.f3 = createPoly(pts3, 0xfde047);
+                this.f1 = new THREE.Mesh(new THREE.SphereGeometry(1.5, 8, 8), new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.9}));
+                
+                this.funnelGroup.add(this.f12, this.f6, this.f7, this.f3, this.f1);
+                this.compressionGroup.add(this.funnelGroup);
+
+                // --- NEW: 5-Quaternion Carrier Streams ---
+                this.streamsGroup = new THREE.Group();
+                this.qStreams = [];
+                const streamColors = [0xef4444, 0x22c55e, 0x3b82f6, 0x00ffcc, 0xfde047]; // The 3 Phases + 2 Carriers
+                for(let i=0; i<5; i++) {
+                    const streamGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0, 0, 40)]);
+                    const streamMat = new THREE.LineBasicMaterial({color: streamColors[i], transparent: true, opacity: 0.8, linewidth: 2});
+                    const stream = new THREE.Line(streamGeom, streamMat);
+                    // Splay them slightly outward from the Z-axis
+                    stream.rotation.x = (Math.random() - 0.5) * 0.5;
+                    stream.rotation.y = (Math.random() - 0.5) * 0.5;
+                    this.qStreams.push(stream);
+                    this.streamsGroup.add(stream);
+                }
+                this.compressionGroup.add(this.streamsGroup);
+            }
+
+            buildTetrahedralSubstrate() {
+                const baseTet = [new THREE.Vector3(1,1,1), new THREE.Vector3(-1,-1,1), new THREE.Vector3(-1,1,-1), new THREE.Vector3(1,-1,-1)];
+                const tetNodes = [];
+                baseTet.forEach(v => tetNodes.push(v));
+                for(let i=0; i<4; i++) for(let j=i+1; j<4; j++) tetNodes.push(new THREE.Vector3().addVectors(baseTet[i], baseTet[j]).multiplyScalar(0.5));
+                for(let i=0; i<4; i++) {
+                    const faceC = new THREE.Vector3(); let count=0;
+                    for(let j=0; j<4; j++) if(i!==j) { faceC.add(baseTet[j]); count++; }
+                    tetNodes.push(faceC.multiplyScalar(1/count));
+                }
+                tetNodes.push(new THREE.Vector3(0,0,0));
+
+                this.tetMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.8, 8, 8), new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending}), 15);
+                
+                this.tetData = [];
+                const colRed = new THREE.Color(0xef4444), colGrn = new THREE.Color(0x22c55e), colBlu = new THREE.Color(0x3b82f6), colYel = new THREE.Color(0xfde047);
+                
+                this.cellHash = getEscherHash(this.gridX, this.gridY, this.gridZ);
+                
+                for(let j=0; j<15; j++) {
+                    let bColor = colRed;
+                    if(j>=4 && j<10) bColor = colGrn;
+                    if(j>=10 && j<14) bColor = colBlu;
+                    if(j===14) bColor = colYel;
+
+                    this.tetData.push({ nodeBase: tetNodes[j].clone().multiplyScalar(14), baseColor: bColor });
+                    this.tetMesh.setColorAt(j, bColor);
+                }
+                
+                this.tetMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+                this.group.add(this.tetMesh);
+            }
+
+            updateSeed(centerHexBin) {
+                // Escher Hash Calculation
+                let seedBin = centerHexBin;
+                if (!this.isCenter) {
+                    const chunkIdx = getEscherHash(this.gridX, this.gridY, this.gridZ) % 16;
+                    seedBin = centerHexBin.substr(chunkIdx * 4, 4).repeat(16);
+                }
+
+                // Parse Params
+                this.params = parseSeedToParams(seedBin, state.activeKernel);
+                
+                // Update Matrix Materials
+                const payloadColor = new THREE.Color(this.params.colorR / 255, this.params.colorG / 255, this.params.colorB / 255);
+                this.waveA.material.color = payloadColor;
+                if(this.isCenter && packetSystem) packetSystem.material.color = payloadColor;
+
+                this.coreMatrices.forEach(mesh => {
+                    const bitIndex = mesh.userData.bitIndex;
+                    const faceIndex = mesh.userData.faceIndex;
+                    let bitVal = seedBin[bitIndex] === '1';
+                    if (faceIndex === 4 || faceIndex === 5) bitVal = !bitVal;
+                    
+                    const haloColor = mesh.userData.def.polarity === 1 ? new THREE.Color(0x00ffff) : new THREE.Color(0xff00ff);
+                    
+                    if (state.tessellationHalo) {
+                        if (mesh.userData.isInner) { 
+                            mesh.material.color = bitVal ? payloadColor : new THREE.Color(0x111111);
+                            mesh.children[0].material.color.setHex(bitVal ? 0xffffff : 0x444444);
+                            mesh.material.opacity = bitVal ? 0.3 : 0.05;
+                        } else { 
+                            mesh.material.color = bitVal ? haloColor : new THREE.Color(0x050505);
+                            mesh.children[0].material.color = haloColor;
+                            mesh.material.opacity = bitVal ? 0.15 : 0.0;
+                            mesh.children[0].material.opacity = bitVal ? 0.4 : 0.05;
+                        }
+                    } else {
+                        mesh.material.color = bitVal ? payloadColor : new THREE.Color(0x111111);
+                        mesh.children[0].material.color = bitVal ? payloadColor : new THREE.Color(0x444444);
+                        mesh.material.opacity = bitVal ? 0.1 : 0.0;
+                    }
+                });
+            }
+
+            updateGeometry(cyclePhase) {
+                const res = this.waveA.geometry.attributes.position.count;
+                const posA = this.waveA.geometry.attributes.position;
+                const posB = this.waveB.geometry.attributes.position;
+                const posC = this.waveC.geometry.attributes.position;
+                const pGovA = this.govA.geometry.attributes.position;
+                const pGovB = this.govB.geometry.attributes.position;
+                const pGovC = this.govC.geometry.attributes.position;
+                const pMeta = this.metaGov.geometry.attributes.position;
+
+                for (let i = 0; i < res; i++) {
+                    const u = i / (res - 1);
+                    // Inherit external governance tensions globally, but apply local structural params
+                    const ptA = getTopologyPoints(u, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, this.params, this.cellPhaseOffset);
+                    const ptB = getTopologyPoints(u, cyclePhase, 2 * Math.PI / 3, state.scaleB, state.govTorsionB, state.govTensionB, this.params, this.cellPhaseOffset);
+                    const ptC = getTopologyPoints(u, cyclePhase, 4 * Math.PI / 3, state.scaleC, state.govTorsionC, state.govTensionC, this.params, this.cellPhaseOffset);
+                    
+                    posA.setXYZ(i, ptA.signal.x, ptA.signal.y, ptA.signal.z);
+                    posB.setXYZ(i, ptB.signal.x, ptB.signal.y, ptB.signal.z);
+                    posC.setXYZ(i, ptC.signal.x, ptC.signal.y, ptC.signal.z);
+                    
+                    pGovA.setXYZ(i, ptA.gov.x, ptA.gov.y, ptA.gov.z);
+                    pGovB.setXYZ(i, ptB.gov.x, ptB.gov.y, ptB.gov.z);
+                    pGovC.setXYZ(i, ptC.gov.x, ptC.gov.y, ptC.gov.z);
+
+                    const centroid = new THREE.Vector3().add(ptA.gov).add(ptB.gov).add(ptC.gov).divideScalar(3);
+                    const v1 = new THREE.Vector3().subVectors(ptB.gov, ptA.gov);
+                    const v2 = new THREE.Vector3().subVectors(ptC.gov, ptA.gov);
+                    let metaNorm = new THREE.Vector3().crossVectors(v1, v2).normalize();
+                    if(metaNorm.lengthSq() < 0.01) metaNorm.copy(ptA.N); 
+                    const mTan = new THREE.Vector3();
+                    if (Math.abs(metaNorm.y) < 0.99) mTan.set(0, 1, 0); else mTan.set(1, 0, 0);
+                    mTan.cross(metaNorm).normalize();
+                    const mBit = new THREE.Vector3().crossVectors(metaNorm, mTan).normalize();
+                    const metaRad = Math.max(centroid.distanceTo(ptA.gov), centroid.distanceTo(ptB.gov), centroid.distanceTo(ptC.gov)) + 2.0;
+                    
+                    const mAngle = (u * state.metaTorsion * Math.PI * 2) - (cyclePhase * Math.PI * 2);
+                    const metaPt = centroid.clone().add(mTan.multiplyScalar(Math.cos(mAngle) * metaRad * state.metaTension)).add(mBit.multiplyScalar(Math.sin(mAngle) * metaRad * state.metaTension));
+                    
+                    pMeta.setXYZ(i, metaPt.x, metaPt.y, metaPt.z);
+                }
+
+                posA.needsUpdate = true; posB.needsUpdate = true; posC.needsUpdate = true;
+                pGovA.needsUpdate = true; pGovB.needsUpdate = true; pGovC.needsUpdate = true; pMeta.needsUpdate = true;
+
+                // Visibilities
+                this.waveB.visible = state.showPhaseWaveforms && state.triPhaseGovernance;
+                this.waveC.visible = state.showPhaseWaveforms && state.triPhaseGovernance;
+                this.govA.visible = state.showGovernance && state.showInternalGov;
+                this.govB.visible = state.showGovernance && state.showInternalGov && state.triPhaseGovernance;
+                this.govC.visible = state.showGovernance && state.showInternalGov && state.triPhaseGovernance;
+                this.metaGov.visible = state.showGovernance && state.showMetaGov;
+
+                this.waveA.material.opacity = state.visualWopac;
+                this.waveB.material.opacity = state.visualWopac;
+                this.waveC.material.opacity = state.visualWopac;
+                this.govA.material.opacity = state.visualGovOpac;
+                this.govB.material.opacity = state.visualGovOpac;
+                this.govC.material.opacity = state.visualGovOpac;
+                this.metaGov.material.opacity = state.visualGovOpac + 0.3;
+
+                const currentFrame = state.currentFrame;
+
+                // --- NEW: Quaternionic SLERP 4-Part Breath ---
+                // Maps 720 frames to a full sine wave: 0 -> 1 -> 0 -> -1 -> 0
+                // w = 0 is the Identity/Zero-Point. |w| = 1 is the Pi8 Boundary.
+                const slerp_w = Math.sin((currentFrame / 720.0) * Math.PI * 2);
+                const absolute_w = Math.abs(slerp_w);
+                const phi = 1.6180339887;
+                
+                // SLERP Scale: q^w = exp(w * log q)
+                const slerpScale = Math.pow(phi, absolute_w * 2.0);
+                const inversePhase = slerp_w < 0 ? -1 : 1;
+
+                if (this.compressionGroup && state.showCompressionCore) {
+                    this.compressionGroup.visible = true;
+
+                    // 1. Golden Strassen Toroid
+                    if (this.toroidGroup) {
+                        this.toroidGroup.visible = state.show24Toroid;
+                        this.toroidGroup.scale.setScalar(0.2 + (slerpScale * 0.8));
+                        this.toroidGroup.rotation.z = cyclePhase * Math.PI * 2 * inversePhase;
+                        this.toroidGroup.children.forEach(c => c.material.opacity = absolute_w * 0.5);
+                    }
+
+                    // 2. The 12-6-7-3-1 Compression Funnel
+                    if (this.funnelGroup) {
+                        this.funnelGroup.visible = state.showCompressionFunnel;
+                        // Funnel crushes inward as w -> 0
+                        const funnelCrush = Math.pow(absolute_w, 0.5); 
+                        
+                        this.f12.scale.setScalar(0.1 + funnelCrush * 1.0);
+                        this.f12.rotation.z = cyclePhase * Math.PI * 4;
+                        this.f12.position.z = slerp_w * 10; // Breathing lift
+
+                        this.f6.scale.setScalar(0.1 + funnelCrush * 0.8);
+                        this.f6.rotation.z = -cyclePhase * Math.PI * 6;
+                        this.f6.position.z = slerp_w * 5;
+
+                        this.f7.scale.setScalar(0.1 + funnelCrush * 0.6);
+                        this.f7.rotation.z = cyclePhase * Math.PI * 8;
+                        this.f7.position.z = slerp_w * 2; // Asymmetric filter spins fast
+
+                        this.f3.scale.setScalar(0.1 + funnelCrush * 0.4);
+                        this.f3.rotation.z = -cyclePhase * Math.PI * 12;
+
+                        // Singularity pulses exactly at w = 0
+                        this.f1.scale.setScalar(1.0 + (1.0 - absolute_w) * 2.0);
+                        this.f1.material.opacity = (1.0 - absolute_w);
+                    }
+
+                    // 3. The 5-Quaternion Offload Streams
+                    if (this.streamsGroup) {
+                        this.streamsGroup.visible = state.show5Streams;
+                        // Burst occurs exactly at the Zero-Point (w approaches 0)
+                        const offloadBurst = Math.max(0, 1.0 - (absolute_w * 8.0));
+                        
+                        this.qStreams.forEach((stream, i) => {
+                            stream.material.opacity = offloadBurst;
+                            // Streams extend and fire outward during the burst
+                            const scaleBurst = 0.1 + offloadBurst * 1.5;
+                            stream.scale.setScalar(scaleBurst);
+                            stream.rotation.z = cyclePhase * Math.PI * (i+1);
+                        });
+                    }
+                } else if (this.compressionGroup) {
+                    this.compressionGroup.visible = false;
+                }
+
+                // Animate Fokker-Planck Substrate (15-Node Tetrahedrons)
+                if (this.tetMesh) {
+                    const dummy = new THREE.Object3D();
+                    const hashNorm = this.cellHash / 945.0;
+                    const isCrunch = (currentFrame % 30) < 2;
+
+                    for(let i=0; i<15; i++) {
+                        const dt = this.tetData[i];
+                        const driftX = Math.sin(cyclePhase * Math.PI * 8 + hashNorm * Math.PI * 2 + i) * 2.5;
+                        const driftY = Math.cos(cyclePhase * Math.PI * 12 + hashNorm * Math.PI * 2 + i) * 2.5;
+                        const driftZ = Math.sin(cyclePhase * Math.PI * 16 + hashNorm * Math.PI * 2 + i) * 2.5;
+                        
+                        if (isCrunch && state.showCompressionCore) {
+                            dummy.position.copy(dt.nodeBase);
+                            this.tetMesh.setColorAt(i, new THREE.Color(0xf59e0b)); 
+                        } else {
+                            dummy.position.copy(dt.nodeBase).add(new THREE.Vector3(driftX, driftY, driftZ));
+                            this.tetMesh.setColorAt(i, dt.baseColor);
+                        }
+                        dummy.updateMatrix();
+                        this.tetMesh.setMatrixAt(i, dummy.matrix);
+                    }
+                    this.tetMesh.instanceMatrix.needsUpdate = true;
+                    this.tetMesh.instanceColor.needsUpdate = true;
+                }
+
+                // Center specific logic
+                if (this.isCenter && state.showGovernance) {
+                    const updateTQF = (mesh, uVal, phaseOffset) => {
+                        const pt = getTopologyPoints(uVal, cyclePhase, phaseOffset, 1.0, state.govTorsionA, state.govTensionA, this.params, this.cellPhaseOffset);
+                        // Dummy meta calculation just for TQF visualization
+                        const pA = getTopologyPoints(uVal, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, this.params, this.cellPhaseOffset);
+                        const pB = getTopologyPoints(uVal, cyclePhase, 2*Math.PI/3, state.scaleB, state.govTorsionB, state.govTensionB, this.params, this.cellPhaseOffset);
+                        const pC = getTopologyPoints(uVal, cyclePhase, 4*Math.PI/3, state.scaleC, state.govTorsionC, state.govTensionC, this.params, this.cellPhaseOffset);
+                        const centroid = new THREE.Vector3().add(pA.gov).add(pB.gov).add(pC.gov).divideScalar(3);
+                        const v1 = new THREE.Vector3().subVectors(pB.gov, pA.gov);
+                        const v2 = new THREE.Vector3().subVectors(pC.gov, pA.gov);
+                        let metaNorm = new THREE.Vector3().crossVectors(v1, v2).normalize();
+                        if(metaNorm.lengthSq() < 0.01) metaNorm.copy(pA.N); 
+                        const mTan = new THREE.Vector3();
+                        if (Math.abs(metaNorm.y) < 0.99) mTan.set(0, 1, 0); else mTan.set(1, 0, 0);
+                        mTan.cross(metaNorm).normalize();
+                        const mBit = new THREE.Vector3().crossVectors(metaNorm, mTan).normalize();
+                        const metaRad = Math.max(centroid.distanceTo(pA.gov), centroid.distanceTo(pB.gov), centroid.distanceTo(pC.gov)) + 2.0;
+                        const mAngle = (uVal * state.metaTorsion * Math.PI * 2) - (cyclePhase * Math.PI * 2);
+                        const mPt = centroid.clone().add(mTan.multiplyScalar(Math.cos(mAngle) * metaRad * state.metaTension)).add(mBit.multiplyScalar(Math.sin(mAngle) * metaRad * state.metaTension));
+
+                        const pos = mesh.geometry.attributes.position;
+                        pos.setXYZ(0, pt.signal.x, pt.signal.y, pt.signal.z);
+                        pos.setXYZ(1, pt.gov.x, pt.gov.y, pt.gov.z);
+                        pos.setXYZ(2, mPt.x, mPt.y, mPt.z);
+                        pos.setXYZ(3, pt.signal.x, pt.signal.y, pt.signal.z);
+                        pos.needsUpdate = true;
+                    };
+                    
+                    this.tqfA.visible = true; updateTQF(this.tqfA, cyclePhase, 0);
+                    if (state.triPhaseGovernance) {
+                        this.tqfB.visible = true; updateTQF(this.tqfB, (cyclePhase + 1/3)%1.0, 2*Math.PI/3);
+                        this.tqfC.visible = true; updateTQF(this.tqfC, (cyclePhase + 2/3)%1.0, 4*Math.PI/3);
+                    } else {
+                        this.tqfB.visible = false; this.tqfC.visible = false;
+                    }
+
+                    // --- NEW: INSTANT GEOMETRIC BACKPROPAGATION ---
+                    // 1. Calculate Spatial Coordinates at the Wavefront
+                    const pA = getTopologyPoints(cyclePhase, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, this.params, this.cellPhaseOffset).signal;
+                    const pB = getTopologyPoints(cyclePhase, cyclePhase, 2*Math.PI/3, state.scaleB, state.govTorsionB, state.govTensionB, this.params, this.cellPhaseOffset).signal;
+                    const pC = getTopologyPoints(cyclePhase, cyclePhase, 4*Math.PI/3, state.scaleC, state.govTorsionC, state.govTensionC, this.params, this.cellPhaseOffset).signal;
+
+                    // 2. Triple Quad Formula (TQF) as Instant Loss Function
+                    const Q1 = pA.distanceToSquared(pB);
+                    const Q2 = pB.distanceToSquared(pC);
+                    const Q3 = pC.distanceToSquared(pA);
+                    
+                    const sumQ = Q1 + Q2 + Q3;
+                    const sumSqQ = Q1*Q1 + Q2*Q2 + Q3*Q3;
+                    // Archimedean Remainder (Area/Frustration)
+                    const A_R = Math.max(0, (sumQ * sumQ) - 2 * sumSqQ); 
+                    
+                    // Normalize the gradient for visual mapping (tuning parameter)
+                    const lossGradient = Math.min(1.0, A_R / 80000.0);
+
+                    // Update HUD
+                    document.getElementById('metric-tqf-loss').innerText = A_R.toFixed(1);
+                    document.getElementById('metric-tqf-loss').style.color = lossGradient > 0.5 ? '#ef4444' : '#a855f7';
+
+                    // 3. Render Scalar Field Tension Web
+                    if (this.scalarWeb) {
+                        this.scalarWeb.visible = state.showScalarField && state.triPhaseGovernance;
+                        if (this.scalarWeb.visible) {
+                            const pos = this.scalarWeb.geometry.attributes.position;
+                            pos.setXYZ(0, pA.x, pA.y, pA.z);
+                            pos.setXYZ(1, pB.x, pB.y, pB.z);
+                            pos.setXYZ(2, pC.x, pC.y, pC.z);
+                            pos.needsUpdate = true;
+                            
+                            if (this.scalarWebEdges) {
+                                const ePos = this.scalarWebEdges.geometry.attributes.position;
+                                ePos.setXYZ(0, pA.x, pA.y, pA.z);
+                                ePos.setXYZ(1, pB.x, pB.y, pB.z);
+                                ePos.setXYZ(2, pC.x, pC.y, pC.z);
+                                ePos.setXYZ(3, pA.x, pA.y, pA.z); // Close the geometric loop
+                                ePos.needsUpdate = true;
+                                this.scalarWebEdges.visible = state.scalarWebHighlight;
+                                // Shift edge boundary from Cyan to Neon Red based on TQF loss
+                                this.scalarWebEdges.material.color.lerpColors(new THREE.Color(0x00ffff), new THREE.Color(0xff0000), lossGradient);
+                            }
+
+                            // Shift Web fill color to Red/Hot if tension is high
+                            this.scalarWeb.material.color.lerpColors(new THREE.Color(0x3b82f6), new THREE.Color(0xef4444), lossGradient);
+                            this.scalarWeb.material.opacity = state.scalarWebOpacity + (lossGradient * 0.5);
+                        }
+                    }
+
+                    // 4. Render Phase-Conjugate Inverse Streams (-w)
+                    if (this.inverseGroup) {
+                        this.inverseGroup.visible = state.showInverseBackprop;
+                        if (state.showInverseBackprop) {
+                            // Flow time backwards
+                            const invPulse = (1.0 - cyclePhase); 
+                            this.inverseStreams.forEach((stream, i) => {
+                                const angle = (i / 12) * Math.PI * 2 - (cyclePhase * Math.PI);
+                                const radius = 180; // Originating from Pi8 boundary
+                                const startPt = new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle * 3) * 40, Math.sin(angle) * radius);
+                                const endPt = new THREE.Vector3(0,0,0); // Flowing to Singularity
+                                
+                                // Create a rapid pulsing trace returning to center
+                                const pulseLoc = (invPulse * 4 + (i * 0.08)) % 1.0;
+                                const pulsePt = new THREE.Vector3().lerpVectors(startPt, endPt, pulseLoc);
+                                
+                                const pos = stream.geometry.attributes.position;
+                                pos.setXYZ(0, startPt.x, startPt.y, startPt.z);
+                                pos.setXYZ(1, pulsePt.x, pulsePt.y, pulsePt.z);
+                                pos.needsUpdate = true;
+
+                                // The inverse streams carry the exact Loss Gradient color back to the center
+                                stream.material.color.lerpColors(new THREE.Color(0xa855f7), new THREE.Color(0xef4444), lossGradient);
+                                stream.material.opacity = 0.1 + (lossGradient * 0.9);
+                            });
+                        }
+                    }
+                    
+                    // Singularity absorbs the error
+                    if (this.f1) {
+                        this.f1.material.color.lerpColors(new THREE.Color(0xffffff), new THREE.Color(0xef4444), lossGradient);
+                    }
+                }
+            }
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+            camera.position.set(300, 250, 400);
+            
+            renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+
+            orbitControls = new OrbitControls(camera, renderer.domElement);
+            orbitControls.enableDamping = true;
+            orbitControls.dampingFactor = 0.05;
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+            scene.add(ambient);
+            const coreLight = new THREE.PointLight(0xffffff, 800, 2000);
+            coreLight.position.set(0, 0, 0);
+            scene.add(coreLight);
+
+            // --- Riemann Zeta Resonance Pole ---
+            zetaPoleMesh = new THREE.Mesh(
+                new THREE.CylinderGeometry(3, 3, 4000, 32),
+                new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false})
+            );
+            scene.add(zetaPoleMesh);
+
+            // Particles (Center Only)
+            const pGeom = new THREE.BufferGeometry();
+            pGeom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(state.particleCount * 3), 3));
+            pGeom.setAttribute('uVal', new THREE.BufferAttribute(new Float32Array(state.particleCount).map((_,i) => i/(state.particleCount-1)), 1));
+            packetSystem = new THREE.Points(pGeom, new THREE.PointsMaterial({ size: 1.2, color: 0xffffff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+            scene.add(packetSystem);
+
+            buildTessellationGrid();
+            buildTracerSystem();
+            buildBoundaryShells();
+            buildEmergentSystem();
+            
+            // Inter-Cell Soliton Struts
+            const sGeo = new THREE.BufferGeometry();
+            sGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(26 * 2 * 3), 3));
+            solitonStrutsGroup = new THREE.LineSegments(sGeo, new THREE.LineBasicMaterial({ color: 0xa855f7, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending }));
+            scene.add(solitonStrutsGroup);
+
+            setupGUI();
+            setupKernelDesigner();
+            setupSequencerUI();
+            setupVisualSettingsUI();
+            
+            syncHexToParams(); 
+            updatePlayBtnUI();
+            
+            window.addEventListener('resize', onWindowResize, false);
+            window.addEventListener('keydown', (e) => { 
+                if (e.code === 'Space' && document.activeElement.tagName !== 'TEXTAREA' && document.activeElement.tagName !== 'INPUT') {
+                    state.isPlaying = !state.isPlaying; updatePlayBtnUI();
+                } 
+            });
+            
+            animate();
+        }
+
+        function buildTessellationGrid() {
+            // Purge old
+            allMacroCells.forEach(cell => scene.remove(cell.group));
+            allMacroCells = [];
+
+            let bounds = [];
+            if (state.tessellationExtent === '1 Cell (Center Only)') {
+                bounds = [{x:0, y:0, z:0}];
+            } else if (state.tessellationExtent === '7 Cells (Face Neighbors)') {
+                bounds = [{x:0,y:0,z:0}, {x:1,y:0,z:0}, {x:-1,y:0,z:0}, {x:0,y:1,z:0}, {x:0,y:-1,z:0}, {x:0,y:0,z:1}, {x:0,y:0,z:-1}];
+            } else {
+                for(let x=-1; x<=1; x++) for(let y=-1; y<=1; y++) for(let z=-1; z<=1; z++) bounds.push({x,y,z});
+            }
+
+            bounds.forEach(b => {
+                const cell = new MacroCell(b.x, b.y, b.z, (b.x===0 && b.y===0 && b.z===0));
+                allMacroCells.push(cell);
+            });
+        }
+
+        function hexToBinaryStr(hex) {
+            let clean = hex.replace('0x', '').padStart(16, '0').toUpperCase();
+            let bin = '';
+            for(let i = 0; i < 16; i++) bin += parseInt(clean[i], 16).toString(2).padStart(4, '0');
+            return bin;
+        }
+
+        function binaryStrToHex(bin) {
+            let hex = '';
+            for(let i = 0; i < bin.length; i+=4) hex += parseInt(bin.substr(i, 4), 2).toString(16).toUpperCase();
+            return hex;
+        }
+
+        function parseSeedToParams(bin, kernel) {
+            const params = {};
+            if(kernel === 'Blackwell Block') {
+                params.formId = parseInt(bin.substring(0, 4), 2);
+                params.parity = parseInt(bin.substring(4, 5), 2);
+                params.payload = parseInt(bin.substring(5, 21), 2);
+                let quat = bin.substring(21, 53);
+                params.colorR = parseInt(quat.substring(0, 8), 2);
+                params.colorG = parseInt(quat.substring(8, 16), 2);
+                params.colorB = parseInt(quat.substring(16, 24), 2);
+                params.freqId = parseInt(bin.substring(53, 58), 2);
+                params.spinClass = parseInt(bin.substring(58, 61), 2);
+                params.ampId = parseInt(bin.substring(61, 64), 2);
+
+                params.shapePower = 0.2 + (params.formId / 15) * 4.8;
+                params.amplitude = 10 + (params.payload / 65535) * 190;
+                params.depth = (params.ampId / 7) * 200;
+                params.frequency = 1 + Math.round((params.freqId / 31) * 19);
+                params.twist = -0.1 + (params.spinClass / 7) * 0.2;
+            } else {
+                let b0 = parseInt(bin.substring(0, 8), 2); let b1 = parseInt(bin.substring(8, 16), 2);
+                let b2 = parseInt(bin.substring(16, 24), 2); let b3 = parseInt(bin.substring(24, 32), 2);
+                let b4 = parseInt(bin.substring(32, 40), 2); params.colorR = parseInt(bin.substring(40, 48), 2);
+                params.colorG = parseInt(bin.substring(48, 56), 2); params.colorB = parseInt(bin.substring(56, 64), 2);
+
+                params.amplitude = 10 + (b0 / 255) * 190; params.depth = (b1 / 255) * 200;
+                params.frequency = 1 + Math.round((b2 / 255) * 19);
+                let rawShape = b3 / 255; params.shapePower = rawShape < 0.5 ? 0.2 + (rawShape * 2) * 1.8 : 2.0 + ((rawShape - 0.5) * 2) * 3.0;
+                params.twist = -0.1 + (b4 / 255) * 0.2; params.parity = 0;
+            }
+            return params;
+        }
+
+        function getBasePath(u, topology) {
+            if (topology === 'Linear Trace') return new THREE.Vector3(-100 + (u * 200), 0, 0);
+            if (topology === 'Toroidal Loop') { const R = 60, t = u * Math.PI * 2; return new THREE.Vector3(R * Math.cos(t), 0, R * Math.sin(t)); }
+            const R = 20, t = u * Math.PI * 2;
+            return new THREE.Vector3( R * (Math.sin(t) + 2 * Math.sin(2 * t)), R * (Math.cos(t) - 2 * Math.cos(2 * t)), R * (-Math.sin(3 * t)));
+        }
+
+        function getFrenetFrame(u, topology) {
+            const delta = 0.0001; const p0 = getBasePath(u, topology); const p1 = getBasePath((u + delta) % 1.0, topology);
+            const T = new THREE.Vector3().subVectors(p1, p0).normalize();
+            let N = new THREE.Vector3(), B = new THREE.Vector3();
+            if (topology === 'Linear Trace') { T.set(1, 0, 0); N.set(0, 1, 0); B.set(0, 0, 1); }
+            else if (topology === 'Toroidal Loop') { const t = u * Math.PI * 2; T.set(-Math.sin(t), 0, Math.cos(t)); N.set(-Math.cos(t), 0, -Math.sin(t)); B.set(0, 1, 0); }
+            else { const p_minus1 = getBasePath((u - delta + 1.0) % 1.0, topology); const T_minus1 = new THREE.Vector3().subVectors(p0, p_minus1).normalize(); N.subVectors(T, T_minus1).normalize(); B.crossVectors(T, N).normalize(); }
+            return { p: p0, T, N, B };
+        }
+
+        function getTopologyPoints(u, cyclePhase, phaseOffset, sScale, pTorsion, pTension, params, baseCellOffset) {
+            const frame = getFrenetFrame(u, state.topology);
+            const p0 = frame.p, N = frame.N, B = frame.B;
+            
+            const panOffset = state.panning * Math.PI * 2;
+            // Introduce baseCellOffset (the modulo 3 Escher lock)
+            const theta = ((u * params.frequency * Math.PI * 2) - (cyclePhase * Math.PI * 2 * params.frequency)) + panOffset + phaseOffset + baseCellOffset;
+            const n_power = 2.0 / params.shapePower;
+            const cosT = Math.cos(theta), sinT = Math.sin(theta);
+            
+            const scaleFac = state.topology === 'Linear Trace' ? 1.0 : 0.25;
+            const parityMult = (params.parity === 1) ? -1 : 1;
+
+            let modY = (params.amplitude * scaleFac) * Math.sign(sinT) * Math.pow(Math.abs(sinT), n_power) * parityMult * sScale;
+            let modZ = (params.depth * scaleFac) * Math.sign(cosT) * Math.pow(Math.abs(cosT), n_power) * parityMult * sScale;
+
+            const twistAngle = u * Math.PI * 2 * params.twist * 10;
+            const twY = modY * Math.cos(twistAngle) - modZ * Math.sin(twistAngle);
+            const twZ = modY * Math.sin(twistAngle) + modZ * Math.cos(twistAngle);
+
+            const signalPt = p0.clone().add(N.clone().multiplyScalar(twY)).add(B.clone().multiplyScalar(twZ));
+
+            const maxConstraint = (Math.max(params.amplitude, params.depth) * scaleFac + 4) * pTension * sScale; 
+            const govTurns = pTorsion * Math.PI * 2; 
+            const govAngle = (u * govTurns) - (cyclePhase * Math.PI * 2) + phaseOffset + baseCellOffset;
+            const govPt = p0.clone().add(N.clone().multiplyScalar(maxConstraint * Math.cos(govAngle))).add(B.clone().multiplyScalar(maxConstraint * Math.sin(govAngle)));
+            const normal = new THREE.Vector3().subVectors(govPt, signalPt).normalize();
+
+            return { signal: signalPt, gov: govPt, normal: normal, N: N };
+        }
+
+        function getBoundaryHit(p, n, bounds) {
+            let t = Infinity;
+            const axes = ['x', 'y', 'z'];
+            for (let i = 0; i < 3; i++) {
+                const axis = axes[i];
+                if (Math.abs(n[axis]) > 1e-8) {
+                    let t1 = (bounds - p[axis]) / n[axis];
+                    if (t1 > 0 && t1 < t) t = t1;
+                    let t2 = (-bounds - p[axis]) / n[axis];
+                    if (t2 > 0 && t2 < t) t = t2;
+                }
+            }
+            if (t === Infinity) t = bounds; 
+            return p.clone().add(n.clone().multiplyScalar(t));
+        }
+
+        function buildTracerSystem() {
+            trailGeo = new THREE.BufferGeometry(); trailPos = new Float32Array(MAX_TRACERS * 3 * 3 * 3); trailCol = new Float32Array(MAX_TRACERS * 3 * 3 * 3);
+            trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3)); trailGeo.setAttribute('color', new THREE.BufferAttribute(trailCol, 3));
+            tqfTrailMesh = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false }));
+            scene.add(tqfTrailMesh);
+
+            bInnerPos = new Float32Array(MAX_TRACERS * 3 * 3); bInnerCol = new Float32Array(MAX_TRACERS * 3 * 3);
+            const bGeoIn = new THREE.BufferGeometry(); bGeoIn.setAttribute('position', new THREE.BufferAttribute(bInnerPos, 3)); bGeoIn.setAttribute('color', new THREE.BufferAttribute(bInnerCol, 3));
+            barcodeInnerMesh = new THREE.Points(bGeoIn, new THREE.PointsMaterial({ size: 1.5, vertexColors: true, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending }));
+            scene.add(barcodeInnerMesh);
+
+            bOuterPos = new Float32Array(MAX_TRACERS * 3 * 3); bOuterCol = new Float32Array(MAX_TRACERS * 3 * 3);
+            const bGeoOut = new THREE.BufferGeometry(); bGeoOut.setAttribute('position', new THREE.BufferAttribute(bOuterPos, 3)); bGeoOut.setAttribute('color', new THREE.BufferAttribute(bOuterCol, 3));
+            barcodeOuterMesh = new THREE.Points(bGeoOut, new THREE.PointsMaterial({ size: 4.0, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+            scene.add(barcodeOuterMesh);
+
+            bExtPos = new Float32Array(MAX_TRACERS * 3 * 3); bExtCol = new Float32Array(MAX_TRACERS * 3 * 3);
+            const bGeoExt = new THREE.BufferGeometry(); bGeoExt.setAttribute('position', new THREE.BufferAttribute(bExtPos, 3)); bGeoExt.setAttribute('color', new THREE.BufferAttribute(bExtCol, 3));
+            barcodeExtMesh = new THREE.Points(bGeoExt, new THREE.PointsMaterial({ size: 6.0, vertexColors: true, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending }));
+            scene.add(barcodeExtMesh);
+
+            bConnPos = new Float32Array(MAX_TRACERS * 3 * 4 * 3); bConnCol = new Float32Array(MAX_TRACERS * 3 * 4 * 3);
+            const bConnGeo = new THREE.BufferGeometry(); bConnGeo.setAttribute('position', new THREE.BufferAttribute(bConnPos, 3)); bConnGeo.setAttribute('color', new THREE.BufferAttribute(bConnCol, 3));
+            barcodeConnectionsMesh = new THREE.LineSegments(bConnGeo, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending }));
+            scene.add(barcodeConnectionsMesh);
+        }
+
+        function buildBoundaryShells() {
+            const coreGeo = new THREE.WireframeGeometry(new THREE.BoxGeometry(360, 360, 360, 4, 4, 4));
+            boundaryCoreMesh = new THREE.LineSegments(coreGeo, new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending }));
+            boundaryCoreMesh.visible = false; scene.add(boundaryCoreMesh);
+
+            const pi6Geo = new THREE.WireframeGeometry(new THREE.BoxGeometry(CELL_OFFSET*0.9, CELL_OFFSET*0.9, CELL_OFFSET*0.9, 3, 3, 3));
+            boundaryPi6Mesh = new THREE.LineSegments(pi6Geo, new THREE.LineBasicMaterial({ color: 0xec4899, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending }));
+            boundaryPi6Mesh.visible = false; scene.add(boundaryPi6Mesh);
+
+            const twoPiGeo = new THREE.WireframeGeometry(new THREE.BoxGeometry(720, 720, 720, 4, 4, 4));
+            boundary2PiMesh = new THREE.LineSegments(twoPiGeo, new THREE.LineBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending }));
+            boundary2PiMesh.visible = false; scene.add(boundary2PiMesh);
+        }
+
+        function buildEmergentSystem() {
+            emergentSphereGroup = new THREE.Group();
+            scene.add(emergentSphereGroup);
+            const ringGeo = new THREE.TorusGeometry(320, 1.5, 16, 100);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending });
+            const ringX = new THREE.Mesh(ringGeo, ringMat.clone()); ringX.rotation.y = Math.PI / 2;
+            const ringY = new THREE.Mesh(ringGeo, ringMat.clone()); ringY.rotation.x = Math.PI / 2;
+            const ringZ = new THREE.Mesh(ringGeo, ringMat.clone());
+            emergentSphereGroup.add(ringX, ringY, ringZ);
+        }
+
+        function syncHexToParams() {
+            const bin = hexToBinaryStr(state.seedHex);
+
+            // Update globals for GUI
+            if(state.activeKernel === 'Blackwell Block') {
+                state.blackwell.formId = parseInt(bin.substring(0, 4), 2);
+                state.blackwell.parity = parseInt(bin.substring(4, 5), 2);
+                state.blackwell.payload = parseInt(bin.substring(5, 21), 2);
+                let quat = bin.substring(21, 53);
+                state.blackwell.quatR = parseInt(quat.substring(0, 8), 2);
+                state.blackwell.quatG = parseInt(quat.substring(8, 16), 2);
+                state.blackwell.quatB = parseInt(quat.substring(16, 24), 2);
+                state.blackwell.freqId = parseInt(bin.substring(53, 58), 2);
+                state.blackwell.spinClass = parseInt(bin.substring(58, 61), 2);
+                state.blackwell.ampId = parseInt(bin.substring(61, 64), 2);
+            } else {
+                state.custom.b0 = parseInt(bin.substring(0, 8), 2);
+                state.custom.b1 = parseInt(bin.substring(8, 16), 2);
+                state.custom.b2 = parseInt(bin.substring(16, 24), 2);
+                state.custom.b3 = parseInt(bin.substring(24, 32), 2);
+                state.custom.b4 = parseInt(bin.substring(32, 40), 2);
+                state.custom.b5 = parseInt(bin.substring(40, 48), 2);
+                state.custom.b6 = parseInt(bin.substring(48, 56), 2);
+                state.custom.b7 = parseInt(bin.substring(56, 64), 2);
+            }
+            
+            // Sync all cells
+            allMacroCells.forEach(cell => cell.updateSeed(bin));
+            
+            // Update Center specific HUDs & Globals
+            const centerCell = allMacroCells.find(c => c.isCenter);
+            if (centerCell) {
+                const payloadColor = new THREE.Color(centerCell.params.colorR / 255, centerCell.params.colorG / 255, centerCell.params.colorB / 255);
+                document.getElementById('seed-display').innerText = '0x' + state.seedHex;
+                document.getElementById('seed-display').style.color = payloadColor.getStyle();
+                const coreLight = scene.children.find(c => c.isPointLight);
+                if (coreLight) coreLight.color = payloadColor;
+                if (boundaryCoreMesh) {
+                    boundaryCoreMesh.visible = state.boundaryMode === 'Default (Core 4x4x4)';
+                    boundaryPi6Mesh.visible = state.boundaryMode === 'Pi6 Soliton Shell';
+                    boundary2PiMesh.visible = state.boundaryMode === '2Pi Structure (2x)';
+                    boundaryCoreMesh.material.color = payloadColor;
+                    boundary2PiMesh.material.color = payloadColor;
+                }
+            }
+            if (guiKernelFolder) guiKernelFolder.controllersRecursive().forEach(c => c.updateDisplay());
+        }
+
+        function syncGUIParamsToHex() {
+            let bin = "";
+            const isBlackwell = state.activeKernel === 'Blackwell Block';
+            const p = isBlackwell ? state.blackwell : state.custom;
+            
+            if(isBlackwell) {
+                bin = p.formId.toString(2).padStart(4, '0') + p.parity.toString(2).padStart(1, '0') +
+                      p.payload.toString(2).padStart(16, '0') + p.quatR.toString(2).padStart(8, '0') +
+                      p.quatG.toString(2).padStart(8, '0') + p.quatB.toString(2).padStart(8, '0') +
+                      "00000000" + p.freqId.toString(2).padStart(5, '0') +
+                      p.spinClass.toString(2).padStart(3, '0') + p.ampId.toString(2).padStart(3, '0');
+            } else {
+                bin = [p.b0, p.b1, p.b2, p.b3, p.b4, p.b5, p.b6, p.b7]
+                      .map(b => (b||0).toString(2).padStart(8, '0')).join('');
+            }
+            state.seedHex = binaryStrToHex(bin);
+            syncHexToParams();
+        }
+
+        function randomizeSeed() {
+            let randomHex = ''; for(let i=0; i<16; i++) randomHex += Math.floor(Math.random()*16).toString(16).toUpperCase();
+            state.seedHex = randomHex; syncHexToParams();
+        }
+
+        function setupGUI() {
+            gui = new GUI({ width: 340 });
+            guiPlaylistFolder = gui.addFolder('Playlist Config');
+            guiPlaylistFolder.add(state, 'playbackMode', ['Continuous', 'Seed Chain']).name('Signal Mode').onChange(syncHexToParams);
+            
+            const quadFolder = gui.addFolder('Trefoil Quadrance Scalers');
+            quadFolder.add(state, 'scaleA', 0.1, 3.0, 0.01).name('Phase 0° (Oracle)');
+            quadFolder.add(state, 'scaleB', 0.1, 3.0, 0.01).name('Phase 120° (Certifier A)');
+            quadFolder.add(state, 'scaleC', 0.1, 3.0, 0.01).name('Phase 240° (Certifier B)');
+
+            const topologyFolder = gui.addFolder('Manifold Topology');
+            topologyFolder.add(state, 'tessellationExtent', ['1 Cell (Center Only)', '7 Cells (Face Neighbors)', '27 Cells (Full 3x3x3)']).name('Tessellation Grid').onChange(buildTessellationGrid);
+            topologyFolder.add(state, 'topology', ['Linear Trace', 'Toroidal Loop', 'Trefoil Knot']).name('Base Manifold');
+            topologyFolder.add(state, 'panning', 0.0, 1.0).name('Wave Panning (Phase)');
+            topologyFolder.add(state, 'showPhaseWaveforms').name('Show Tri-Phase Waves');
+            topologyFolder.add(state, 'showCompressionCore').name('3-Tier Delta Encoder');
+            topologyFolder.add(state, 'showGovernance').name('TQF Triangulation');
+            topologyFolder.add(state, 'triPhaseGovernance').name('Tri-Phase (120° Offsets)');
+            
+            topologyFolder.add(state, 'tessellationHalo').name('Holographic Edge Halos').onChange(syncHexToParams);
+            topologyFolder.add(state, 'escherMode', ['Spatial Octants', 'Holographic Slicing', 'Pandiagonal Interference']).name('Escher Logic').onChange(syncHexToParams);
+            topologyFolder.add(state, 'autoRotate').name('Auto-Rotate Camera').onChange(v => { orbitControls.autoRotate = v; });
+
+            const boundaryFolder = gui.addFolder('Simulation Boundaries');
+            boundaryFolder.add(state, 'boundaryMode', ['Hidden', 'Default (Core 4x4x4)', 'Pi6 Soliton Shell', '2Pi Structure (2x)']).name('Active Shell').onChange(syncHexToParams);
+            boundaryFolder.add(state, 'boundaryOpacity', 0.0, 1.0, 0.01).name('Shell Opacity');
+
+            const govFolder = gui.addFolder('4-Helix Governance System');
+            govFolder.add(state, 'showInternalGov').name('Show Phase Governors');
+            govFolder.add(state, 'showMetaGov').name('Show Meta-Governor');
+            govFolder.add(state, 'govTorsionA', 1, 48, 1).name('Phase 0° Torsion');
+            govFolder.add(state, 'govTensionA', 0.1, 3.0, 0.1).name('Phase 0° Tension');
+            govFolder.add(state, 'govTorsionB', 1, 48, 1).name('Phase +120° Torsion');
+            govFolder.add(state, 'govTensionB', 0.1, 3.0, 0.1).name('Phase +120° Tension');
+            govFolder.add(state, 'govTorsionC', 1, 48, 1).name('Phase -120° Torsion');
+            govFolder.add(state, 'govTensionC', 0.1, 3.0, 0.1).name('Phase -120° Tension');
+            govFolder.add(state, 'metaTorsion', 1, 24, 1).name('Meta-Gov Torsion');
+            govFolder.add(state, 'metaTension', 0.5, 5.0, 0.1).name('Meta-Gov Expansion');
+
+            const chiralFolder = gui.addFolder('Chiral Compression Engine');
+            chiralFolder.add(state, 'show24Toroid').name('24-Stream Toroid');
+            chiralFolder.add(state, 'showCompressionFunnel').name('12-6-7-3-1 Funnel');
+            chiralFolder.add(state, 'show5Streams').name('5-Quaternion Offload');
+
+            const tracerFolder = gui.addFolder('Tracer & Telemetry Trails');
+            tracerFolder.add(state, 'showScalarField').name('Show Tension Web');
+            tracerFolder.add(state, 'scalarWebHighlight').name('Tension Edge Bounds');
+            tracerFolder.add(state, 'scalarWebOpacity', 0.0, 1.0, 0.05).name('Web Opacity');
+            tracerFolder.add(state, 'showInverseBackprop').name('Show Inverse (-ω) Streams');
+            tracerFolder.add(state, 'tqfTracers').name('Enable Trails');
+            tracerFolder.add(state, 'barcodeTracers').name('Dual Barcode + Struts');
+            tracerFolder.add(state, 'tracerLength', 5, 100, 1).name('Trail Length');
+            tracerFolder.add(state, 'tracerSpacing', 0.001, 0.02, 0.001).name('Trail Density');
+
+            const seedFolder = gui.addFolder('64-Bit Core Seed');
+            seedFolder.add(state, 'seedHex').name('Hex Seed').listen().onChange(syncHexToParams);
+            seedFolder.add(state, 'regenerateSeed').name('Randomize Seed');
+            
+            rebuildGUI();
+        }
+
+        function rebuildGUI() {
+            if (guiKernelFolder) guiKernelFolder.destroy();
+            guiKernelFolder = gui.addFolder(`Packet Parameters (${state.activeKernel})`);
+            const p = state.activeKernel === 'Blackwell Block' ? state.blackwell : state.custom;
+            
+            if (state.activeKernel === 'Blackwell Block') {
+                guiKernelFolder.add(p, 'formId', 0, 15, 1).name('ST: Form ID').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'parity', 0, 1, 1).name('PR: Parity').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'payload', 0, 65535, 1).name('PA: Payload Scale').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'quatR', 0, 255, 1).name('Red (X)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'quatG', 0, 255, 1).name('Green (Y)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'quatB', 0, 255, 1).name('Blue (Z)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'freqId', 0, 31, 1).name('FR: Frequency ID').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'spinClass', 0, 7, 1).name('SP: Spin Class').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'ampId', 0, 7, 1).name('AM: Amplitude ID').onChange(syncGUIParamsToHex);
+            } else {
+                guiKernelFolder.add(p, 'b0', 0, 255, 1).name('Byte 0 (Amp Y)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b1', 0, 255, 1).name('Byte 1 (Depth Z)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b2', 0, 255, 1).name('Byte 2 (Freq)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b3', 0, 255, 1).name('Byte 3 (Shape)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b4', 0, 255, 1).name('Byte 4 (Twist)').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b5', 0, 255, 1).name('Red').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b6', 0, 255, 1).name('Green').onChange(syncGUIParamsToHex);
+                guiKernelFolder.add(p, 'b7', 0, 255, 1).name('Blue').onChange(syncGUIParamsToHex);
+            }
+        }
+
+        function setupVisualSettingsUI() {
+            const panel = document.getElementById('visual-settings-panel');
+            document.getElementById('btn-visual-settings').addEventListener('click', () => panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex');
+            document.getElementById('vs-bg-color').addEventListener('input', (e) => { scene.fog.color.set(e.target.value); renderer.setClearColor(e.target.value); });
+            document.getElementById('vs-light').addEventListener('input', (e) => { const coreLight = scene.children.find(c => c.isPointLight); if(coreLight) coreLight.intensity = parseFloat(e.target.value); });
+            document.getElementById('vs-psize').addEventListener('input', (e) => { if(packetSystem) packetSystem.material.size = parseFloat(e.target.value); });
+            document.getElementById('vs-wopac').addEventListener('input', (e) => { state.visualWopac = parseFloat(e.target.value); });
+            document.getElementById('vs-telemetry').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                const c = allMacroCells.find(m => m.isCenter);
+                if(c && c.projectionBeams) c.projectionBeams.material.opacity = val;
+                if(barcodeConnectionsMesh) barcodeConnectionsMesh.material.opacity = val * 0.7;
+                if(solitonStrutsGroup) solitonStrutsGroup.material.opacity = val;
+            });
+            document.getElementById('vs-govopac').addEventListener('input', (e) => { state.visualGovOpac = parseFloat(e.target.value); });
+        }
+
+        function setupSequencerUI() {
+            const panel = document.getElementById('seq-panel');
+            const header = document.getElementById('seq-header');
+            const toggle = document.getElementById('seq-toggle');
+            const body = document.getElementById('seq-body');
+            
+            let isDragging = false, startX, startY, initX, initY;
+            header.addEventListener('mousedown', (e) => {
+                isDragging = true; startX = e.clientX; startY = e.clientY;
+                initX = panel.offsetLeft; initY = panel.offsetTop;
+                panel.style.transform = 'none'; panel.style.left = initX + 'px'; panel.style.bottom = 'auto'; panel.style.top = initY + 'px';
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                panel.style.left = (initX + (e.clientX - startX)) + 'px'; panel.style.top = (initY + (e.clientY - startY)) + 'px';
+            });
+            window.addEventListener('mouseup', () => { isDragging = false; });
+
+            toggle.addEventListener('click', (e) => { e.stopPropagation(); body.style.display = body.style.display === 'none' ? 'flex' : 'none'; toggle.innerText = body.style.display === 'none' ? '▲' : '▼'; });
+            document.getElementById('seq-play').addEventListener('click', () => { state.isPlaying = !state.isPlaying; updatePlayBtnUI(); });
+            document.getElementById('seq-prev').addEventListener('click', () => { state.isPlaying=false; updatePlayBtnUI(); state.currentFrame = (state.currentFrame - 1 + CYCLE_FRAMES) % CYCLE_FRAMES; });
+            document.getElementById('seq-next').addEventListener('click', () => { state.isPlaying=false; updatePlayBtnUI(); state.currentFrame = (state.currentFrame + 1) % CYCLE_FRAMES; });
+            document.getElementById('seq-slider').addEventListener('input', (e) => { state.isPlaying=false; updatePlayBtnUI(); state.currentFrame = parseFloat(e.target.value); });
+            document.getElementById('seq-speed').addEventListener('input', (e) => { state.playbackSpeed = parseFloat(e.target.value); });
+        }
+
+        function setupKernelDesigner() {
+            const panel = document.getElementById('kernel-panel');
+            document.getElementById('btn-kernel-designer').addEventListener('click', () => panel.classList.add('open'));
+            document.getElementById('close-kernel-btn').addEventListener('click', () => panel.classList.remove('open'));
+        }
+
+        window.updatePlayBtnUI = function() { document.getElementById('seq-play').innerText = state.isPlaying ? '⏸' : '▶'; }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            orbitControls.update();
+
+            if (state.isPlaying) state.currentFrame = (state.currentFrame + state.playbackSpeed) % CYCLE_FRAMES;
+            const cyclePhase = state.currentFrame / CYCLE_FRAMES;
+            document.getElementById('seq-slider').value = state.currentFrame;
+            document.getElementById('seq-frame-read').innerText = `${Math.floor(state.currentFrame).toString().padStart(3, '0')} / ${CYCLE_FRAMES}`;
+
+            const centerCell = allMacroCells.find(c => c.isCenter);
+
+            // Update Emergent Residual Rho
+            const zX = state.scaleA * 1 + state.scaleB * (-0.5) + state.scaleC * (-0.5);
+            const zY = state.scaleA * 0 + state.scaleB * (Math.sqrt(3)/2) + state.scaleC * (-Math.sqrt(3)/2);
+            const rho = Math.sqrt(zX*zX + zY*zY);
+            document.getElementById('metric-rho').innerText = rho.toFixed(4);
+            document.getElementById('metric-rho').style.color = rho > 0.05 ? '#ef4444' : '#f59e0b';
+
+            if (emergentSphereGroup) {
+                emergentSphereGroup.rotation.x = cyclePhase * Math.PI * 2; emergentSphereGroup.rotation.y = cyclePhase * Math.PI * 4;
+                const cGold = new THREE.Color(0xf59e0b), cRed = new THREE.Color(0xef4444);
+                const mix = Math.min(rho / 1.0, 1.0); const curColor = cGold.clone().lerp(cRed, mix);
+                emergentSphereGroup.children.forEach(ring => { ring.material.color = curColor; ring.material.opacity = 0.15 + (mix * 0.6); });
+            }
+
+            // --- Riemann Zeta Resonance Pole Evaluation ---
+            const isAligned = (state.govTorsionA % 12 === 0 && Math.abs(state.govTensionA - 1.0) < 0.05) &&
+                              (!state.triPhaseGovernance || (state.govTorsionB % 12 === 0 && Math.abs(state.govTensionB - 1.0) < 0.05 &&
+                                                             state.govTorsionC % 12 === 0 && Math.abs(state.govTensionC - 1.0) < 0.05));
+            const isCrunchPhase = (state.currentFrame % 30) < 4; 
+
+            let zetaIntensity = 0;
+            if (isAligned && isCrunchPhase) {
+                zetaIntensity = 1.0 - Math.abs((state.currentFrame % 30) / 4.0);
+                if(zetaIntensity < 0) zetaIntensity = 0;
+            }
+
+            if (zetaPoleMesh) {
+                zetaPoleMesh.material.opacity = zetaIntensity * 0.9;
+                zetaPoleMesh.scale.set(1 + zetaIntensity * 4, 1, 1 + zetaIntensity * 4);
+                if(zetaIntensity > 0) {
+                    zetaPoleMesh.material.color.setHex(0x67e8f9); // Blinding Cyan
+                }
+            }
+
+            // --- Update All Crystalline Cells ---
+            allMacroCells.forEach(cell => cell.updateGeometry(cyclePhase));
+
+            // --- Update Center Particles ---
+            if (packetSystem && centerCell) {
+                const positions = packetSystem.geometry.attributes.position;
+                const uVals = packetSystem.geometry.attributes.uVal;
+                for (let i = 0; i < state.particleCount; i++) {
+                    const pts = getTopologyPoints((uVals.getX(i) + cyclePhase) % 1.0, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, centerCell.params, 0);
+                    positions.setXYZ(i, pts.signal.x, pts.signal.y, pts.signal.z);
+                }
+                positions.needsUpdate = true;
+            }
+
+            // --- Update Central Historical Trails & Soliton Beams ---
+            if (tqfTrailMesh && centerCell) {
+                if (state.tqfTracers && state.showGovernance) {
+                    tqfTrailMesh.visible = true; barcodeInnerMesh.visible = state.barcodeTracers; barcodeOuterMesh.visible = state.barcodeTracers; barcodeExtMesh.visible = state.barcodeTracers; barcodeConnectionsMesh.visible = state.barcodeTracers;
+                    let pIdx = 0, cIdx = 0, bpIdx = 0, bcIdx = 0, connPIdx = 0, connCIdx = 0;
+                    
+                    for (let i = 0; i < state.tracerLength; i++) {
+                        const fade = Math.max(0, 1.0 - (i / state.tracerLength)); 
+                        const tHist = (cyclePhase - (i * state.tracerSpacing) + 1.0) % 1.0;
+
+                        const getMetaPtHist = (uVal) => {
+                            const pA = getTopologyPoints(uVal, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, centerCell.params, 0);
+                            const pB = getTopologyPoints(uVal, cyclePhase, 2*Math.PI/3, state.scaleB, state.govTorsionB, state.govTensionB, centerCell.params, 0);
+                            const pC = getTopologyPoints(uVal, cyclePhase, 4*Math.PI/3, state.scaleC, state.govTorsionC, state.govTensionC, centerCell.params, 0);
+                            const centroid = new THREE.Vector3().add(pA.gov).add(pB.gov).add(pC.gov).divideScalar(3);
+                            const v1 = new THREE.Vector3().subVectors(pB.gov, pA.gov); const v2 = new THREE.Vector3().subVectors(pC.gov, pA.gov);
+                            let metaNorm = new THREE.Vector3().crossVectors(v1, v2).normalize(); if(metaNorm.lengthSq() < 0.01) metaNorm.copy(pA.N); 
+                            const mTan = new THREE.Vector3(); if (Math.abs(metaNorm.y) < 0.99) mTan.set(0, 1, 0); else mTan.set(1, 0, 0); mTan.cross(metaNorm).normalize();
+                            const mBit = new THREE.Vector3().crossVectors(metaNorm, mTan).normalize();
+                            const metaRad = Math.max(centroid.distanceTo(pA.gov), centroid.distanceTo(pB.gov), centroid.distanceTo(pC.gov)) + 2.0;
+                            const mAngle = (uVal * state.metaTorsion * Math.PI * 2) - (cyclePhase * Math.PI * 2);
+                            return centroid.clone().add(mTan.multiplyScalar(Math.cos(mAngle) * metaRad * state.metaTension)).add(mBit.multiplyScalar(Math.sin(mAngle) * metaRad * state.metaTension));
+                        };
+
+                        const addTri = (pts, mPt, col) => {
+                            trailPos[pIdx++] = pts.signal.x; trailPos[pIdx++] = pts.signal.y; trailPos[pIdx++] = pts.signal.z;
+                            trailPos[pIdx++] = pts.gov.x; trailPos[pIdx++] = pts.gov.y; trailPos[pIdx++] = pts.gov.z;
+                            trailPos[pIdx++] = mPt.x; trailPos[pIdx++] = mPt.y; trailPos[pIdx++] = mPt.z;
+                            for(let j=0; j<3; j++) { trailCol[cIdx++] = col.r * fade; trailCol[cIdx++] = col.g * fade; trailCol[cIdx++] = col.b * fade; }
+
+                            if (state.barcodeTracers) {
+                                const hIn = getBoundaryHit(pts.signal, pts.normal, 38); const hOut = getBoundaryHit(pts.signal, pts.normal, 120); const hExt = getBoundaryHit(pts.signal, pts.normal, 320); 
+                                bInnerPos[bpIdx] = hIn.x; bInnerPos[bpIdx+1] = hIn.y; bInnerPos[bpIdx+2] = hIn.z; bOuterPos[bpIdx] = hOut.x; bOuterPos[bpIdx+1] = hOut.y; bOuterPos[bpIdx+2] = hOut.z; bExtPos[bpIdx] = hExt.x; bExtPos[bpIdx+1] = hExt.y; bExtPos[bpIdx+2] = hExt.z;
+                                bpIdx += 3;
+                                bInnerCol[bcIdx] = col.r * fade; bOuterCol[bcIdx] = col.r * fade; bExtCol[bcIdx] = col.r * fade; bcIdx++;
+                                bInnerCol[bcIdx] = col.g * fade; bOuterCol[bcIdx] = col.g * fade; bExtCol[bcIdx] = col.g * fade; bcIdx++;
+                                bInnerCol[bcIdx] = col.b * fade; bOuterCol[bcIdx] = col.b * fade; bExtCol[bcIdx] = col.b * fade; bcIdx++;
+
+                                bConnPos[connPIdx++] = hIn.x; bConnPos[connPIdx++] = hIn.y; bConnPos[connPIdx++] = hIn.z; bConnPos[connPIdx++] = hOut.x; bConnPos[connPIdx++] = hOut.y; bConnPos[connPIdx++] = hOut.z;
+                                bConnPos[connPIdx++] = hOut.x; bConnPos[connPIdx++] = hOut.y; bConnPos[connPIdx++] = hOut.z; bConnPos[connPIdx++] = hExt.x; bConnPos[connPIdx++] = hExt.y; bConnPos[connPIdx++] = hExt.z;
+                                const strutFade = fade * 0.3; for(let k=0; k<4; k++) { bConnCol[connCIdx++] = col.r * strutFade; bConnCol[connCIdx++] = col.g * strutFade; bConnCol[connCIdx++] = col.b * strutFade; }
+                            }
+                        };
+
+                        const mPtHist = getMetaPtHist(tHist); addTri(getTopologyPoints(tHist, cyclePhase, 0, state.scaleA, state.govTorsionA, state.govTensionA, centerCell.params, 0), mPtHist, new THREE.Color(0xef4444)); 
+                        if (state.triPhaseGovernance) {
+                            addTri(getTopologyPoints((tHist + 1/3)%1.0, cyclePhase, 2*Math.PI/3, state.scaleB, state.govTorsionB, state.govTensionB, centerCell.params, 0), getMetaPtHist((tHist + 1/3)%1.0), new THREE.Color(0x22c55e)); 
+                            addTri(getTopologyPoints((tHist + 2/3)%1.0, cyclePhase, 4*Math.PI/3, state.scaleC, state.govTorsionC, state.govTensionC, centerCell.params, 0), getMetaPtHist((tHist + 2/3)%1.0), new THREE.Color(0x3b82f6)); 
+                        }
+                    }
+                    const numPhases = state.triPhaseGovernance ? 3 : 1;
+                    trailGeo.setDrawRange(0, state.tracerLength * numPhases * 3); trailGeo.attributes.position.needsUpdate = true; trailGeo.attributes.color.needsUpdate = true;
+                    if (state.barcodeTracers) {
+                        const count = state.tracerLength * numPhases;
+                        barcodeInnerMesh.geometry.setDrawRange(0, count); barcodeInnerMesh.geometry.attributes.position.needsUpdate = true; barcodeInnerMesh.geometry.attributes.color.needsUpdate = true;
+                        barcodeOuterMesh.geometry.setDrawRange(0, count); barcodeOuterMesh.geometry.attributes.position.needsUpdate = true; barcodeOuterMesh.geometry.attributes.color.needsUpdate = true;
+                        barcodeExtMesh.geometry.setDrawRange(0, count); barcodeExtMesh.geometry.attributes.position.needsUpdate = true; barcodeExtMesh.geometry.attributes.color.needsUpdate = true;
+                        barcodeConnectionsMesh.geometry.setDrawRange(0, count * 4); barcodeConnectionsMesh.geometry.attributes.position.needsUpdate = true; barcodeConnectionsMesh.geometry.attributes.color.needsUpdate = true;
+                    }
+                } else {
+                    tqfTrailMesh.visible = false; barcodeInnerMesh.visible = false; barcodeOuterMesh.visible = false; barcodeExtMesh.visible = false; barcodeConnectionsMesh.visible = false;
+                }
+            }
+
+            // --- Soliton Inter-Cell Backpropagation Visuals ---
+            if (solitonStrutsGroup && centerCell) {
+                const sPos = solitonStrutsGroup.geometry.attributes.position;
+                let sIdx = 0;
+                // Only draw links from Center to its direct neighbors if they exist
+                allMacroCells.forEach(cell => {
+                    if (cell.isCenter) return;
+                    // Pulse animation travelling from center to neighbor
+                    const pulse = (cyclePhase * 2) % 1.0;
+                    const centerPt = new THREE.Vector3(cell.gridX * CELL_OFFSET * pulse, cell.gridY * CELL_OFFSET * pulse, cell.gridZ * CELL_OFFSET * pulse);
+                    sPos.setXYZ(sIdx++, 0, 0, 0);
+                    sPos.setXYZ(sIdx++, centerPt.x, centerPt.y, centerPt.z);
+                });
+                solitonStrutsGroup.geometry.setDrawRange(0, sIdx);
+                solitonStrutsGroup.geometry.attributes.position.needsUpdate = true;
+            }
+
+            // Boundaries Breathing
+            const baseOp = state.boundaryOpacity; const pulseOp = baseOp * 0.3; 
+            if (boundaryCoreMesh && boundaryCoreMesh.visible) boundaryCoreMesh.material.opacity = baseOp + Math.sin(cyclePhase * Math.PI * 4) * pulseOp;
+            if (boundaryPi6Mesh && boundaryPi6Mesh.visible) boundaryPi6Mesh.material.opacity = baseOp + Math.sin(cyclePhase * Math.PI * 4) * pulseOp;
+            if (boundary2PiMesh && boundary2PiMesh.visible) boundary2PiMesh.material.opacity = baseOp + Math.sin(cyclePhase * Math.PI * 4) * pulseOp;
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() { camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight); }
+
+        init();
+    </script>
+</body>
+</html>
