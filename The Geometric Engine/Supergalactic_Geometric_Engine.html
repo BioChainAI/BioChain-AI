@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supergalactic Geometric Engine of Time</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700;800&family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Three.js and add-ons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+
+    <!-- MathJax for LaTeX formatting -->
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        mono: ['JetBrains Mono', 'monospace'],
+                        serif: ['Cinzel', 'serif'],
+                    },
+                    colors: {
+                        void: '#02040a',
+                        cyanGlow: '#00ffff',
+                        orangeGlow: '#ff8800',
+                        magentaGlow: '#ff00ff',
+                        gold: '#ffd700'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #02040a; color: #e2e8f0; font-family: 'JetBrains Mono', monospace; user-select: none; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        .glass-panel {
+            background: rgba(10, 15, 25, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+        }
+
+        #narrative-panel {
+            position: absolute; top: 20px; left: 20px; bottom: 20px; width: 420px; z-index: 10;
+            display: flex; flex-direction: column; overflow: hidden; border-radius: 12px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .step-content {
+            opacity: 0; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; transition: opacity 0.5s ease; padding: 24px;
+            display: flex; flex-direction: column;
+        }
+        .step-content.active { opacity: 1; pointer-events: auto; position: relative; }
+
+        .btn {
+            background: rgba(255, 215, 0, 0.1); border: 1px solid rgba(255, 215, 0, 0.4);
+            color: #ffd700; padding: 10px 16px; border-radius: 6px; cursor: pointer;
+            font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;
+            transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:hover:not(:disabled) { background: rgba(255, 215, 0, 0.25); box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; border-color: rgba(255,255,255,0.1); color: #64748b; }
+
+        .progress-dots { display: flex; gap: 8px; justify-content: center; margin: 15px 0; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #334155; transition: all 0.3s; }
+        .dot.active { background: #ffd700; box-shadow: 0 0 10px #ffd700; transform: scale(1.3); }
+
+        .coord-box {
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 11px;
+        }
+
+        .glitch-text { text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 215, 0, 0.3); border-radius: 2px; }
+
+        .coord-cyan { color: #00ffff; text-shadow: 0 0 8px rgba(0,255,255,0.6); }
+        .coord-orange { color: #ff8800; text-shadow: 0 0 8px rgba(255,136,0,0.6); }
+        .coord-magenta { color: #ff00ff; text-shadow: 0 0 8px rgba(255,0,255,0.6); }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay -->
+    <div id="narrative-panel" class="glass-panel">
+        
+        <!-- Header -->
+        <div class="p-5 border-b border-white/10 bg-black/40 shrink-0">
+            <h1 class="font-serif text-xl font-bold text-gold tracking-widest uppercase mb-1">Scale-Synchronized Homomorphism</h1>
+            <div class="text-xs text-cyan-400 opacity-80 tracking-widest uppercase">Supergalactic Geometric Engine</div>
+        </div>
+
+        <!-- Content Area (Relative for absolute children) -->
+        <div class="relative flex-grow overflow-y-auto overflow-x-hidden" id="step-container">
+            
+            <!-- STEP 1 -->
+            <div class="step-content active" id="step-1">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-bullseye text-gold mr-2"></i>1. The Centroid Oscillator</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    In the localized BioChain architecture, the base Topological Quantum Pulse (<span class="italic font-serif">τ_Q</span>) is bounded by the SI-defined Cesium-133 transition at the $T_0$ core. 
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    Scaling to the macroscopic level, the <span class="text-white font-bold">Central Pulsars of the Milky Way</span> replace the atomic clock. Positioned at the geometric centroid ($w=0$), these millisecond pulsars act as the precise rotational metronomes of the local galactic manifold, emitting the macro-equivalent topological pulses that define the base angular velocity.
+                </p>
+                <div class="coord-box mt-auto">
+                    <div class="text-[10px] text-slate-400 mb-1">LOCAL CENTROID (W=0)</div>
+                    <div class="font-bold text-gold">Milky Way Galactic Center</div>
+                    <div class="text-[10px] opacity-70 mt-1">Oscillator: Millisecond Pulsar Array</div>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div class="step-content" id="step-2">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-ring text-cyan-400 mr-2"></i>2. The Local Node (Solar System)</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    Nested exactly on the inner boundary of the galactic manifold lies our Solar System. 
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    It operates as a self-contained 5-tier, 6-channel nested scalar clock. Its temporal boundary is governed by the <span class="text-gold font-bold">Platonic Great Year</span>, navigating 25,920 topological pulses per cycle. By the principle of Scale-Synchronized Homomorphism, this local geometry obeys the identical winding laws ($W_n = 16-2n$) as the supergalactic structure it inhabits.
+                </p>
+                <div class="coord-box mt-auto">
+                    <div class="text-[10px] text-slate-400 mb-1">FRACTAL SCALAR NODE</div>
+                    <div class="font-bold text-cyan-400">Solar System 5-Tier Toroid</div>
+                    <div class="text-[10px] opacity-70 mt-1">Local Cycle: 25,920 Earth Years</div>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div class="step-content" id="step-3">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-dharmachakra text-purple-400 mr-2"></i>3. The Supergalactic Toroid</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    We now zoom out to the overarching topology enclosing the local group. This is the third-order macroscopic scalar toroid aligned to the <span class="text-white font-bold">Supergalactic Plane (SGP)</span>.
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    Standard astronomical data maps the distribution of extragalactic clusters along this flattened disc. In the SHD-CCP framework, this plane forms the equator ($0^\circ$ SGB) of a massive spatial manifold that processes temporal parity at a cosmic scale.
+                </p>
+                <div class="coord-box mt-auto">
+                    <div class="text-[10px] text-slate-400 mb-1">MANIFOLD GEOMETRY</div>
+                    <div class="font-bold text-purple-400">De Vaucouleurs Supergalactic Frame</div>
+                    <div class="text-[10px] opacity-70 mt-1">Equator: 0° Supergalactic Latitude (SGB)</div>
+                </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div class="step-content" id="step-4">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-infinity text-orange-400 mr-2"></i>4. The Chiral Parity Map (C2)</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    The 6-channel Dual-Helix system requires a Product Symmetry space ($C_3 \times C_2$) with Forward (+1) and Inverse (-1) chiral wraps to process the half-integer temporal parity.
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    Look at the physical supergalactic coordinates: <span class="coord-cyan font-bold">M101</span> and the <span class="coord-orange font-bold">Telescope Array (TA) Hotspot</span> exhibit near-perfect mirror symmetry across the supergalactic plane. They are the macroscopic physical crests of the Forward and Inverse governance helices.
+                </p>
+                <div class="grid grid-cols-2 gap-2 mt-auto">
+                    <div class="coord-box !mb-0">
+                        <div class="text-[9px] text-slate-400 mb-1">FORWARD HELIX (+1)</div>
+                        <div class="coord-cyan font-bold text-[10px]">M101 GALAXY</div>
+                        <div class="text-[9px] font-mono mt-1">SGL: 63.58°<br>SGB: +22.61°</div>
+                    </div>
+                    <div class="coord-box !mb-0">
+                        <div class="text-[9px] text-slate-400 mb-1">INVERSE HELIX (-1)</div>
+                        <div class="coord-orange font-bold text-[10px]">TA HOTSPOT</div>
+                        <div class="text-[9px] font-mono mt-1">SGL: 58.58°<br>SGB: -22.51°</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5 -->
+            <div class="step-content" id="step-5">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-bahai text-magenta-500 mr-2"></i>5. Phase Conjugate Singularity</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    As the positive helix (M101) and negative helix (TA Hotspot) waves traverse the manifold, they create structural scalar tension. They cross at the spherical midpoint on the supergalactic equator (SGB 0°).
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    At this exact geometric crossing lies <span class="coord-magenta font-bold">Galaxy M82</span>. By collapsing the forward and inverse waves together, the spatial tension is negated and offloaded physically. It is no coincidence astrophysicists classify M82 as a hyper-active <span class="text-white font-bold">"Supernova Factory"</span>—it is the Orthogonal Data Offload Node executing the Geometric Parity Closure Theorem.
+                </p>
+                <div class="coord-box mt-auto border-magentaGlow/50 bg-magentaGlow/10 shadow-[0_0_15px_rgba(255,0,255,0.2)]">
+                    <div class="text-[10px] text-slate-300 mb-1">ORTHOGONAL OFFLOAD NODE</div>
+                    <div class="coord-magenta font-bold text-[12px]">M82 Supernova Factory</div>
+                    <div class="text-[10px] font-mono mt-1 text-white">SGL: 40.72° | SGB: +1.05° (Equator)</div>
+                    <div class="text-[9px] text-magenta-300 mt-2 italic">Mathematical negation of phase error resolved via energetic stellar discharge.</div>
+                </div>
+            </div>
+
+            <!-- STEP 6 -->
+            <div class="step-content" id="step-6">
+                <h2 class="text-sm text-white font-bold tracking-widest uppercase mb-4 border-b border-white/10 pb-2"><i class="fas fa-network-wired text-green-400 mr-2"></i>6. System Synthesis</h2>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    We can now directly compare the complete 3-part nested scalar system. The <strong>Milky Way Centroid</strong> acts as the base oscillator ($T_0$), generating the macroscopic topological pulse $\tau_Q$.
+                </p>
+                <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    This frequency propagates through our <strong>Local Node (Solar System)</strong> and expands into the <strong>Supergalactic Manifold</strong>. The fractional residual error ($\{N_{pulse}\} = 0.5$) splits into the $C_2$ Chiral Parity Map: the Forward transmission line at <span class="coord-cyan font-bold">M101</span> and the Inverse transmission line at the <span class="coord-orange font-bold">TA Hotspot</span>.
+                </p>
+                 <p class="text-xs text-slate-300 leading-relaxed mb-4 text-justify">
+                    As these helices cross the Supergalactic Plane ($SGB = 0^\circ$), they perfectly converge at <span class="coord-magenta font-bold">M82</span>. In relation to the Milky Way's origin signal, M82 acts as the macroscopic phase conjugate mirror—a "ground" that physically offloads the scalar tension (via supernovae) from the Milky Way's base frequency, achieving perfect geometric closure across the cosmos.
+                </p>
+                <div class="coord-box mt-auto border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                    <div class="text-[10px] text-slate-300 mb-1">MACRO-OSCILLATOR ALIGNMENT</div>
+                    <div class="text-green-400 font-bold text-[11px] mb-1">Milky Way $(T_0) \leftrightarrow M82 (\text{Closure})$</div>
+                    <div class="text-[9px] font-mono text-slate-400 mt-1">Error offload via $\Sigma \Delta SGB \approx 0$ at Singularity</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Controls -->
+        <div class="p-4 border-t border-white/10 bg-black/40 shrink-0">
+            <div class="progress-dots" id="dot-container">
+                <div class="dot active"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+            <div class="flex justify-between gap-3 mt-3">
+                <button id="btn-prev" class="btn flex-1" disabled><i class="fas fa-chevron-left"></i> Previous</button>
+                <button id="btn-next" class="btn flex-1">Next Phase <i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // UI & STATE MANAGEMENT
+        // ==========================================
+        let currentStep = 1;
+        const totalSteps = 6;
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const dots = document.getElementById('dot-container').children;
+
+        function updateUI() {
+            // Update buttons
+            btnPrev.disabled = currentStep === 1;
+            btnNext.disabled = currentStep === totalSteps;
+            if(currentStep === totalSteps) {
+                btnNext.innerHTML = 'Closure Achieved <i class="fas fa-check"></i>';
+                btnNext.classList.add('border-magentaGlow', 'text-magentaGlow');
+            } else {
+                btnNext.innerHTML = 'Next Phase <i class="fas fa-chevron-right"></i>';
+                btnNext.classList.remove('border-magentaGlow', 'text-magentaGlow');
+            }
+
+            // Update content panels
+            for(let i=1; i<=totalSteps; i++) {
+                const el = document.getElementById(`step-${i}`);
+                if(i === currentStep) el.classList.add('active');
+                else el.classList.remove('active');
+                
+                if(i-1 < dots.length) {
+                    if(i === currentStep) dots[i-1].classList.add('active');
+                    else dots[i-1].classList.remove('active');
+                }
+            }
+
+            triggerAnimations(currentStep);
+        }
+
+        btnPrev.addEventListener('click', () => { if(currentStep > 1) { currentStep--; updateUI(); } });
+        btnNext.addEventListener('click', () => { if(currentStep < totalSteps) { currentStep++; updateUI(); } });
+
+        // ==========================================
+        // THREE.JS SETUP
+        // ==========================================
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x02040a, 0.002);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 100, 300);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxDistance = 600;
+        controls.minDistance = 10;
+
+        // Lighting
+        scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+        const centerLight = new THREE.PointLight(0xffd700, 2, 200);
+        scene.add(centerLight);
+        const rimLight = new THREE.DirectionalLight(0x4080ff, 1);
+        rimLight.position.set(-100, 50, -100);
+        scene.add(rimLight);
+
+        
+        // --- 1. THE MILKY WAY PULSAR (CENTROID) ---
+        const mwGroup = new THREE.Group();
+        scene.add(mwGroup);
+        
+        const pulsarGeo = new THREE.SphereGeometry(2, 32, 32);
+        const pulsarMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const pulsar = new THREE.Mesh(pulsarGeo, pulsarMat);
+        mwGroup.add(pulsar);
+
+        const coreGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(3.5, 32, 32),
+            new THREE.MeshBasicMaterial({ color: 0xffd700, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending })
+        );
+        mwGroup.add(coreGlow);
+
+        // Galactic disc particles
+        const particlesGeo = new THREE.BufferGeometry();
+        const particlesCount = 3000;
+        const posArray = new Float32Array(particlesCount * 3);
+        const colArray = new Float32Array(particlesCount * 3);
+        const colorInside = new THREE.Color(0xffd700);
+        const colorOutside = new THREE.Color(0x0044ff);
+        
+        for(let i=0; i<particlesCount * 3; i+=3) {
+            const radius = Math.random() * 40 + 2;
+            const branchAngle = (i % 2 === 0 ? 0 : Math.PI) + (radius * 0.2); // Spiral
+            const angle = branchAngle + (Math.random() * 0.5 - 0.25);
+            posArray[i] = Math.cos(angle) * radius;
+            posArray[i+1] = (Math.random() - 0.5) * (radius * 0.1); // Flattened Z (using Y here)
+            posArray[i+2] = Math.sin(angle) * radius;
+
+            const mixedColor = colorInside.clone().lerp(colorOutside, radius/42);
+            colArray[i] = mixedColor.r; colArray[i+1] = mixedColor.g; colArray[i+2] = mixedColor.b;
+        }
+        particlesGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        particlesGeo.setAttribute('color', new THREE.BufferAttribute(colArray, 3));
+        const particleMat = new THREE.PointsMaterial({ size: 0.5, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
+        const galaxyParticles = new THREE.Points(particlesGeo, particleMat);
+        mwGroup.add(galaxyParticles);
+        
+        // Pulse ring
+        const pulseRing = new THREE.Mesh(
+            new THREE.RingGeometry(4, 4.5, 64),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+        );
+        pulseRing.rotation.x = Math.PI / 2;
+        mwGroup.add(pulseRing);
+
+
+        // --- 2. LOCAL SOLAR SYSTEM NODE ---
+        const localNodeGroup = new THREE.Group();
+        // Orbiting around the Milky Way
+        localNodeGroup.position.set(30, 0, 0); 
+        scene.add(localNodeGroup);
+        localNodeGroup.visible = false; // Hidden initially
+
+        // 5-Tier Toroid representation
+        for(let i=0; i<5; i++) {
+            const tGeo = new THREE.TorusGeometry(3 + (i*1.5), 0.2, 16, 64);
+            const tMat = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.3 - (i*0.05)
+            });
+            const tMesh = new THREE.Mesh(tGeo, tMat);
+            if(i%2 !== 0) tMesh.rotation.x = Math.PI/2;
+            localNodeGroup.add(tMesh);
+        }
+        const ssCore = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshBasicMaterial({color: 0xffd700}));
+        localNodeGroup.add(ssCore);
+
+
+        // --- 3. SUPERGALACTIC TOROID ---
+        const sgGroup = new THREE.Group();
+        scene.add(sgGroup);
+        sgGroup.visible = false;
+
+        const sgMajor = 120;
+        const sgMinor = 40;
+        const sgToroidGeo = new THREE.TorusGeometry(sgMajor, sgMinor, 32, 128);
+        const sgToroidMat = new THREE.MeshPhysicalMaterial({
+            color: 0x221144, transparent: true, opacity: 0.15, wireframe: true,
+            emissive: 0x110033, side: THREE.DoubleSide
+        });
+        const sgToroid = new THREE.Mesh(sgToroidGeo, sgToroidMat);
+        sgToroid.rotation.x = Math.PI/2; // Supergalactic plane is XZ
+        sgGroup.add(sgToroid);
+
+        const equatorRing = new THREE.Mesh(
+            new THREE.RingGeometry(sgMajor - sgMinor, sgMajor + sgMinor, 128),
+            new THREE.MeshBasicMaterial({ color: 0x442288, transparent: true, opacity: 0.3, side: THREE.DoubleSide })
+        );
+        equatorRing.rotation.x = Math.PI/2;
+        sgGroup.add(equatorRing);
+
+
+
+        // --- 4. CHIRAL HELICES (M101 & TA Hotspot) ---
+        class SupergalacticHelixCurve extends THREE.Curve {
+            constructor(major, minor, turns, isInverse) {
+                super();
+                this.major = major; this.minor = minor; 
+                this.turns = turns; this.isInverse = isInverse;
+            }
+            getPoint(t, optionalTarget = new THREE.Vector3()) {
+                const u = t * Math.PI * 2; // Around the major ring
+                // Offset phase to cross at SGL ~40 (M82 location)
+                const m82Offset = (40.72 / 360) * Math.PI * 2; 
+                const v = (this.isInverse ? -1 : 1) * (u * this.turns) + m82Offset;
+                
+                const x = (this.major + this.minor * Math.cos(v)) * Math.cos(u);
+                const y = this.minor * Math.sin(v); // Height (Latitude)
+                const z = (this.major + this.minor * Math.cos(v)) * Math.sin(u);
+                return optionalTarget.set(x, y, z);
+            }
+        }
+
+        const helixTurns = 6; // Winding number abstract representation
+        
+        // Forward (+1) Helix - CYAN
+        const fwdCurve = new SupergalacticHelixCurve(sgMajor, sgMinor, helixTurns, false);
+        const fwdGeo = new THREE.TubeGeometry(fwdCurve, 256, 1.5, 8, true);
+        const fwdMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+        const fwdHelix = new THREE.Mesh(fwdGeo, fwdMat);
+        sgGroup.add(fwdHelix);
+        fwdHelix.visible = false;
+
+        // Inverse (-1) Helix - ORANGE
+        const invCurve = new SupergalacticHelixCurve(sgMajor, sgMinor, helixTurns, true);
+        const invGeo = new THREE.TubeGeometry(invCurve, 256, 1.5, 8, true);
+        const invMat = new THREE.MeshBasicMaterial({ color: 0xff8800, transparent: true, opacity: 0.6, blending: THREE.AdditiveBlending });
+        const invHelix = new THREE.Mesh(invGeo, invMat);
+        sgGroup.add(invHelix);
+        invHelix.visible = false;
+
+        // ASTROPHYSICAL NODES
+        function createNode(color, size, labelText) {
+            const group = new THREE.Group();
+            
+            const core = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            const glow = new THREE.Mesh(new THREE.SphereGeometry(size*1.8, 32, 32), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending }));
+            group.add(core); group.add(glow);
+            
+            // Simple label via sprite (using canvas)
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.font = 'bold 24px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(labelText, 128, 40);
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true, depthTest: false });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(40, 10, 1);
+            sprite.position.y = size * 3;
+            group.add(sprite);
+            
+            return { group, glow, core };
+        }
+
+        // Coordinates based on SGL/SGB mapping to Torus Surface
+        function getTorusPos(sgl_deg, sgb_deg) {
+            const u = (sgl_deg / 360) * Math.PI * 2;
+            const v = (sgb_deg / 90) * (Math.PI / 2); // Map lat to minor radius angle
+            const x = (sgMajor + sgMinor * Math.cos(v)) * Math.cos(u);
+            const y = sgMinor * Math.sin(v);
+            const z = (sgMajor + sgMinor * Math.cos(v)) * Math.sin(u);
+            return new THREE.Vector3(x, y, z);
+        }
+
+        const m101 = createNode('#00ffff', 3, "M101 (Fwd)");
+        m101.group.position.copy(getTorusPos(63.58, 22.61));
+        sgGroup.add(m101.group);
+        m101.group.visible = false;
+
+        const taHotspot = createNode('#ff8800', 3, "TA Hotspot (Inv)");
+        taHotspot.group.position.copy(getTorusPos(58.58, -22.51));
+        sgGroup.add(taHotspot.group);
+        taHotspot.group.visible = false;
+
+        // --- 5. PHASE CONJUGATE NODE (M82) ---
+        const m82 = createNode('#ff00ff', 5, "M82 Singularity");
+        m82.group.position.copy(getTorusPos(40.72, 1.05));
+        sgGroup.add(m82.group);
+        m82.group.visible = false;
+
+        // Shockwave rings for M82
+        const m82Rings = new THREE.Group();
+        for(let i=1; i<=3; i++) {
+            const ring = new THREE.Mesh(
+                new THREE.RingGeometry(5*i, 5.5*i, 32),
+                new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, side: THREE.DoubleSide })
+            );
+            m82Rings.add(ring);
+        }
+        m82.group.add(m82Rings);
+
+        // System Synthesis Connection Line (MW to M82)
+        const connectionPoints = [];
+        connectionPoints.push(new THREE.Vector3(0, 0, 0)); // Milky Way origin
+        // We will update the end point dynamically in the animation loop
+        connectionPoints.push(new THREE.Vector3(0, 0, 0)); 
+        const connectionLineGeo = new THREE.BufferGeometry().setFromPoints(connectionPoints);
+        const connectionLineMat = new THREE.LineDashedMaterial({ color: 0x4ade80, dashSize: 3, gapSize: 2, transparent: true, opacity: 0.8, linewidth: 2 });
+        const connectionLine = new THREE.Line(connectionLineGeo, connectionLineMat);
+        scene.add(connectionLine);
+        connectionLine.visible = false;
+
+
+        // State Machine logic
+        function triggerAnimations(step) {
+            TWEEN.removeAll(); // Reset tweens
+
+            // Camera Targets
+            const camTarget = new THREE.Vector3();
+            let camPos = new THREE.Vector3();
+
+            if(step === 1) {
+                // Centroid Pulsar
+                camPos.set(0, 15, 45);
+                camTarget.set(0, 0, 0);
+                
+                mwGroup.visible = true;
+                localNodeGroup.visible = false;
+                sgGroup.visible = false;
+            }
+            else if (step === 2) {
+                // Local Solar System
+                camPos.set(30, 15, 20); // Close to local node
+                camTarget.set(30, 0, 0);
+                
+                mwGroup.visible = true;
+                localNodeGroup.visible = true;
+                sgGroup.visible = false;
+            }
+            else if (step === 3) {
+                // Supergalactic Toroid
+                camPos.set(0, 120, 280);
+                camTarget.set(0, 0, 0);
+                
+                mwGroup.visible = true;
+                localNodeGroup.visible = true;
+                sgGroup.visible = true;
+                
+                fwdHelix.visible = false;
+                invHelix.visible = false;
+                m101.group.visible = false;
+                taHotspot.group.visible = false;
+                m82.group.visible = false;
+            }
+            else if (step === 4) {
+                // Chiral Helices & SGB Coordinates
+                camPos.set(80, 50, 140);
+                camTarget.copy(m101.group.position).lerp(taHotspot.group.position, 0.5); // Focus mid-point of the two
+                
+                fwdHelix.visible = true;
+                invHelix.visible = true;
+                m101.group.visible = true;
+                taHotspot.group.visible = true;
+                m82.group.visible = false;
+            }
+            else if (step === 5) {
+                // M82 Singularity Offload
+                camPos.set(m82.group.position.x + 30, m82.group.position.y + 20, m82.group.position.z + 50);
+                camTarget.copy(m82.group.position);
+                
+                m82.group.visible = true;
+                connectionLine.visible = false;
+            }
+            else if (step === 6) {
+                // System Synthesis
+                camPos.set(150, 100, 200); // Pull back to see MW and M82 together
+                camTarget.set(0, 0, 0); // Focus back on centroid
+                
+                mwGroup.visible = true;
+                localNodeGroup.visible = true;
+                sgGroup.visible = true;
+                fwdHelix.visible = true;
+                invHelix.visible = true;
+                m101.group.visible = true;
+                taHotspot.group.visible = true;
+                m82.group.visible = true;
+                connectionLine.visible = true;
+            }
+
+            // Tween Camera
+            new TWEEN.Tween(camera.position)
+                .to({ x: camPos.x, y: camPos.y, z: camPos.z }, 2000)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .start();
+            
+            new TWEEN.Tween(controls.target)
+                .to({ x: camTarget.x, y: camTarget.y, z: camTarget.z }, 2000)
+                .easing(TWEEN.Easing.Cubic.InOut)
+                .start();
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Main Animation Loop
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+
+            time += 0.016;
+
+            // Milky way rotation & pulsar
+            galaxyParticles.rotation.y = time * 0.1;
+            const pulseScale = 1 + Math.sin(time * 10) * 0.1;
+            pulsar.scale.set(pulseScale, pulseScale, pulseScale);
+            pulseRing.scale.set(pulseScale*1.2, pulseScale*1.2, pulseScale*1.2);
+            pulseRing.material.opacity = (Math.sin(time*10)+1)*0.5 * 0.8;
+
+            // Local Node Orbit
+            if(localNodeGroup.visible) {
+                const angle = time * 0.2;
+                localNodeGroup.position.set(Math.cos(angle)*30, Math.sin(angle)*5, Math.sin(angle)*30);
+                localNodeGroup.rotation.x = time * 0.5;
+                localNodeGroup.rotation.y = time * 0.3;
+            }
+
+            // Helices flowing effect (texture offset conceptually, but using rotation here)
+            if(sgGroup.visible) {
+                sgToroid.rotation.z = time * 0.01;
+            }
+
+            // Node throbbing
+            if(m101.group.visible) {
+                m101.glow.scale.setScalar(1 + Math.sin(time * 3)*0.2);
+                taHotspot.glow.scale.setScalar(1 + Math.cos(time * 3)*0.2);
+            }
+
+            // M82 Supernova burst effect
+            if(m82.group.visible) {
+                m82.glow.scale.setScalar(1 + Math.sin(time * 15)*0.3);
+                
+                // Expand rings and reset
+                m82Rings.children.forEach((ring, idx) => {
+                    let s = ring.scale.x + 0.05;
+                    let o = ring.material.opacity - 0.01;
+                    if(s > 3) { s = 0.5; o = 0.8; }
+                    ring.scale.setScalar(s);
+                    ring.material.opacity = o;
+                    ring.lookAt(camera.position); // Always face camera
+                });
+            }
+
+            // Update Connection Line
+            if(connectionLine.visible) {
+                const mwWorldPos = new THREE.Vector3();
+                pulsar.getWorldPosition(mwWorldPos);
+                
+                const m82WorldPos = new THREE.Vector3();
+                m82.core.getWorldPosition(m82WorldPos);
+                
+                connectionLine.geometry.setFromPoints([mwWorldPos, m82WorldPos]);
+                connectionLine.computeLineDistances();
+                connectionLine.material.dashOffset -= 0.5; // Animate energy flow
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Initialize
+        updateUI();
+        animate();
+    </script>
+</body>
+</html>
