@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioChain AI SHD-CCP Geometric Calculator</title>
+    <title>BIOCHAIN AI Geometric Calculator</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -79,7 +79,7 @@
             <div class="bg-slate-950/60 p-4 border-b border-cyan-900/50 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <i class="fa-solid fa-hexagon-nodes text-cyan-400"></i>
-                    <span class="font-semibold text-sm tracking-wider text-cyan-400">BIOCHAIN GEOMETRIC CALCULATOR TERMINAL</span>
+                    <span class="font-semibold text-sm tracking-wider text-cyan-400">BIOCHAIN AI - SHD-CCP TERMINAL</span>
                 </div>
                 <i id="status-icon" class="fa-solid fa-wave-square text-emerald-400 animate-pulse"></i>
             </div>
@@ -87,8 +87,8 @@
             <div class="p-6 flex-1 flex flex-col">
                 <!-- Display -->
                 <div class="bg-slate-950 rounded-lg p-4 mb-6 border border-cyan-900/40 relative h-28 flex flex-col justify-end items-end shadow-inner">
-                    <div id="calc-expression" class="text-cyan-600/70 text-sm mb-1 tracking-widest font-mono-code h-6"></div>
-                    <div id="calc-result" class="text-4xl text-cyan-100 font-mono-code tracking-tight h-10">0</div>
+                    <div id="calc-expression" class="text-cyan-600/70 text-sm mb-1 tracking-widest font-mono-code h-6 overflow-hidden"></div>
+                    <div id="calc-result" class="text-3xl text-cyan-100 font-mono-code tracking-tight h-10 w-full text-right overflow-hidden text-ellipsis whitespace-nowrap">0</div>
                 </div>
 
                 <!-- Keypad -->
@@ -133,7 +133,7 @@
                     <p class="text-sm mt-2 text-cyan-600/60">Awaiting geometric tensor input...</p>
                     <div class="mt-8 flex gap-3">
                         <button onclick="testClassicError()" class="px-4 py-2 border border-cyan-900/50 rounded-md bg-slate-900/50 text-xs text-cyan-400 font-mono-code hover:bg-cyan-900/30 transition">Try: 0.1 + 0.2</button>
-                        <button onclick="testRationalTarget()" class="px-4 py-2 border border-amber-900/50 rounded-md bg-slate-900/50 text-xs text-amber-400 font-mono-code hover:bg-amber-900/30 transition">Try: 3.005 * 3</button>
+                        <button onclick="testRationalTarget()" class="px-4 py-2 border border-amber-900/50 rounded-md bg-slate-900/50 text-xs text-amber-400 font-mono-code hover:bg-amber-900/30 transition">Try: 9.0000000000000005 + 0.30000008</button>
                     </div>
                 </div>
 
@@ -163,19 +163,19 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
                         <div class="bg-slate-950 rounded-lg p-3 border border-cyan-900/30 text-center">
                             <div class="text-[10px] text-cyan-600 mb-1 font-mono-code">NODE A (Ψ_A)</div>
-                            <div id="node-a-frac" class="text-lg font-bold text-cyan-100 mb-1">A</div>
+                            <div id="node-a-frac" class="text-sm font-bold text-cyan-100 mb-1 overflow-hidden text-ellipsis">A</div>
                             <div id="node-a-prime" class="text-[10px] text-emerald-400/80 font-mono-code">Resonance</div>
                         </div>
                         <div class="bg-slate-950 rounded-lg p-3 border border-cyan-900/30 text-center relative">
                             <div class="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-900 text-cyan-500 text-sm z-10 w-6 h-6 flex items-center justify-center rounded-full border border-cyan-900">+</div>
                             <div class="text-[10px] text-cyan-600 mb-1 font-mono-code">NODE B (Ψ_B)</div>
-                            <div id="node-b-frac" class="text-lg font-bold text-cyan-100 mb-1">B</div>
+                            <div id="node-b-frac" class="text-sm font-bold text-cyan-100 mb-1 overflow-hidden text-ellipsis">B</div>
                             <div id="node-b-prime" class="text-[10px] text-emerald-400/80 font-mono-code">Resonance</div>
                         </div>
                         <div class="bg-cyan-900/20 rounded-lg p-3 border border-cyan-500/50 text-center relative shadow-[0_0_15px_rgba(8,145,178,0.1)]">
                             <div class="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-900 text-cyan-400 text-sm z-10 w-6 h-6 flex items-center justify-center rounded-full border border-cyan-500">=</div>
                             <div class="text-[10px] text-cyan-400 mb-1 font-mono-code tracking-widest">COLLAPSE (Ψ_C)</div>
-                            <div id="node-c-frac" class="text-xl font-bold text-white mb-1">C</div>
+                            <div id="node-c-frac" class="text-sm font-bold text-white mb-1 overflow-hidden text-ellipsis">C</div>
                             <div id="node-c-prime" class="text-[10px] text-emerald-300 font-mono-code">Harmonic</div>
                         </div>
                     </div>
@@ -189,7 +189,7 @@
     </div>
 
     <script>
-        // --- 1. SHD-CCP CALCULATOR LOGIC (EXACT RATIONAL ARITHMETIC) ---
+        // --- 1. SHD-CCP CALCULATOR LOGIC (EXACT RATIONAL BIGINT ARITHMETIC) ---
         let calcState = {
             expression: '',
             result: null,
@@ -201,46 +201,97 @@
         };
 
         const calcStages = [
-            "STAGE 0: Ingesting 64-bit Einstein Tile...",
-            "STAGE 1: Anchoring to Prime Nodes (Rational Duals)...",
-            "STAGE 2: Hyperbolic Superposition (Wave Interference)...",
+            "STAGE 0: Ingesting 64-bit Einstein Tile (Bypassing IEEE 754 Ceiling)...",
+            "STAGE 1: Infinite-Precision Prime Anchoring (BigInt Tensors)...",
+            "STAGE 2: Hyperbolic Superposition (Constructive Interference)...",
             "STAGE 3: Clifford-Strassen Collapse (TQF Pruning)...",
             "STAGE 4: Geometric Resolution (Soliton Latch)..."
         ];
 
-        // Helper: Greatest Common Divisor for exact fractional reduction
+        // Helper: Greatest Common Divisor for exact fractional reduction (BigInt)
         function gcd(a, b) {
-            return b === 0 ? a : gcd(b, a % b);
+            a = a < 0n ? -a : a;
+            b = b < 0n ? -b : b;
+            while (b !== 0n) {
+                let temp = b;
+                b = a % b;
+                a = temp;
+            }
+            return a;
         }
 
-        // Helper: Convert decimal or integer string to an exact Fraction {n, d}
+        // Helper: Convert decimal or integer string to an exact Fraction {n, d} (BigInt)
         function toFraction(str) {
             str = str.trim();
             if (str.includes('.')) {
                 const parts = str.split('.');
-                const intPart = parseInt(parts[0] || '0', 10);
+                const intPart = parts[0] || '0';
                 const decStr = parts[1] || '';
-                const decLen = decStr.length;
-                const denominator = Math.pow(10, decLen);
-                const numerator = intPart * denominator + parseInt(decStr || '0', 10);
-                const common = gcd(Math.abs(numerator), denominator);
+                
+                let denominator = 1n;
+                for(let i=0; i<decStr.length; i++) {
+                    denominator *= 10n;
+                }
+                
+                const isNegative = intPart.startsWith('-');
+                const rawInt = isNegative ? intPart.slice(1) : intPart;
+                
+                // Combine integer and decimal string segments safely avoiding parsing leading zeros issues
+                let numStr = rawInt + decStr;
+                numStr = numStr.replace(/^0+(?=\d)/, ''); // strip leading zeros
+                
+                let numerator = BigInt(numStr);
+                if (isNegative) numerator = -numerator;
+
+                const common = gcd(numerator, denominator);
                 return { n: numerator / common, d: denominator / common };
             } else {
-                return { n: parseInt(str, 10), d: 1 };
+                return { n: BigInt(str), d: 1n };
             }
         }
 
-        // Exact Rational Arithmetic Evaluator (Bypasses IEEE 754 binary truncation)
+        // Helper: Convert BigInt fraction back to precise decimal string representation
+        function fractionToString(n, d) {
+            if (d === 1n) return n.toString();
+            
+            let res = "";
+            let absN = n < 0n ? -n : n;
+            let absD = d < 0n ? -d : d;
+            
+            if ((n < 0n && d > 0n) || (n > 0n && d < 0n)) {
+                res += "-";
+            }
+
+            res += (absN / absD).toString();
+            let rem = absN % absD;
+            
+            if (rem === 0n) return res; // Perfect termination
+            
+            res += ".";
+            let count = 0;
+            // Limit to 60 decimal places purely to avoid locking the UI on infinitely repeating fractions (like 1/3)
+            while (rem !== 0n && count < 60) {
+                rem *= 10n;
+                res += (rem / absD).toString();
+                rem = rem % absD;
+                count++;
+            }
+            
+            if (rem !== 0n) res += "..."; // Indicates repeating decimal geometric limit
+            return res;
+        }
+
+        // Exact Rational Arithmetic Evaluator (Bypasses IEEE 754 float limits with BigInts)
         function calculateExactRational(expr) {
             try {
                 // Tokenize expression by numbers and operators
                 const tokens = expr.match(/(\d+\.\d+|\d+|[\+\-\*\/])/g);
-                if (!tokens || tokens.length === 0) return 0;
+                if (!tokens || tokens.length === 0) return "0";
 
                 // Handle single number case
                 if (tokens.length === 1) {
                     const f = toFraction(tokens[0]);
-                    return f.n / f.d;
+                    return fractionToString(f.n, f.d);
                 }
 
                 // First pass: Multiplication and Division
@@ -259,12 +310,16 @@
                                 d: currentFrac.d * nextFrac.d
                             };
                         } else {
-                            if (nextFrac.n === 0) return "ERROR: Div/0";
+                            if (nextFrac.n === 0n) return "ERROR: Div/0";
                             currentFrac = {
                                 n: currentFrac.n * nextFrac.d,
                                 d: currentFrac.d * nextFrac.n
                             };
                         }
+                        // Prune tensor to lowest terms continuously to optimize memory
+                        const common = gcd(currentFrac.n, currentFrac.d);
+                        currentFrac.n /= common;
+                        currentFrac.d /= common;
                     } else {
                         stackNums.push(currentFrac);
                         stackOps.push(op);
@@ -292,12 +347,12 @@
                     }
                     resD = commonD;
 
-                    const common = gcd(Math.abs(resN), resD);
+                    const common = gcd(resN, resD);
                     resN /= common;
                     resD /= common;
                 }
 
-                return resN / resD;
+                return fractionToString(resN, resD);
             } catch (e) {
                 return "ERROR: Topo-Singularity";
             }
@@ -306,19 +361,19 @@
         function generateExplanation(expr, res) {
             const cleanExpr = expr.replace(/\s/g, '');
             const isClassicError = cleanExpr === '0.1+0.2';
-            const isTarget3005 = cleanExpr === '3.005*3';
+            const isDeepDecimal = cleanExpr === '9.0000000000000005+0.30000008';
             
-            if (isTarget3005) {
+            if (isDeepDecimal) {
                 return {
-                    title: "Rational Prime Anchoring: Resolving 3.005 × 3",
-                    intro: "Standard CPUs convert 3.005 to an infinite repeating binary sequence, leading to 9.014999999999999. The SHD-CCP engine bypasses binary truncation entirely by mapping operands to exact integer rational fractions and prime toroidal nodes.",
+                    title: "Bypassing the 64-Bit Ceiling (Infinite Precision)",
+                    intro: "Standard computers cap integers at exactly 9,007,199,254,740,991. When inputting 16-decimal numbers, traditional systems crush the microscopic tail into a zero. By upgrading to dynamic memory BigInt rational parsing, the geometric engine maintains flawless integrity.",
                     steps: [
-                        { title: "1. Rational Conversion", content: "3.005 is converted to exact fraction 3005/1000, simplified to 601/200 (2³ × 5² denominator primes). Integer 3 becomes 3/1." },
-                        { title: "2. Manifold Mapping & Superposition", content: "Denominator primes map operands to Tiers 4 and 2. Multiplying by 3 projects the wave across the scalar manifold: (601/200) × (3/1) = 1803/200." },
-                        { title: "3. TQF Collapse & Resolution", content: "The TQF area invariant stabilizes (A_R = 16A²), collapsing the standing wave into exact integer division: 1803 ÷ 200 = 9.015." }
+                        { title: "1. Flawless BigInt Conversion", content: "9.0000000000000005 is safely expanded into exactly 90,000,000,000,000,005 / 10,000,000,000,000,000 without hitting MAX_SAFE_INTEGER bounds." },
+                        { title: "2. Geodesic Path Intersecting", content: "The fractions are mathematically aligned by scaling to a common massive denominator, reflecting physical paths crossing a mathematically pure topological plane." },
+                        { title: "3. Precision Harmonic Collapse", content: `The geometry locks into the final structural answer: ${res}, preserving every decimal of physical reality perfectly.` }
                     ],
-                    fractions: ["601/200", "3/1", "1803/200"],
-                    primes: ["Node 2,5", "Core T0", "Stable: 9,015"]
+                    fractions: ["Dynamic Prime A", "Dynamic Prime B", res],
+                    primes: ["Node Phase A", "Node Phase B", "Stable Alignment"]
                 };
             }
 
@@ -335,15 +390,16 @@
                     primes: ["Node 2,5", "Node 5", "Stable: 3,10"]
                 };
             }
+
             return {
                 title: "SHD-CCP Geometric Evaluation",
                 intro: `Evaluating ${expr} via Exact Rational Reduction and Hyperbolic Projection.`,
                 steps: [
                     { title: "1. Vectorization", content: "Operands are mapped to spatial coordinates, operators define the manifold topology, and exact fractional reduction is applied." },
                     { title: "2. Clifford-Strassen Collapse", content: "The inputs are projected as geodesic flows onto a toroid surface finding where mathematical waves constructively amplify." },
-                    { title: "3. TQF Pruning & Crystallization", content: `The final standing wave collapses onto the discrete integer coordinate corresponding to ${res}.` }
+                    { title: "3. TQF Pruning & Crystallization", content: `The final standing wave collapses onto the discrete coordinate corresponding to ${res}.` }
                 ],
-                fractions: ["A/1", "B/1", `${res}/1`],
+                fractions: ["A/d1", "B/d2", res.length > 8 ? res.substring(0,8) + '...' : res],
                 primes: ["Dynamic", "Dynamic", "Stable"]
             };
         }
@@ -446,7 +502,7 @@
 
         function testRationalTarget() {
             clearCalc();
-            calcState.expression = '3.005 * 3';
+            calcState.expression = '9.0000000000000005 + 0.30000008';
             updateCalcUI();
         }
 
@@ -710,8 +766,12 @@
                             // Abacus SNAP: Halt the engine and snap rotation to represent mathematical result physically
                             state.simSpeed = 0; 
                             state.isPlaying = false;
-                            if (mainManifoldGroup && typeof calcState.result === 'number') {
-                                mainManifoldGroup.rotation.y = calcState.result % (Math.PI * 2);
+                            
+                            if (mainManifoldGroup && typeof calcState.result === 'string') {
+                                const floatResult = parseFloat(calcState.result.replace('...', ''));
+                                if (!isNaN(floatResult)) {
+                                    mainManifoldGroup.rotation.y = floatResult % (Math.PI * 2);
+                                }
                             }
                             
                             // Reset Torus Colors
