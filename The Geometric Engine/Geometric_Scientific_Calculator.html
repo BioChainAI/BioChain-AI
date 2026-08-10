@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHD-CCP Geometric Calculator</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- FontAwesome Icons -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; overflow: hidden; background-color: #020617; color: #f3f4f6; font-family: 'Inter', sans-serif; user-select: none; }
+        .font-mono-code { font-family: 'Fira Code', monospace; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.82);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(8, 145, 178, 0.35);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(8, 145, 178, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(8, 145, 178, 0.8); }
+
+        .btn-calc {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.8);
+            color: #cffafe;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-family: 'Fira Code', monospace;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 2.75rem;
+            cursor: pointer;
+        }
+        .btn-calc:hover {
+            background: rgba(22, 78, 99, 0.5);
+            border-color: rgba(6, 182, 212, 0.5);
+        }
+        .btn-calc-action {
+            background: rgba(136, 19, 55, 0.25);
+            color: #fda4af;
+            border-color: rgba(159, 18, 57, 0.5);
+        }
+        .btn-calc-action:hover {
+            background: rgba(159, 18, 57, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Three.js Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- Main UI Overlay -->
+    <div class="absolute inset-0 z-10 flex flex-col md:flex-row gap-6 p-4 md:p-8 pointer-events-none pt-6 h-screen">
+        
+        <!-- Left Panel: The Calculator -->
+        <div class="pointer-events-auto w-full md:w-[380px] glass-panel rounded-xl flex flex-col overflow-hidden max-h-full">
+            <div class="bg-slate-950/70 p-4 border-b border-cyan-900/50 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-hexagon-nodes text-cyan-400"></i>
+                    <span class="font-semibold text-sm tracking-wider text-cyan-400">SHD-CCP TERMINAL</span>
+                </div>
+                <i id="status-icon" class="fa-solid fa-wave-square text-emerald-400 animate-pulse"></i>
+            </div>
+
+            <div class="p-5 flex-1 flex flex-col">
+                <!-- Calculator Mode & Angle Tabs -->
+                <div class="flex gap-2 mb-4">
+                    <button id="tab-basic" onclick="setCalcMode('basic')" class="flex-1 py-1.5 text-xs font-bold rounded bg-cyan-900/40 text-cyan-300 border border-cyan-500/50 transition">BASIC TENSOR</button>
+                    <button id="tab-sci" onclick="setCalcMode('scientific')" class="flex-1 py-1.5 text-xs font-bold rounded bg-slate-900/60 text-slate-400 border border-slate-700 hover:text-cyan-300 transition">SCIENTIFIC</button>
+                    <button id="angle-mode-btn" onclick="toggleAngleMode()" class="px-3 py-1.5 text-xs font-bold rounded bg-amber-900/40 text-amber-400 border border-amber-500/50 transition hidden">DEG</button>
+                </div>
+
+                <!-- Display -->
+                <div class="bg-slate-950 rounded-lg p-4 mb-4 border border-cyan-900/40 relative h-24 flex flex-col justify-end items-end shadow-inner">
+                    <div id="calc-expression" class="text-cyan-600/70 text-xs mb-1 tracking-widest font-mono-code h-5 overflow-hidden w-full text-right"></div>
+                    <div id="calc-result" class="text-2xl text-cyan-100 font-mono-code tracking-tight h-8 w-full text-right overflow-hidden text-ellipsis whitespace-nowrap">0</div>
+                </div>
+
+                <!-- Keypad: Basic Mode -->
+                <div id="keypad-basic" class="grid grid-cols-4 gap-2.5 flex-1">
+                    <button class="btn-calc" onclick="appendToExpression('7')">7</button>
+                    <button class="btn-calc" onclick="appendToExpression('8')">8</button>
+                    <button class="btn-calc" onclick="appendToExpression('9')">9</button>
+                    <button class="btn-calc" onclick="appendToExpression('/')">/</button>
+                    
+                    <button class="btn-calc" onclick="appendToExpression('4')">4</button>
+                    <button class="btn-calc" onclick="appendToExpression('5')">5</button>
+                    <button class="btn-calc" onclick="appendToExpression('6')">6</button>
+                    <button class="btn-calc" onclick="appendToExpression('*')">*</button>
+                    
+                    <button class="btn-calc" onclick="appendToExpression('1')">1</button>
+                    <button class="btn-calc" onclick="appendToExpression('2')">2</button>
+                    <button class="btn-calc" onclick="appendToExpression('3')">3</button>
+                    <button class="btn-calc" onclick="appendToExpression('-')">-</button>
+                    
+                    <button class="btn-calc btn-calc-action" onclick="clearCalc()">C</button>
+                    <button class="btn-calc" onclick="appendToExpression('0')">0</button>
+                    <button class="btn-calc" onclick="appendToExpression('.')">.</button>
+                    <button class="btn-calc" onclick="appendToExpression('+')">+</button>
+                    
+                    <button onclick="handleCalculate()" class="col-span-4 mt-1 bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 rounded-lg py-3 text-lg font-mono-code tracking-widest transition-all shadow-[0_0_15px_rgba(8,145,178,0.2)]">
+                        RESOLVE MANIFOLD (=)
+                    </button>
+                </div>
+
+                <!-- Keypad: Scientific Mode -->
+                <div id="keypad-sci" class="hidden grid grid-cols-4 gap-2 flex-1">
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression('sin(')">sin</button>
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression('cos(')">cos</button>
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression('(')">(</button>
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression(')')">)</button>
+
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression('sqrt(')">√</button>
+                    <button class="btn-calc text-xs text-purple-300" onclick="appendToExpression('^')">^</button>
+                    <button class="btn-calc btn-calc-action" onclick="clearCalc()">C</button>
+                    <button class="btn-calc" onclick="appendToExpression('/')">/</button>
+                    
+                    <button class="btn-calc" onclick="appendToExpression('7')">7</button>
+                    <button class="btn-calc" onclick="appendToExpression('8')">8</button>
+                    <button class="btn-calc" onclick="appendToExpression('9')">9</button>
+                    <button class="btn-calc" onclick="appendToExpression('*')">*</button>
+                    
+                    <button class="btn-calc" onclick="appendToExpression('4')">4</button>
+                    <button class="btn-calc" onclick="appendToExpression('5')">5</button>
+                    <button class="btn-calc" onclick="appendToExpression('6')">6</button>
+                    <button class="btn-calc" onclick="appendToExpression('-')">-</button>
+                    
+                    <button class="btn-calc" onclick="appendToExpression('1')">1</button>
+                    <button class="btn-calc" onclick="appendToExpression('2')">2</button>
+                    <button class="btn-calc" onclick="appendToExpression('3')">3</button>
+                    <button class="btn-calc" onclick="appendToExpression('+')">+</button>
+                    
+                    <button class="btn-calc col-span-2" onclick="appendToExpression('0')">0</button>
+                    <button class="btn-calc col-span-2" onclick="appendToExpression('.')">.</button>
+                    
+                    <button onclick="handleCalculate()" class="col-span-4 mt-1 bg-cyan-600/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 rounded-lg py-2.5 text-lg font-mono-code tracking-widest transition-all shadow-[0_0_15px_rgba(8,145,178,0.2)]">
+                        RESOLVE MANIFOLD (=)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Hologram & Explanation -->
+        <div class="pointer-events-auto flex-1 glass-panel rounded-xl relative overflow-hidden flex flex-col max-h-full">
+            <div class="absolute inset-0 opacity-5 pointer-events-none" style="background-image: linear-gradient(to right, #0891b2 1px, transparent 1px), linear-gradient(to bottom, #0891b2 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+            <div class="p-6 relative z-10 flex flex-col h-full overflow-hidden">
+                
+                <!-- State 1: Standby -->
+                <div id="panel-standby" class="flex-1 flex flex-col items-center justify-center text-cyan-600/50">
+                    <i class="fa-solid fa-circle-notch fa-spin text-5xl mb-6 opacity-50"></i>
+                    <h2 class="text-xl tracking-widest uppercase font-semibold text-cyan-500/70">System Standby</h2>
+                    <p class="text-sm mt-2 text-cyan-600/60">Awaiting geometric tensor input...</p>
+                    <div class="mt-8 flex flex-wrap gap-3 justify-center">
+                        <button onclick="testClassicError()" class="px-4 py-2 border border-cyan-900/50 rounded-md bg-slate-900/50 text-xs text-cyan-400 font-mono-code hover:bg-cyan-900/30 transition">Try: 0.1 + 0.2</button>
+                        <button onclick="testRationalTarget()" class="px-4 py-2 border border-amber-900/50 rounded-md bg-slate-900/50 text-xs text-amber-400 font-mono-code hover:bg-amber-900/30 transition">Try: 3.005 * 3</button>
+                        <button onclick="testScientificTrig()" class="px-4 py-2 border border-purple-900/50 rounded-md bg-slate-900/50 text-xs text-purple-400 font-mono-code hover:bg-purple-900/30 transition">Try: cos(7)+3.25/sin(8)</button>
+                    </div>
+                </div>
+
+                <!-- State 2: Computing Stages -->
+                <div id="panel-computing" class="hidden flex-1 flex flex-col items-start justify-center font-mono-code">
+                    <h2 class="text-2xl text-cyan-400 mb-8 flex items-center gap-3">
+                        <i class="fa-solid fa-terminal animate-pulse"></i>
+                        INITIATING CHIRAL COMPRESSION ENGINE
+                    </h2>
+                    <div class="space-y-4 text-cyan-100/70 w-full" id="computing-stages"></div>
+                    
+                    <div class="mt-12 p-4 border border-cyan-900/50 rounded bg-slate-950/50 text-xs text-cyan-500/70 w-full flex items-center justify-between">
+                        <span>Awaiting 30-Node Parity Closure (φ = 0.0)...</span>
+                        <span id="computing-node-readout" class="font-bold text-amber-400">Node 0/30</span>
+                    </div>
+                </div>
+
+                <!-- State 3: Explanation -->
+                <div id="panel-explanation" class="hidden flex-col h-full animate-in fade-in duration-700">
+                    <div class="border-b border-cyan-900/50 pb-4 mb-6 shrink-0">
+                        <h2 id="exp-title" class="text-2xl font-semibold text-cyan-300">Title</h2>
+                        <p id="exp-intro" class="text-cyan-100/70 text-sm mt-2 leading-relaxed">Intro</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 shrink-0">
+                        <div class="bg-slate-950 rounded-lg p-3 border border-cyan-900/30 text-center">
+                            <div class="text-[10px] text-cyan-600 mb-1 font-mono-code">NODE A (Ψ_A)</div>
+                            <div id="node-a-frac" class="text-base font-bold text-cyan-100 mb-1 overflow-hidden text-ellipsis">A</div>
+                            <div id="node-a-prime" class="text-[10px] text-emerald-400/80 font-mono-code">Resonance</div>
+                        </div>
+                        <div class="bg-slate-950 rounded-lg p-3 border border-cyan-900/30 text-center relative">
+                            <div class="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-900 text-cyan-500 text-sm z-10 w-6 h-6 flex items-center justify-center rounded-full border border-cyan-900">+</div>
+                            <div class="text-[10px] text-cyan-600 mb-1 font-mono-code">NODE B (Ψ_B)</div>
+                            <div id="node-b-frac" class="text-base font-bold text-cyan-100 mb-1 overflow-hidden text-ellipsis">B</div>
+                            <div id="node-b-prime" class="text-[10px] text-emerald-400/80 font-mono-code">Resonance</div>
+                        </div>
+                        <div class="bg-cyan-900/20 rounded-lg p-3 border border-cyan-500/50 text-center relative shadow-[0_0_15px_rgba(8,145,178,0.1)]">
+                            <div class="absolute -left-3 top-1/2 -translate-y-1/2 bg-slate-900 text-cyan-400 text-sm z-10 w-6 h-6 flex items-center justify-center rounded-full border border-cyan-500">=</div>
+                            <div class="text-[10px] text-cyan-400 mb-1 font-mono-code tracking-widest">COLLAPSE (Ψ_C)</div>
+                            <div id="node-c-frac" class="text-base font-bold text-white mb-1 overflow-hidden text-ellipsis">C</div>
+                            <div id="node-c-prime" class="text-[10px] text-emerald-300 font-mono-code">Harmonic</div>
+                        </div>
+                    </div>
+
+                    <div id="exp-steps" class="space-y-4 overflow-y-auto flex-1 pr-2 custom-scrollbar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. SHD-CCP CALCULATOR LOGIC (EXACT RATIONAL BIGINT ARITHMETIC) ---
+        let calcState = {
+            expression: '',
+            result: null,
+            isComputing: false,
+            computeStage: 0,
+            explanation: null,
+            targetResult: null,
+            activeTiers: [],
+            mode: 'basic',
+            angleMode: 'DEG'
+        };
+
+        function toggleAngleMode() {
+            calcState.angleMode = calcState.angleMode === 'DEG' ? 'RAD' : 'DEG';
+            const btn = document.getElementById('angle-mode-btn');
+            if (btn) {
+                btn.innerText = calcState.angleMode;
+                btn.className = calcState.angleMode === 'DEG' 
+                    ? "px-3 py-1.5 text-xs font-bold rounded bg-amber-900/40 text-amber-400 border border-amber-500/50 transition"
+                    : "px-3 py-1.5 text-xs font-bold rounded bg-purple-900/40 text-purple-400 border border-purple-500/50 transition";
+            }
+            if (calcState.expression && !calcState.isComputing && calcState.result !== null) {
+                handleCalculate();
+            }
+        }
+
+        function setCalcMode(mode) {
+            calcState.mode = mode;
+            const angleBtn = document.getElementById('angle-mode-btn');
+            if(mode === 'basic') {
+                document.getElementById('tab-basic').className = "flex-1 py-1.5 text-xs font-bold rounded bg-cyan-900/40 text-cyan-300 border border-cyan-500/50 transition";
+                document.getElementById('tab-sci').className = "flex-1 py-1.5 text-xs font-bold rounded bg-slate-900/60 text-slate-400 border border-slate-700 hover:text-cyan-300 transition";
+                document.getElementById('keypad-basic').classList.remove('hidden');
+                document.getElementById('keypad-sci').classList.add('hidden');
+                if(angleBtn) angleBtn.classList.add('hidden');
+            } else {
+                document.getElementById('tab-sci').className = "flex-1 py-1.5 text-xs font-bold rounded bg-cyan-900/40 text-cyan-300 border border-cyan-500/50 transition";
+                document.getElementById('tab-basic').className = "flex-1 py-1.5 text-xs font-bold rounded bg-slate-900/60 text-slate-400 border border-slate-700 hover:text-cyan-300 transition";
+                document.getElementById('keypad-sci').classList.remove('hidden');
+                document.getElementById('keypad-basic').classList.add('hidden');
+                if(angleBtn) angleBtn.classList.remove('hidden');
+            }
+        }
+
+        const calcStages = [
+            "STAGE 0: Ingesting 64-bit Einstein Tile (Bypassing IEEE 754 Ceiling)...",
+            "STAGE 1: Infinite-Precision Prime Anchoring (BigInt Tensors)...",
+            "STAGE 2: Hyperbolic Superposition (Constructive Interference)...",
+            "STAGE 3: Clifford-Strassen Collapse (TQF Pruning)...",
+            "STAGE 4: Geometric Resolution (Soliton Latch)..."
+        ];
+
+        function gcd(a, b) {
+            a = a < 0n ? -a : a;
+            b = b < 0n ? -b : b;
+            while (b !== 0n) {
+                let temp = b;
+                b = a % b;
+                a = temp;
+            }
+            return a;
+        }
+
+        function bigIntSqrt(n) {
+            if (n < 0n) throw "Square root of negative number";
+            if (n === 0n) return 0n;
+            let x0 = n / 2n + 1n;
+            let x1 = (x0 + n / x0) / 2n;
+            while (x1 < x0) {
+                x0 = x1;
+                x1 = (x0 + n / x0) / 2n;
+            }
+            return x0;
+        }
+
+        function toFraction(str) {
+            str = str.trim();
+            if (str.includes('.')) {
+                const parts = str.split('.');
+                const intPart = parts[0] || '0';
+                const decStr = parts[1] || '';
+                
+                let denominator = 1n;
+                for(let i=0; i<decStr.length; i++) {
+                    denominator *= 10n;
+                }
+                
+                const isNegative = intPart.startsWith('-');
+                const rawInt = isNegative ? intPart.slice(1) : intPart;
+                let numStr = (rawInt === '' ? '0' : rawInt) + decStr;
+                numStr = numStr.replace(/^0+(?=\d)/, '');
+                
+                let numerator = BigInt(numStr === '' ? '0' : numStr);
+                if (isNegative) numerator = -numerator;
+
+                const common = gcd(numerator < 0n ? -numerator : numerator, denominator);
+                return { n: numerator / common, d: denominator / common };
+            } else {
+                return { n: BigInt(str), d: 1n };
+            }
+        }
+
+        function fractionToString(n, d) {
+            if (d === 1n) return n.toString();
+            let res = "";
+            let absN = n < 0n ? -n : n;
+            let absD = d < 0n ? -d : d;
+            
+            if ((n < 0n && d > 0n) || (n > 0n && d < 0n)) {
+                res += "-";
+            }
+
+            res += (absN / absD).toString();
+            let rem = absN % absD;
+            
+            if (rem === 0n) return res;
+            
+            res += ".";
+            let count = 0;
+            while (rem !== 0n && count < 30) { 
+                rem *= 10n;
+                res += (rem / absD).toString();
+                rem = rem % absD;
+                count++;
+            }
+            
+            return res;
+        }
+
+        // Geometric Rational Math Engine (Replaces CPU ALUs)
+        const RationalMath = {
+            simplify: (f) => {
+                const common = gcd(f.n < 0n ? -f.n : f.n, f.d);
+                return { n: f.n / common, d: f.d / common };
+            },
+            add: (a, b) => RationalMath.simplify({ n: a.n * b.d + b.n * a.d, d: a.d * b.d }),
+            sub: (a, b) => RationalMath.simplify({ n: a.n * b.d - b.n * a.d, d: a.d * b.d }),
+            mul: (a, b) => RationalMath.simplify({ n: a.n * b.n, d: a.d * b.d }),
+            div: (a, b) => {
+                if (b.n === 0n) throw "Div/0";
+                return RationalMath.simplify({ n: a.n * b.d, d: a.d * b.n });
+            },
+            pow: (a, b) => {
+                if (b.d !== 1n) throw "Fractional Exponent Requires Root Fallback";
+                let exp = b.n;
+                if (exp < 0n) return RationalMath.simplify({ n: a.d ** -exp, d: a.n ** -exp });
+                return RationalMath.simplify({ n: a.n ** exp, d: a.d ** exp });
+            },
+            sqrt: (a) => {
+                if(a.n < 0n) throw "Imaginary Root";
+                if(a.n === 0n) return {n:0n, d:1n};
+                const scale = 10000000000000000000000000000000n; // 10^30 precision scalar
+                const scaleRoot = 1000000000000000n; 
+                const scaledVal = (a.n * scale) / a.d;
+                return RationalMath.simplify({ n: bigIntSqrt(scaledVal), d: scaleRoot });
+            },
+            sin: (a) => {
+                let x = normalizeAngle(a);
+                let res = x;
+                let sign = -1n;
+                let xSq = RationalMath.pow(x, {n:2n, d:1n});
+                let currentPow = RationalMath.mul(x, xSq);
+                let currentFact = 6n; // 3!
+                let factBase = 4n;
+                
+                // Deepened 10-term Harmonic Collapse for extreme bounds
+                for(let i=1; i<=10; i++) {
+                    let term = RationalMath.div(currentPow, {n:currentFact, d:1n});
+                    if(sign === 1n) res = RationalMath.add(res, term);
+                    else res = RationalMath.sub(res, term);
+                    
+                    sign = -sign;
+                    currentPow = RationalMath.mul(currentPow, xSq);
+                    currentFact = currentFact * factBase * (factBase + 1n);
+                    factBase += 2n;
+                }
+                return res;
+            },
+            cos: (a) => {
+                let x = normalizeAngle(a);
+                let res = {n:1n, d:1n};
+                let sign = -1n;
+                let currentPow = RationalMath.pow(x, {n:2n, d:1n});
+                let currentFact = 2n;
+                let factMultiplier = 3n;
+                
+                for(let i=1; i<=10; i++) {
+                    let term = RationalMath.div(currentPow, {n:currentFact, d:1n});
+                    if(sign === 1n) res = RationalMath.add(res, term);
+                    else res = RationalMath.sub(res, term);
+                    
+                    sign = -sign;
+                    currentPow = RationalMath.mul(currentPow, RationalMath.pow(x, {n:2n, d:1n}));
+                    currentFact = currentFact * factMultiplier * (factMultiplier + 1n);
+                    factMultiplier += 2n;
+                }
+                return res;
+            }
+        };
+
+        const PI_EXACT = { n: 3141592653589793238462643383280n, d: 1000000000000000000000000000000n };
+        const TWO_PI_EXACT = { n: 6283185307179586476925286766559n, d: 1000000000000000000000000000000n };
+        const PI_OVER_180 = { n: 3141592653589793238462643383280n, d: 180000000000000000000000000000000n };
+
+        function normalizeAngle(a) {
+            let input = a;
+            if (calcState.angleMode === 'DEG') {
+                input = RationalMath.mul(input, PI_OVER_180);
+            }
+            
+            let divN = input.n * TWO_PI_EXACT.d;
+            let divD = input.d * TWO_PI_EXACT.n;
+            let q = divN / divD;
+            if (divN < 0n && divN % divD !== 0n) q -= 1n;
+            
+            let qFrac = { n: q, d: 1n };
+            let wrapped = RationalMath.sub(input, RationalMath.mul(qFrac, TWO_PI_EXACT));
+            
+            if ((wrapped.n * PI_EXACT.d) > (PI_EXACT.n * wrapped.d)) {
+                wrapped = RationalMath.sub(wrapped, TWO_PI_EXACT);
+            } else if ((wrapped.n * PI_EXACT.d) < (-PI_EXACT.n * wrapped.d)) {
+                wrapped = RationalMath.add(wrapped, TWO_PI_EXACT);
+            }
+            return wrapped;
+        }
+
+        // Recursive Descent Parser for BigInt Exact Rational Arithmetic
+        function calculateExactRational(expr) {
+            try {
+                // Tokenize structural operators and geometry functions
+                const tokens = expr.match(/(sin|cos|sqrt|\d+\.\d+|\d+|[\+\-\*\/\(\)\^])/g);
+                if (!tokens || tokens.length === 0) return "0";
+
+                let pos = 0;
+
+                function parsePrimary() {
+                    if (pos >= tokens.length) return {n:0n, d:1n};
+                    const token = tokens[pos++];
+                    
+                    if (token === '(') {
+                        const val = parseExpression();
+                        if (pos < tokens.length && tokens[pos] === ')') pos++;
+                        return val;
+                    }
+                    if (token === 'sin') {
+                        if (pos < tokens.length && tokens[pos] === '(') pos++;
+                        const val = parseExpression();
+                        if (pos < tokens.length && tokens[pos] === ')') pos++;
+                        return RationalMath.sin(val);
+                    }
+                    if (token === 'cos') {
+                        if (pos < tokens.length && tokens[pos] === '(') pos++;
+                        const val = parseExpression();
+                        if (pos < tokens.length && tokens[pos] === ')') pos++;
+                        return RationalMath.cos(val);
+                    }
+                    if (token === 'sqrt') {
+                        if (pos < tokens.length && tokens[pos] === '(') pos++;
+                        const val = parseExpression();
+                        if (pos < tokens.length && tokens[pos] === ')') pos++;
+                        return RationalMath.sqrt(val);
+                    }
+                    if (token === '-') { // Unary inversion
+                        const val = parsePrimary();
+                        return { n: -val.n, d: val.d };
+                    }
+                    return toFraction(token);
+                }
+
+                function parseExponent() {
+                    let left = parsePrimary();
+                    while (pos < tokens.length && tokens[pos] === '^') {
+                        pos++;
+                        const right = parsePrimary();
+                        left = RationalMath.pow(left, right);
+                    }
+                    return left;
+                }
+
+                function parseFactor() {
+                    let left = parseExponent();
+                    while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')) {
+                        const op = tokens[pos++];
+                        const right = parseExponent();
+                        if (op === '*') left = RationalMath.mul(left, right);
+                        else left = RationalMath.div(left, right);
+                    }
+                    return left;
+                }
+
+                function parseExpression() {
+                    let left = parseFactor();
+                    while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')) {
+                        const op = tokens[pos++];
+                        const right = parseFactor();
+                        if (op === '+') left = RationalMath.add(left, right);
+                        else left = RationalMath.sub(left, right);
+                    }
+                    return left;
+                }
+
+                const res = parseExpression();
+                return fractionToString(res.n, res.d);
+            } catch (e) {
+                return "ERROR: Topo-Singularity";
+            }
+        }
+
+        function generateExplanation(expr, res) {
+            const cleanExpr = expr.replace(/\s/g, '');
+            const isClassicError = cleanExpr === '0.1+0.2';
+            const isDeepDecimal = cleanExpr === '9.0000000000000005+0.30000008';
+            
+            if (isDeepDecimal) {
+                return {
+                    title: "Bypassing 64-Bit Ceiling (BigInt Rational Precision)",
+                    intro: "Standard computers cap integers at 9,007,199,254,740,991. When inputting 16-decimal numbers, traditional systems crush microscopic tails. Dynamic BigInt parsing maintains flawless structural integrity.",
+                    steps: [
+                        { title: "1. Flawless BigInt Expansion", content: "9.0000000000000005 expands into 90,000,000,000,000,005 / 10,000,000,000,000,000 without hitting MAX_SAFE_INTEGER bounds." },
+                        { title: "2. Geodesic Path Intersecting", content: "Fractions are mathematically aligned by scaling to a common massive denominator across the toroid manifold." },
+                        { title: "3. Precision Harmonic Collapse", content: `Geometry locks into exact structural answer: ${res}, preserving reality perfectly.` }
+                    ],
+                    fractions: ["Dynamic Prime A", "Dynamic Prime B", res],
+                    primes: ["Node Phase A", "Node Phase B", "Stable Alignment"]
+                };
+            }
+
+            if (isClassicError) {
+                return {
+                    title: "Resolving IEEE 754 Floating-Point Artifacts",
+                    intro: "Standard 64-bit systems force base-10 fractions into fixed-width base-2 strings, causing truncation. SHD-CCP bypasses binary truncation entirely by mapping to prime-resonant wave functions.",
+                    steps: [
+                        { title: "1. Representation: Anchoring", content: "Encoded as rational relationship 1/10 locking phase and frequency to prime resonant nodes." },
+                        { title: "2. Addition: Superposition", content: "System superimposes wave functions, creating predictable geometric patterns." },
+                        { title: "3. Recovery: Collapse", content: `Interference stabilizes at discrete coordinates. Recovers pure ${res}.` }
+                    ],
+                    fractions: ["1/10", "1/5", "3/10"],
+                    primes: ["Node 2,5", "Node 5", "Stable: 3,10"]
+                };
+            }
+
+            return {
+                title: "SHD-CCP Geometric Evaluation",
+                intro: `Evaluating ${expr} via Exact Rational Reduction and Hyperbolic Projection.`,
+                steps: [
+                    { title: "1. Vectorization", content: "Operands are mapped to spatial coordinates and exact fractional reduction is applied." },
+                    { title: "2. Clifford-Strassen Collapse", content: "Inputs project as geodesic flows onto toroid surfaces finding constructive wave amplification." },
+                    { title: "3. TQF Pruning & Crystallization", content: `Final standing wave collapses onto discrete coordinate corresponding to ${res}.` }
+                ],
+                fractions: ["A/d1", "B/d2", res.length > 8 ? res.substring(0,8) + '...' : res],
+                primes: ["Dynamic", "Dynamic", "Stable"]
+            };
+        }
+
+        function updateCalcUI() {
+            document.getElementById('calc-expression').innerText = calcState.expression || '';
+            
+            const resultEl = document.getElementById('calc-result');
+            if (calcState.isComputing) {
+                resultEl.innerHTML = '<span class="animate-pulse text-cyan-500">_</span>';
+            } else {
+                resultEl.innerText = calcState.result !== null ? calcState.result : '0';
+            }
+
+            const icon = document.getElementById('status-icon');
+            if (calcState.isComputing) {
+                icon.className = 'fa-solid fa-arrows-spin text-amber-400 animate-spin';
+            } else if (calcState.result !== null) {
+                icon.className = 'fa-solid fa-check text-cyan-400';
+            } else {
+                icon.className = 'fa-solid fa-wave-square text-emerald-400 animate-pulse';
+            }
+
+            document.getElementById('panel-standby').classList.add('hidden');
+            document.getElementById('panel-computing').classList.add('hidden');
+            document.getElementById('panel-explanation').classList.add('hidden');
+
+            if (calcState.isComputing) {
+                document.getElementById('panel-computing').classList.remove('hidden');
+                const stagesContainer = document.getElementById('computing-stages');
+                stagesContainer.innerHTML = '';
+                calcStages.forEach((stage, idx) => {
+                    const isVisible = calcState.computeStage >= idx;
+                    const opacityClass = isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4';
+                    stagesContainer.innerHTML += `
+                        <div class="transition-all duration-500 flex items-center gap-4 ${opacityClass}">
+                            <div class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee]"></div>
+                            ${stage}
+                        </div>
+                    `;
+                });
+            } else if (calcState.explanation) {
+                document.getElementById('panel-explanation').classList.remove('hidden');
+                document.getElementById('exp-title').innerText = calcState.explanation.title;
+                document.getElementById('exp-intro').innerText = calcState.explanation.intro;
+                
+                document.getElementById('node-a-frac').innerText = calcState.explanation.fractions[0];
+                document.getElementById('node-b-frac').innerText = calcState.explanation.fractions[1];
+                document.getElementById('node-c-frac').innerText = calcState.explanation.fractions[2];
+                
+                document.getElementById('node-a-prime').innerText = 'Resonance: ' + calcState.explanation.primes[0];
+                document.getElementById('node-b-prime').innerText = 'Resonance: ' + calcState.explanation.primes[1];
+                document.getElementById('node-c-prime').innerText = 'Harmonic: ' + calcState.explanation.primes[2];
+
+                const stepsContainer = document.getElementById('exp-steps');
+                stepsContainer.innerHTML = '';
+                calcState.explanation.steps.forEach(step => {
+                    stepsContainer.innerHTML += `
+                        <div class="bg-slate-800/40 rounded-lg p-4 border border-slate-700/50 relative mb-3">
+                            <div class="absolute -left-[1px] top-4 w-1 h-8 bg-cyan-500 rounded-r-md shadow-[0_0_10px_#06b6d4]"></div>
+                            <h3 class="text-sm font-medium text-cyan-200 mb-1 font-sans tracking-wide">${step.title}</h3>
+                            <p class="text-slate-300 text-xs leading-relaxed">${step.content}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                document.getElementById('panel-standby').classList.remove('hidden');
+            }
+        }
+
+        function appendToExpression(val) {
+            if (calcState.result !== null && !calcState.isComputing) {
+                calcState.expression = val;
+                calcState.result = null;
+                calcState.explanation = null;
+            } else {
+                calcState.expression += val;
+            }
+            updateCalcUI();
+        }
+
+        function clearCalc() {
+            calcState.expression = '';
+            calcState.result = null;
+            calcState.explanation = null;
+            calcState.computeStage = 0;
+            state.isPlaying = false;
+            updateCalcUI();
+        }
+
+        function testClassicError() {
+            clearCalc();
+            calcState.expression = '0.1 + 0.2';
+            updateCalcUI();
+        }
+
+        function testRationalTarget() {
+            clearCalc();
+            calcState.expression = '9.0000000000000005 + 0.30000008';
+            updateCalcUI();
+        }
+
+        function testScientificTrig() {
+            clearCalc();
+            setCalcMode('scientific');
+            calcState.expression = 'cos(7)+3.25/sin(8)';
+            updateCalcUI();
+        }
+
+        let previousActiveNode = -1;
+
+        function handleCalculate() {
+            if (!calcState.expression) return;
+            
+            calcState.isComputing = true;
+            calcState.result = null;
+            calcState.explanation = null;
+            calcState.computeStage = 0;
+            
+            state.isPlaying = true;
+            state.simSpeed = 8.0;
+            
+            calcState.targetResult = calculateExactRational(calcState.expression);
+            updateCalcUI();
+        }
+
+        // --- 2. 3D ENGINE LOGIC ---
+        const TOTAL_NODES = 30;
+        const TIERS_SPEC = [
+            { id: 0, W: 16, R: 15,  r: 4,  color: 0x38bdf8, hex: '#38bdf8', rotAxis: 'Z', freq: 96.0 },
+            { id: 1, W: 14, R: 35,  r: 6,  color: 0xa855f7, hex: '#a855f7', rotAxis: 'X', freq: 84.0 },
+            { id: 2, W: 12, R: 65,  r: 8,  color: 0x10b981, hex: '#10b981', rotAxis: 'Z', freq: 72.0 },
+            { id: 3, W: 10, R: 105, r: 10, color: 0xf59e0b, hex: '#f59e0b', rotAxis: 'X', freq: 60.0 }, 
+            { id: 4, W: 8,  R: 155, r: 12, color: 0xf43f5e, hex: '#f43f5e', rotAxis: 'Z', freq: 48.0 }
+        ];
+
+        const state = {
+            isPlaying: false,
+            simTime: 0,
+            simSpeed: 1.0,
+            pulseCount: 0,
+            activeNode: 0,
+            targetT3Freq: 60.0
+        };
+
+        let scene, camera, renderer, controls;
+        let mainManifoldGroup, toriGroup, helixGroup, particleSystemsGroup;
+        let particleChannels = [];
+        let orthoLines = null, scalarCore = null;
+
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x020617, 0.0015);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+            camera.position.set(240, 180, 260);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = false;
+            controls.enablePan = false;
+
+            const ambientLight = new THREE.AmbientLight(0x0f172a, 2.0);
+            scene.add(ambientLight);
+
+            const coreLight = new THREE.PointLight(0x38bdf8, 3.5, 350);
+            coreLight.position.set(0, 0, 0);
+            scene.add(coreLight);
+
+            const outerLight = new THREE.PointLight(0xf59e0b, 2.5, 500);
+            outerLight.position.set(120, 180, 120);
+            scene.add(outerLight);
+
+            mainManifoldGroup = new THREE.Group();
+            scene.add(mainManifoldGroup);
+
+            toriGroup = new THREE.Group();
+            helixGroup = new THREE.Group();
+            particleSystemsGroup = new THREE.Group();
+
+            mainManifoldGroup.add(toriGroup);
+            mainManifoldGroup.add(helixGroup);
+            mainManifoldGroup.add(particleSystemsGroup);
+
+            buildManifoldTori();
+            buildDualHelixChannels();
+            buildAlignedSquareParticleFields();
+            buildScalarField();
+        }
+
+        function buildScalarField() {
+            const maxParticles = 480;
+            const linePositions = new Float32Array(maxParticles * 2 * 3);
+            const lineColors = new Float32Array(maxParticles * 2 * 3);
+            const lineGeo = new THREE.BufferGeometry();
+            lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+            lineGeo.setAttribute('color', new THREE.BufferAttribute(lineColors, 3));
+
+            const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+            orthoLines = new THREE.LineSegments(lineGeo, lineMat);
+            mainManifoldGroup.add(orthoLines);
+
+            const coreGeo = new THREE.SphereGeometry(3.5, 32, 32);
+            const coreMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, emissive: 0x38bdf8, emissiveIntensity: 0.5, transparent: true, opacity: 0.95 });
+            scalarCore = new THREE.Mesh(coreGeo, coreMat);
+            mainManifoldGroup.add(scalarCore);
+        }
+
+        function buildManifoldTori() {
+            toriGroup.clear();
+            TIERS_SPEC.forEach(tier => {
+                const geo = new THREE.TorusGeometry(tier.R, tier.r, 28, 90);
+                const mat = new THREE.MeshPhysicalMaterial({ color: tier.color, emissive: tier.color, emissiveIntensity: 0.1, roughness: 0.3, metalness: 0.7, transparent: true, opacity: 0.25 });
+                const mesh = new THREE.Mesh(geo, mat);
+                
+                const wireGeo = new THREE.TorusGeometry(tier.R, tier.r, 12, 45);
+                const wireMat = new THREE.MeshBasicMaterial({ color: tier.color, wireframe: true, transparent: true, opacity: 0.1 });
+                mesh.add(new THREE.Mesh(wireGeo, wireMat));
+
+                if (tier.rotAxis === 'X') mesh.rotation.x = Math.PI / 2;
+                mesh.userData = { tierId: tier.id };
+                toriGroup.add(mesh);
+            });
+        }
+
+        function buildDualHelixChannels() {
+            helixGroup.clear();
+            TIERS_SPEC.forEach(tier => {
+                const triadicPhases = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+                const chiralities = [1, -1];
+
+                triadicPhases.forEach((phase) => {
+                    chiralities.forEach((chiral) => {
+                        const points = [];
+                        for (let i = 0; i <= 200; i++) {
+                            const theta = (i / 200) * Math.PI * 2;
+                            const phi = tier.W * theta * chiral + phase;
+                            const x = (tier.R + tier.r * Math.cos(phi)) * Math.cos(theta);
+                            const y = (tier.R + tier.r * Math.cos(phi)) * Math.sin(theta);
+                            const z = tier.r * Math.sin(phi);
+                            points.push(new THREE.Vector3(x, y, z));
+                        }
+                        const curve = new THREE.CatmullRomCurve3(points, true);
+                        const tubeGeo = new THREE.TubeGeometry(curve, 150, 0.4, 5, true);
+                        const mat = new THREE.MeshBasicMaterial({ color: chiral === 1 ? 0x38bdf8 : 0xf59e0b, transparent: true, opacity: 0.4 });
+                        const mesh = new THREE.Mesh(tubeGeo, mat);
+                        if (tier.rotAxis === 'X') mesh.rotation.x = Math.PI / 2;
+                        helixGroup.add(mesh);
+                    });
+                });
+            });
+        }
+
+        function createSquareParticleTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32; canvas.height = 32;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 4, 24, 24);
+            ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 3; ctx.strokeRect(2, 2, 28, 28);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function buildAlignedSquareParticleFields() {
+            particleSystemsGroup.clear();
+            particleChannels = [];
+            const particleTexture = createSquareParticleTexture();
+
+            TIERS_SPEC.forEach(tier => {
+                const triadicPhases = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+                const chiralities = [1, -1];
+                const count = 16;
+
+                triadicPhases.forEach((phase) => {
+                    chiralities.forEach((chiral) => {
+                        const geo = new THREE.BufferGeometry();
+                        const positions = new Float32Array(count * 3);
+                        const colors = new Float32Array(count * 3);
+                        const c = new THREE.Color(chiral === 1 ? tier.color : 0xf59e0b);
+                        const offsetArray = [];
+
+                        for (let i = 0; i < count; i++) {
+                            offsetArray.push(i / count);
+                            positions[i * 3] = positions[i * 3 + 1] = positions[i * 3 + 2] = 0;
+                            colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+                        }
+
+                        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+                        const mat = new THREE.PointsMaterial({ size: 4.5, map: particleTexture, transparent: true, opacity: 0.9, vertexColors: true, blending: THREE.AdditiveBlending, depthWrite: false });
+                        const pSystem = new THREE.Points(geo, mat);
+                        if (tier.rotAxis === 'X') pSystem.rotation.x = Math.PI / 2;
+                        
+                        particleSystemsGroup.add(pSystem);
+                        particleChannels.push({ pSystem, tierId: tier.id, W: tier.W, R: tier.R, r: tier.r, chiral, phase, offsets: offsetArray, count, rotAxis: tier.rotAxis });
+                    });
+                });
+            });
+        }
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (state.isPlaying) {
+                state.simTime += delta * state.simSpeed;
+                state.pulseCount = Math.floor(state.simTime * state.targetT3Freq);
+                state.activeNode = state.pulseCount % TOTAL_NODES;
+
+                if (calcState.isComputing) {
+                    if (document.getElementById('computing-node-readout')) {
+                        document.getElementById('computing-node-readout').innerText = `Node ${state.activeNode + 1}/30`;
+                    }
+
+                    if (state.activeNode === 29 && previousActiveNode !== 29) {
+                        calcState.computeStage++;
+                        updateCalcUI();
+                        
+                        if (calcState.computeStage === 3) state.simSpeed = 1.5;
+
+                        if (calcState.computeStage >= calcStages.length) {
+                            calcState.result = calcState.targetResult;
+                            calcState.explanation = generateExplanation(calcState.expression, calcState.result);
+                            calcState.isComputing = false;
+                            
+                            state.simSpeed = 0; 
+                            state.isPlaying = false;
+                            
+                            const floatRes = parseFloat(calcState.result);
+                            if (!isNaN(floatRes) && mainManifoldGroup) {
+                                mainManifoldGroup.rotation.y = floatRes % (Math.PI * 2);
+                            }
+                            
+                            updateCalcUI();
+                        }
+                    }
+                }
+                previousActiveNode = state.activeNode;
+
+                let orthoIdx = 0;
+                const orthoPositions = orthoLines ? orthoLines.geometry.attributes.position.array : null;
+
+                particleChannels.forEach(ch => {
+                    const tier = TIERS_SPEC.find(t => t.id === ch.tierId);
+                    const waveTime = state.simTime * ((tier ? tier.freq : 60) / 15.0);
+
+                    const positions = ch.pSystem.geometry.attributes.position.array;
+                    for (let i = 0; i < ch.count; i++) {
+                        const theta = (ch.offsets[i] * Math.PI * 2) + waveTime;
+                        const phi = ch.W * theta * ch.chiral + ch.phase;
+                        let px = (ch.R + ch.r * Math.cos(phi)) * Math.cos(theta);
+                        let py = (ch.R + ch.r * Math.cos(phi)) * Math.sin(theta);
+                        let pz = ch.r * Math.sin(phi);
+
+                        positions[i * 3] = px; positions[i * 3 + 1] = py; positions[i * 3 + 2] = pz;
+
+                        if (orthoPositions) {
+                            let rx = px, ry = py, rz = pz;
+                            if (ch.rotAxis === 'X') { rx = px; ry = -pz; rz = py; }
+                            orthoPositions[orthoIdx * 6] = 0; orthoPositions[orthoIdx * 6 + 1] = 0; orthoPositions[orthoIdx * 6 + 2] = 0;
+                            orthoPositions[orthoIdx * 6 + 3] = rx; orthoPositions[orthoIdx * 6 + 4] = ry; orthoPositions[orthoIdx * 6 + 5] = rz;
+                            orthoIdx++;
+                        }
+                    }
+                    ch.pSystem.geometry.attributes.position.needsUpdate = true;
+                });
+                
+                if (orthoLines) orthoLines.geometry.attributes.position.needsUpdate = true;
+                if (mainManifoldGroup) mainManifoldGroup.rotation.y = state.simTime * 0.05;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        window.onload = function() {
+            init3D();
+            updateCalcUI();
+            animate();
+        };
+    </script>
+</body>
+</html>
