@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archimedean System & Platonic Physics Simulator</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Three.js and OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;600;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #01060e; /* Deep dark blue space */
+            color: #d1f8ff;
+            font-family: 'Rajdhani', sans-serif;
+        }
+
+        .font-mono-code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        /* HUD Overlays */
+        #hud-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 10;
+            pointer-events: none; /* Let clicks pass through to Three.js canvas */
+        }
+
+        .hud-panel {
+            background: rgba(3, 15, 30, 0.75);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(132, 225, 255, 0.25);
+            box-shadow: 0 0 15px rgba(5, 40, 70, 0.8), inset 0 0 20px rgba(132, 225, 255, 0.05);
+            position: absolute;
+            pointer-events: auto; /* Buttons inside should be clickable */
+            display: flex;
+            flex-direction: column;
+            border-radius: 4px;
+        }
+
+        .panel-header {
+            cursor: move;
+            background: rgba(3, 15, 30, 0.9);
+            padding: 6px 10px;
+            border-bottom: 1px solid rgba(132, 225, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+            color: #84e1ff;
+            user-select: none;
+        }
+
+        .panel-header .min-btn {
+            cursor: pointer;
+            padding: 0 4px;
+            color: #22d3ee;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        .panel-header .min-btn:hover { color: #fff; }
+
+        .panel-content {
+            padding: 12px 16px;
+            transition: opacity 0.2s ease;
+        }
+        .panel-content.minimized {
+            display: none;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(3,15,30,0.5); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(132,225,255,0.4); border-radius: 2px; }
+
+        /* Bracket corners for authentic technical look */
+        .hud-panel::before, .hud-panel::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-color: rgba(132, 225, 255, 0.8);
+            border-style: solid;
+            transition: all 0.3s ease;
+        }
+        .hud-panel::before { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+        .hud-panel::after { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+        /* Dynamic floating labels pinned to 3D coords */
+        .floating-label {
+            position: absolute;
+            background: rgba(3, 15, 30, 0.85);
+            border: 1px solid rgba(132, 225, 255, 0.4);
+            padding: 6px 10px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            color: #fff;
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+            box-shadow: 0 0 10px rgba(132, 225, 255, 0.15);
+            transition: opacity 0.2s;
+        }
+
+        /* SVG lines for HUD connectors */
+        #svg-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 5;
+            pointer-events: none;
+        }
+        
+        .hud-line {
+            stroke: rgba(132, 225, 255, 0.6);
+            stroke-width: 1.5;
+            fill: none;
+        }
+        .hud-line-glow {
+            stroke: rgba(132, 225, 255, 0.2);
+            stroke-width: 4;
+            fill: none;
+            filter: blur(2px);
+        }
+
+        /* Glow utilities */
+        .text-glow-cyan { text-shadow: 0 0 8px rgba(132, 225, 255, 0.8); }
+        .text-glow-amber { text-shadow: 0 0 8px rgba(255, 180, 100, 0.8); }
+        
+        /* Custom Controls */
+        select {
+            background: rgba(3, 15, 30, 0.8);
+            border: 1px solid rgba(132, 225, 255, 0.4);
+            color: #d1f8ff;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            outline: none;
+            cursor: pointer;
+        }
+        select:focus { border-color: rgba(132, 225, 255, 0.9); }
+        
+        /* Custom Timeline Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+            width: 100%;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #22d3ee;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.8);
+            border: 2px solid #083344;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(34, 211, 238, 0.3);
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Gear animation styling */
+        @keyframes rotate-gear {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .gear-spin-cw { animation: rotate-gear 12s linear infinite; }
+        .gear-spin-ccw { animation: rotate-gear 16s linear infinite reverse; }
+
+        /* Modal Overlay */
+        #theorem-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(1, 6, 14, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D Three.js Viewport -->
+    <div id="canvas-container"></div>
+
+    <!-- SVG Layer for dynamic lines connecting HUD panels to 3D nodes -->
+    <svg id="svg-layer">
+        <path id="line-q1-glow" class="hud-line-glow" d="M0,0 L0,0" />
+        <path id="line-q1" class="hud-line" d="M0,0 L0,0" />
+        <path id="line-q2-glow" class="hud-line-glow" d="M0,0 L0,0" />
+        <path id="line-q2" class="hud-line" d="M0,0 L0,0" />
+        <path id="line-q3-glow" class="hud-line-glow" d="M0,0 L0,0" />
+        <path id="line-q3" class="hud-line" d="M0,0 L0,0" />
+        <path id="line-ar-glow" class="hud-line-glow" d="M0,0 L0,0" />
+        <path id="line-ar" class="hud-line" d="M0,0 L0,0" />
+    </svg>
+
+    <!-- HTML HUD Container -->
+    <div id="hud-container">
+        
+        <!-- Top Toolbar & Controls -->
+        <div class="hud-panel absolute top-4 left-4 z-20 w-full max-w-2xl">
+            <div class="panel-header">
+                <span class="flex items-center gap-2">
+                    MANIFOLD ENGINE CONTROLS
+                    <button id="btn-info-modal" class="px-2 py-0.5 rounded bg-cyan-950 border border-cyan-500/50 text-[10px] text-cyan-300 hover:bg-cyan-900 transition">THEOREM INFO</button>
+                </span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content flex flex-col gap-2">
+                <!-- Playback & Solid Selection Row -->
+                <div class="flex gap-2 items-center">
+                    <button id="btn-play" class="p-2 border border-cyan-900/50 rounded flex items-center justify-center hover:bg-cyan-900/40 transition" title="Play">
+                        <span class="text-cyan-300 text-xs font-mono-code font-bold">PLAY</span>
+                    </button>
+                    <button id="btn-pause" class="p-2 border border-cyan-900/50 rounded flex items-center justify-center hover:bg-cyan-900/40 transition" title="Pause">
+                        <span class="text-cyan-300 text-xs font-mono-code font-bold">PAUSE</span>
+                    </button>
+                    <button id="btn-stop" class="p-2 border border-cyan-900/50 rounded flex items-center justify-center hover:bg-cyan-900/40 transition" title="Stop & Reset">
+                        <span class="text-cyan-300 text-xs font-mono-code font-bold">STOP</span>
+                    </button>
+                    <button id="btn-prev" class="p-2 border border-cyan-900/50 rounded flex items-center justify-center hover:bg-cyan-900/40 transition" title="Frame Backward">
+                        <span class="text-cyan-300 text-xs font-mono-code font-bold">&lt;</span>
+                    </button>
+                    <button id="btn-next" class="p-2 border border-cyan-900/50 rounded flex items-center justify-center hover:bg-cyan-900/40 transition" title="Frame Forward">
+                        <span class="text-cyan-300 text-xs font-mono-code font-bold">&gt;</span>
+                    </button>
+
+                    <!-- Manifold Scrubbing Slider -->
+                    <div class="flex items-center flex-1 px-3 py-2 border border-cyan-900/50 rounded bg-cyan-950/20">
+                        <input type="range" id="frame-slider" min="0" max="719" value="0">
+                    </div>
+
+                    <select id="solid-selector" class="hover:bg-cyan-900/40 transition ml-1 rounded">
+                        <option value="tetrahedron">TETRAHEDRON (4V)</option>
+                        <option value="cube">HEXAHEDRON (8V)</option>
+                        <option value="octahedron">OCTAHEDRON (6V)</option>
+                        <option value="icosahedron">ICOSAHEDRON (12V)</option>
+                    </select>
+                </div>
+
+                <!-- Visualization Filters Row -->
+                <div class="flex gap-4 items-center p-2 border border-cyan-900/50 rounded bg-cyan-950/20 w-max mt-1">
+                    <span class="text-[10px] text-cyan-500 font-mono-code uppercase tracking-widest">Vector Field Viz:</span>
+                    <label class="flex items-center gap-1.5 text-[10px] text-emerald-400 font-mono-code cursor-pointer transition hover:text-emerald-300">
+                        <input type="checkbox" id="chk-fwd" checked class="w-3 h-3 accent-emerald-500"> FWD QUADRANCE (Q) + Wireframe Shadow
+                    </label>
+                    <label class="flex items-center gap-1.5 text-[10px] text-amber-400 font-mono-code cursor-pointer transition hover:text-amber-300">
+                        <input type="checkbox" id="chk-inv" checked class="w-3 h-3 accent-amber-500"> REV QUADRANCE (Q⁻¹) + Wireframe Shadow
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Time & Gear Calculator Chronometry -->
+        <div class="hud-panel top-4 right-4 text-right min-w-[280px]">
+            <div class="panel-header">
+                <span>CHRONOMETRY & GEAR ENGINE</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content flex items-center justify-between gap-4">
+                <!-- 5-Tier Nested Toroidal Gear Representation -->
+                <div class="relative w-16 h-16 flex items-center justify-center flex-shrink-0" title="5-Tier Manifold Gear Engine">
+                    <svg class="absolute inset-0 w-full h-full gear-spin-cw text-cyan-500/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4">
+                        <circle cx="50" cy="50" r="42" stroke-dasharray="10 5" />
+                        <circle cx="50" cy="50" r="30" stroke-dasharray="6 4" stroke="#22d3ee" />
+                    </svg>
+                    <svg class="absolute inset-0 w-full h-full gear-spin-ccw text-amber-500/40" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="3">
+                        <circle cx="50" cy="50" r="18" stroke-dasharray="4 4" />
+                    </svg>
+                    <div class="w-3 h-3 rounded-full bg-cyan-300 shadow-[0_0_8px_#22d3ee] z-10"></div>
+                </div>
+                <!-- Time & Frame Info -->
+                <div class="text-right flex-1">
+                    <div id="sys-time" class="text-xl text-cyan-100 font-mono-code tracking-wider text-glow-cyan">00:00:00</div>
+                    <div id="manifold-frame" class="text-[11px] text-emerald-400 font-mono-code tracking-widest mt-1" style="text-shadow: 0 0 8px rgba(52,211,153,0.6);">MANIFOLD: [ 000 / 720 ]</div>
+                    <div class="text-[9px] text-slate-400 font-mono-code mt-0.5">W_Σ = 60 Wraps Active</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Floating Labels mapped to 3D elements -->
+        <div id="label-q1" class="floating-label">Q1 = 0</div>
+        <div id="label-q2" class="floating-label">Q2 = 0</div>
+        <div id="label-q3" class="floating-label">Q3 = 0</div>
+        
+        <!-- Center Floating Block -->
+        <div id="label-ar-center" class="floating-label" style="background: rgba(3, 15, 30, 0.95); border: 1px solid rgba(255, 180, 100, 0.5);">
+            <div id="hud-q-sum" class="text-cyan-300 border-b border-cyan-900/50 pb-1 mb-1">(Q1: 0) + (Q2: 0) + (Q3: 0) = [0]</div>
+            <div id="hud-ar-formula" class="text-amber-300">A_R = (Q1 + Q2 + Q3)² - 2(Q1² + Q2² + Q3²)</div>
+        </div>
+
+        <!-- Side Panels -->
+        <!-- Left Panel: AR Explanation & Section Selector -->
+        <div id="panel-left" class="hud-panel left-8 top-1/3 max-w-[280px]">
+            <div class="panel-header">
+                <span>REMAINDER & MANIFOLD TIER</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content space-y-2">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="text-cyan-300 font-bold font-mono-code text-lg" id="panel-ar-val">A<sub>R</sub></span>
+                    <span class="text-slate-300 text-[11px] tracking-wider uppercase font-semibold">: Archimedean Area Remainder</span>
+                </div>
+                <div class="text-cyan-500 text-[10px] font-mono-code">(Quantifies Integer Rational Remainder)</div>
+                <div class="pt-2 border-t border-cyan-900/50">
+                    <label class="text-[10px] text-slate-400 font-mono-code block mb-1">Select Manifold Tier Section:</label>
+                    <select id="manifold-tier-selector" class="w-full text-xs">
+                        <option value="0">Tier 0 (W=16, R=15) - Core</option>
+                        <option value="1">Tier 1 (W=14, R=35)</option>
+                        <option value="2" selected>Tier 2 (W=12, R=65) - Focal</option>
+                        <option value="3">Tier 3 (W=10, R=105)</option>
+                        <option value="4">Tier 4 (W=8, R=155) - Outer</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Topology Matrix Panel -->
+        <div id="panel-matrix" class="hud-panel right-8 top-[20%] w-[380px]">
+            <div class="panel-header">
+                <span id="matrix-title">GEOMETRIC TOPOLOGY MATRIX</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content">
+                <div class="text-slate-200 text-xs tracking-widest uppercase font-semibold border-b border-cyan-900/50 pb-2 mb-2 flex justify-between items-center">
+                    <span>Integer Edge Quadrances</span>
+                    <span id="matrix-subtitle" class="text-[9px] text-cyan-500">6-EDGE NETWORK</span>
+                </div>
+                <div id="matrix-header"></div>
+                <div id="matrix-rows" class="space-y-2 mt-1 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                    <!-- Javascript populates this -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Vector Distance & Section Selection -->
+        <div id="panel-right" class="hud-panel right-8 bottom-1/3 max-w-[260px]">
+            <div class="panel-header">
+                <span>VECTOR DISTANCE</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content space-y-2">
+                <div class="text-white text-sm tracking-wider uppercase font-semibold mb-1">Integer Quadrances</div>
+                <div class="text-cyan-500 text-[10px] font-mono-code uppercase" id="vector-selected-info">(Squared Euclidean Distance)</div>
+                <div class="pt-2 border-t border-cyan-900/50 text-[11px] font-mono-code text-amber-300" id="vector-integer-display">
+                    Selected Q: 0.00
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Left: Structural Status -->
+        <div class="hud-panel bottom-8 left-8 min-w-[220px]">
+            <div class="panel-header">
+                <span>FOCUS TRIANGLE STATUS</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content">
+                <div class="font-mono-code text-cyan-400 text-sm space-y-1">
+                    <div class="flex justify-between"><span>Q<sub class="text-[9px]">1</sub></span> <span id="stat-q1">0</span></div>
+                    <div class="flex justify-between"><span>Q<sub class="text-[9px]">2</sub></span> <span id="stat-q2">0</span></div>
+                    <div class="flex justify-between"><span>Q<sub class="text-[9px]">3</sub></span> <span id="stat-q3">0</span></div>
+                    <div class="flex justify-between mt-2 pt-2 border-t border-cyan-900/30 text-amber-400">
+                        <span class="font-bold">A<sub class="text-[9px]">R</sub></span> <span id="stat-ar" class="text-glow-amber">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Right: Deterministic Log -->
+        <div class="hud-panel bottom-8 right-[420px] max-w-[300px]">
+            <div class="panel-header">
+                <span>DETERMINISTIC LOG</span>
+                <span class="min-btn">[ - ]</span>
+            </div>
+            <div class="panel-content">
+                <div class="font-mono-code text-[11px] text-emerald-400 leading-relaxed uppercase">
+                    > Rational Trigonometry Engine Active.<br>
+                    > Wireframe Shadows Enabled.<br>
+                    > Tier Section Filter Synchronized.<br>
+                    > <span class="text-white">Precision Locked.</span>
+                </div>
+                <div class="mt-3 text-[9px] text-slate-500 tracking-widest uppercase text-right">
+                    Scale: 1:1 Geometric Precision & Energetic Landscape Mapping
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Theorem Info Modal (Collapsible via Button) -->
+    <div id="theorem-modal">
+        <div class="hud-panel max-w-xl w-full mx-4 p-0 relative" style="position: relative; pointer-events: auto;">
+            <div class="panel-header">
+                <span>ARCHIMEDEAN AREA THEOREM SPECIFICATION</span>
+                <button id="modal-close-btn" class="min-btn">[ X ]</button>
+            </div>
+            <div class="panel-content space-y-4">
+                <div class="text-xs text-slate-300 uppercase tracking-widest">
+                    The Triple Quad Formula Maintains Absolute Precision Across The Energetic Landscape
+                </div>
+                <div class="text-xl font-mono-code text-white tracking-wider text-center py-3 bg-cyan-950/40 border border-cyan-900/50 rounded">
+                    A<sub class="text-sm">R</sub> = (Q<sub class="text-xs">1</sub> + Q<sub class="text-xs">2</sub> + Q<sub class="text-xs">3</sub>)<sup>2</sup> - 2(Q<sub class="text-xs">1</sub><sup>2</sup> + Q<sub class="text-xs">2</sub><sup>2</sup> + Q<sub class="text-xs">3</sub><sup>2</sup>)
+                </div>
+                <p class="text-xs text-slate-300 leading-relaxed">
+                    By bypassing floating point inaccuracies through pure integer rational quadrances, the engine maps Platonic solids directly onto the 5-tier nested toroidal manifold. The Triple Quad Formula proves whether the focal triangle maintains stable Euclidean alignment ($A_R = 16A^2$) across all manifold sections.
+                </p>
+                <div class="text-right">
+                    <button id="modal-close-action" class="px-4 py-1.5 bg-cyan-950 border border-cyan-500/50 text-cyan-300 text-xs font-mono-code rounded hover:bg-cyan-900 transition">CLOSE SPECIFICATION</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let scene, camera, renderer, controls;
+        let terrain, wireframeTerrain;
+        let platonicGroup, nodes = [], edges = [];
+        let edgeLinesGroup;
+        let shadowWireframeGroup; // Wireframe shadows for FWD/REV quadrances
+        let geometryType = 'tetrahedron'; // default
+        let selectedTierIndex = 2; // Default focal tier
+        let clock = new THREE.Clock();
+        
+        // Manifold Playback State
+        const MANIFOLD_MAX = 720;
+        let currentFrame = 0;
+        let isPlaying = true;
+        
+        // Visualization State
+        let showFwdQ = true;
+        let showInvQ = true;
+
+        let focusTriangle = { a: null, b: null, c: null }; 
+        let selectedEdgeIndex = 0; // For section selection
+        
+        const COLORS = {
+            bg: 0x01060e,
+            terrainDark: 0x03182b,
+            terrainPeak: 0xff3b00,
+            terrainMid: 0x0891b2,
+            nodeLight: 0xffffff,
+            edgeLight: 0xd1f8ff,
+            edgeHighlight: 0xffb464
+        };
+
+        init();
+        animate();
+
+        function init() {
+            const container = document.getElementById('canvas-container');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(COLORS.bg);
+            scene.fog = new THREE.FogExp2(COLORS.bg, 0.0035);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 120, 200);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            container.appendChild(renderer.domElement);
+
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 500;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
+            controls.target.set(0, 20, 0);
+
+            const ambientLight = new THREE.AmbientLight(0x0f2a4a, 2.0);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xd1f8ff, 3, 200);
+            pointLight.position.set(0, 80, 0);
+            scene.add(pointLight);
+
+            const centerLight = new THREE.PointLight(COLORS.terrainPeak, 5, 100);
+            centerLight.position.set(0, 0, 0);
+            scene.add(centerLight);
+
+            edgeLinesGroup = new THREE.Group();
+            scene.add(edgeLinesGroup);
+
+            shadowWireframeGroup = new THREE.Group();
+            scene.add(shadowWireframeGroup);
+
+            createTopographicTerrain();
+            createPlatonicSolid(geometryType);
+
+            window.addEventListener('resize', onWindowResize);
+            
+            // Playback Controls
+            document.getElementById('btn-play').addEventListener('click', () => isPlaying = true);
+            document.getElementById('btn-pause').addEventListener('click', () => isPlaying = false);
+            
+            document.getElementById('btn-stop').addEventListener('click', () => {
+                isPlaying = false;
+                currentFrame = 0;
+                updateSliderUI();
+            });
+            
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                isPlaying = false;
+                currentFrame = (Math.floor(currentFrame) - 1 + MANIFOLD_MAX) % MANIFOLD_MAX;
+                updateSliderUI();
+            });
+            
+            document.getElementById('btn-next').addEventListener('click', () => {
+                isPlaying = false;
+                currentFrame = (Math.floor(currentFrame) + 1) % MANIFOLD_MAX;
+                updateSliderUI();
+            });
+
+            const slider = document.getElementById('frame-slider');
+            slider.addEventListener('input', (e) => {
+                isPlaying = false;
+                currentFrame = parseFloat(e.target.value);
+            });
+
+            document.getElementById('chk-fwd').addEventListener('change', (e) => showFwdQ = e.target.checked);
+            document.getElementById('chk-inv').addEventListener('change', (e) => showInvQ = e.target.checked);
+            
+            document.getElementById('solid-selector').addEventListener('change', (e) => {
+                geometryType = e.target.value;
+                createPlatonicSolid(geometryType);
+            });
+
+            document.getElementById('manifold-tier-selector').addEventListener('change', (e) => {
+                selectedTierIndex = parseInt(e.target.value, 10);
+            });
+
+            // Modal Controls
+            const modal = document.getElementById('theorem-modal');
+            document.getElementById('btn-info-modal').addEventListener('click', () => modal.style.display = 'flex');
+            document.getElementById('modal-close-btn').addEventListener('click', () => modal.style.display = 'none');
+            document.getElementById('modal-close-action').addEventListener('click', () => modal.style.display = 'none');
+            
+            initDraggablePanels();
+        }
+        
+        function initDraggablePanels() {
+            const panels = document.querySelectorAll('.hud-panel');
+            let zIndexCounter = 100;
+
+            panels.forEach(panel => {
+                const header = panel.querySelector('.panel-header');
+                if (!header) return;
+
+                const minBtn = header.querySelector('.min-btn');
+                const content = panel.querySelector('.panel-content');
+                
+                if (minBtn && content) {
+                    minBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        content.classList.toggle('minimized');
+                        minBtn.innerText = content.classList.contains('minimized') ? '[ + ]' : '[ - ]';
+                    });
+                }
+
+                let isDragging = false;
+                let startX, startY, initialLeft, initialTop;
+
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.min-btn') || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+                    
+                    isDragging = true;
+                    panel.style.zIndex = ++zIndexCounter;
+                    
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    
+                    const rect = panel.getBoundingClientRect();
+                    initialLeft = rect.left;
+                    initialTop = rect.top;
+                    
+                    panel.style.bottom = 'auto';
+                    panel.style.right = 'auto';
+                    panel.style.transform = 'none'; 
+                    
+                    panel.style.left = `${initialLeft}px`;
+                    panel.style.top = `${initialTop}px`;
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - startX;
+                    const dy = e.clientY - startY;
+                    panel.style.left = `${initialLeft + dx}px`;
+                    panel.style.top = `${initialTop + dy}px`;
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+            });
+        }
+
+        function createTopographicTerrain() {
+            if (terrain) scene.remove(terrain);
+            if (wireframeTerrain) scene.remove(wireframeTerrain);
+
+            const width = 400;
+            const height = 400;
+            const segments = 60;
+
+            const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
+            geometry.rotateX(-Math.PI / 2);
+
+            const count = geometry.attributes.position.count;
+            geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3), 3));
+
+            const material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.8,
+                metalness: 0.2,
+                wireframe: false,
+                transparent: true,
+                opacity: 0.85
+            });
+
+            terrain = new THREE.Mesh(geometry, material);
+            terrain.position.y = -20;
+            scene.add(terrain);
+
+            const wireMaterial = new THREE.LineBasicMaterial({
+                color: 0x2288aa,
+                transparent: true,
+                opacity: 0.15
+            });
+            const wireGeo = new THREE.WireframeGeometry(geometry);
+            wireframeTerrain = new THREE.LineSegments(wireGeo, wireMaterial);
+            wireframeTerrain.position.y = -19.9;
+            scene.add(wireframeTerrain);
+        }
+
+        function noise(x, z, t) {
+            const d = Math.sqrt(x*x + z*z);
+            let y = Math.sin(d * 0.05 - t * 2.0) * 15.0;
+            y += Math.sin(x * 0.02 + t) * 10.0;
+            y += Math.cos(z * 0.03 - t * 0.5) * 10.0;
+            const centerDist = Math.max(0, 1.0 - (d / 100));
+            y += centerDist * 20.0 * Math.sin(t); 
+            return y;
+        }
+
+        function updateTerrain(t) {
+            if (!terrain) return;
+            const positions = terrain.geometry.attributes.position;
+            const colors = terrain.geometry.attributes.color;
+            const colorObj = new THREE.Color();
+
+            const cDark = new THREE.Color(COLORS.terrainDark);
+            const cMid = new THREE.Color(COLORS.terrainMid);
+            const cPeak = new THREE.Color(COLORS.terrainPeak);
+
+            for (let i = 0; i < positions.count; i++) {
+                const x = positions.getX(i);
+                const z = positions.getZ(i);
+                const y = noise(x, z, t);
+                positions.setY(i, y);
+
+                let normalizedY = (y + 15) / 40; 
+                normalizedY = Math.max(0, Math.min(1, normalizedY));
+
+                if (normalizedY < 0.5) {
+                    colorObj.lerpColors(cDark, cMid, normalizedY * 2.0);
+                } else {
+                    colorObj.lerpColors(cMid, cPeak, (normalizedY - 0.5) * 2.0);
+                }
+                colors.setXYZ(i, colorObj.r, colorObj.g, colorObj.b);
+            }
+            positions.needsUpdate = true;
+            colors.needsUpdate = true;
+        }
+
+        function createPlatonicSolid(type) {
+            if (platonicGroup) {
+                scene.remove(platonicGroup);
+                platonicGroup.children.forEach(c => {
+                    if(c.geometry) c.geometry.dispose();
+                    if(c.material) c.material.dispose();
+                });
+            }
+
+            platonicGroup = new THREE.Group();
+            platonicGroup.position.set(0, 25, 0);
+            scene.add(platonicGroup);
+            nodes = [];
+            edges = [];
+            focusTriangle = { a: null, b: null, c: null };
+
+            let baseGeometry;
+            const radius = 40;
+            switch(type) {
+                case 'tetrahedron': baseGeometry = new THREE.TetrahedronGeometry(radius, 0); break;
+                case 'cube': baseGeometry = new THREE.BoxGeometry(radius*1.2, radius*1.2, radius*1.2); break;
+                case 'octahedron': baseGeometry = new THREE.OctahedronGeometry(radius, 0); break;
+                case 'icosahedron': baseGeometry = new THREE.IcosahedronGeometry(radius, 0); break;
+                default: baseGeometry = new THREE.TetrahedronGeometry(radius, 0);
+            }
+
+            const posAttr = baseGeometry.attributes.position;
+            const uniqueVertices = [];
+            
+            for (let i = 0; i < posAttr.count; i++) {
+                const v = new THREE.Vector3().fromBufferAttribute(posAttr, i);
+                const exists = uniqueVertices.some(uv => uv.distanceTo(v) < 0.1);
+                if (!exists) uniqueVertices.push(v);
+            }
+
+            const nodeGeo = new THREE.SphereGeometry(2.5, 16, 16);
+            const nodeMat = new THREE.MeshBasicMaterial({ color: COLORS.nodeLight });
+            
+            uniqueVertices.forEach((v, index) => {
+                const sphere = new THREE.Mesh(nodeGeo, nodeMat);
+                sphere.position.copy(v);
+                
+                const glowGeo = new THREE.SphereGeometry(6, 16, 16);
+                const glowMat = new THREE.MeshBasicMaterial({ 
+                    color: COLORS.edgeHighlight, 
+                    transparent: true, 
+                    opacity: 0.3,
+                    blending: THREE.AdditiveBlending 
+                });
+                const glow = new THREE.Mesh(glowGeo, glowMat);
+                sphere.add(glow);
+
+                sphere.userData.basePosition = v.clone();
+                sphere.userData.id = index;
+                
+                nodes.push(sphere);
+                platonicGroup.add(sphere);
+            });
+
+            let edgeLength = 0;
+            if (nodes.length > 1) {
+                let minDist = Infinity;
+                for(let i=1; i<nodes.length; i++) {
+                    const d = nodes[0].position.distanceTo(nodes[i].position);
+                    if(d < minDist) minDist = d;
+                }
+                edgeLength = minDist * 1.1;
+            }
+
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    if (nodes[i].position.distanceTo(nodes[j].position) <= edgeLength) {
+                        edges.push({ source: nodes[i], target: nodes[j] });
+                    }
+                }
+            }
+
+            if (nodes.length >= 3) {
+                focusTriangle.a = nodes[0];
+                const edgeAB = edges.find(e => e.source === focusTriangle.a || e.target === focusTriangle.a);
+                focusTriangle.b = edgeAB.source === focusTriangle.a ? edgeAB.target : edgeAB.source;
+                const edgeAC = edges.find(e => 
+                    (e.source === focusTriangle.a || e.target === focusTriangle.a) && 
+                    (e.source !== focusTriangle.b && e.target !== focusTriangle.b)
+                );
+                focusTriangle.c = edgeAC ? (edgeAC.source === focusTriangle.a ? edgeAC.target : edgeAC.source) : nodes[2];
+            }
+
+            baseGeometry.dispose();
+            rebuildShadowWireframes(baseGeometry);
+        }
+
+        function rebuildShadowWireframes() {
+            while(shadowWireframeGroup.children.length > 0) {
+                const c = shadowWireframeGroup.children[0];
+                shadowWireframeGroup.remove(c);
+                if(c.geometry) c.geometry.dispose();
+                if(c.material) c.material.dispose();
+            }
+
+            let shadowGeo;
+            const radius = 40;
+            if (geometryType === 'tetrahedron') shadowGeo = new THREE.TetrahedronGeometry(radius * 1.15, 0);
+            else if (geometryType === 'cube') shadowGeo = new THREE.BoxGeometry(radius * 1.3, radius * 1.3, radius * 1.3);
+            else if (geometryType === 'octahedron') shadowGeo = new THREE.OctahedronGeometry(radius * 1.15, 0);
+            else shadowGeo = new THREE.IcosahedronGeometry(radius * 1.15, 0);
+
+            const wireMatFwd = new THREE.LineBasicMaterial({ color: 0x10b981, transparent: true, opacity: 0.35 });
+            const wireMatRev = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.35 });
+
+            const wireGeo = new THREE.WireframeGeometry(shadowGeo);
+            
+            const fwdMesh = new THREE.LineSegments(wireGeo, wireMatFwd);
+            fwdMesh.name = 'shadow-fwd';
+            fwdMesh.visible = showFwdQ;
+            shadowWireframeGroup.add(fwdMesh);
+
+            const revMesh = new THREE.LineSegments(wireGeo.clone(), wireMatRev);
+            revMesh.name = 'shadow-rev';
+            revMesh.scale.set(0.9, 0.9, 0.9);
+            revMesh.visible = showInvQ;
+            shadowWireframeGroup.add(revMesh);
+
+            shadowGeo.dispose();
+        }
+
+        function updateEdges() {
+            while(edgeLinesGroup.children.length > 0){ 
+                const child = edgeLinesGroup.children[0];
+                edgeLinesGroup.remove(child); 
+                child.geometry.dispose();
+                child.material.dispose();
+            }
+
+            let baseColorHex = COLORS.edgeLight;
+            let hiColorHex = COLORS.edgeHighlight;
+
+            if (showFwdQ && !showInvQ) {
+                baseColorHex = 0x34d399;
+                hiColorHex = 0x10b981;
+            } else if (!showFwdQ && showInvQ) {
+                baseColorHex = 0xfbbf24;
+                hiColorHex = 0xf59e0b;
+            } else if (!showFwdQ && !showInvQ) {
+                baseColorHex = 0x1e293b;
+                hiColorHex = 0x334155;
+            }
+
+            edges.forEach((edge, idx) => {
+                const isFocus = (
+                    (edge.source === focusTriangle.a || edge.source === focusTriangle.b || edge.source === focusTriangle.c) &&
+                    (edge.target === focusTriangle.a || edge.target === focusTriangle.b || edge.target === focusTriangle.c)
+                );
+
+                const points = [
+                    edge.source.getWorldPosition(new THREE.Vector3()),
+                    edge.target.getWorldPosition(new THREE.Vector3())
+                ];
+                
+                const geo = new THREE.BufferGeometry().setFromPoints(points);
+                const mat = new THREE.LineBasicMaterial({ 
+                    color: (idx === selectedEdgeIndex) ? 0x22d3ee : (isFocus ? hiColorHex : baseColorHex),
+                    transparent: true,
+                    opacity: (!showFwdQ && !showInvQ) ? 0.1 : (isFocus ? 0.9 : 0.35)
+                });
+                const line = new THREE.Line(geo, mat);
+                edgeLinesGroup.add(line);
+            });
+
+            // Update wireframe shadows visibility and rotation
+            const fwdObj = shadowWireframeGroup.getObjectByName('shadow-fwd');
+            const revObj = shadowWireframeGroup.getObjectByName('shadow-rev');
+            if (fwdObj) fwdObj.visible = showFwdQ;
+            if (revObj) revObj.visible = showInvQ;
+            shadowWireframeGroup.position.copy(platonicGroup.position);
+            shadowWireframeGroup.rotation.copy(platonicGroup.rotation);
+        }
+
+        function getScreenPosition(vector) {
+            const projected = vector.clone().project(camera);
+            return {
+                x: (projected.x * 0.5 + 0.5) * window.innerWidth,
+                y: (projected.y * -0.5 + 0.5) * window.innerHeight
+            };
+        }
+
+        function updateMathAndHUD() {
+            if (!focusTriangle.a || !focusTriangle.b || !focusTriangle.c) return;
+
+            const pA = focusTriangle.a.getWorldPosition(new THREE.Vector3());
+            const pB = focusTriangle.b.getWorldPosition(new THREE.Vector3());
+            const pC = focusTriangle.c.getWorldPosition(new THREE.Vector3());
+
+            // Tier scaling multiplier based on selected manifold tier section
+            const tierMultipliers = [0.8, 1.0, 1.25, 1.5, 1.8];
+            const tScale = tierMultipliers[selectedTierIndex];
+
+            const q1 = Math.round(pA.distanceToSquared(pB) * tScale);
+            const q2 = Math.round(pB.distanceToSquared(pC) * tScale);
+            const q3 = Math.round(pC.distanceToSquared(pA) * tScale);
+
+            const sumQ = q1 + q2 + q3;
+            const sumQsq = (q1*q1) + (q2*q2) + (q3*q3);
+            const aR = Math.pow(sumQ, 2) - 2 * sumQsq;
+
+            document.getElementById('stat-q1').innerText = q1;
+            document.getElementById('stat-q2').innerText = q2;
+            document.getElementById('stat-q3').innerText = q3;
+            document.getElementById('stat-ar').innerText = aR;
+            document.getElementById('panel-ar-val').innerText = `A_R = ${aR}`;
+
+            document.getElementById('hud-q-sum').innerText = `(Q1: ${q1}) + (Q2: ${q2}) + (Q3: ${q3}) = [${sumQ}]`;
+
+            // Update Selected Edge Quadrance Display
+            if (edges[selectedEdgeIndex]) {
+                const selEdge = edges[selectedEdgeIndex];
+                const sp1 = selEdge.source.getWorldPosition(new THREE.Vector3());
+                const sp2 = selEdge.target.getWorldPosition(new THREE.Vector3());
+                const selQ = Math.round(sp1.distanceToSquared(sp2) * tScale);
+                document.getElementById('vector-integer-display').innerText = `Edge [N${selEdge.source.userData.id}→N${selEdge.target.userData.id}] Q: ${selQ}`;
+                document.getElementById('vector-selected-info').innerText = `(Tier ${selectedTierIndex} Section Scaled)`;
+            }
+
+            // Topology Matrix Population
+            const matrixHeader = document.getElementById('matrix-header');
+            matrixHeader.innerHTML = `
+            <div class="grid grid-cols-3 gap-2 font-mono-code text-[9px] text-slate-400 mb-1 border-b border-cyan-900/50 pb-1">
+                <div class="font-bold">VECTOR / TIER</div>
+                ${showFwdQ ? '<div class="text-emerald-400">FWD (Q) INT</div>' : '<div></div>'}
+                ${showInvQ ? '<div class="text-amber-400">REV (Q⁻¹) INT</div>' : '<div></div>'}
+            </div>`;
+
+            let matrixHTML = '';
+            edges.forEach((edge, idx) => {
+                const id1 = edge.source.userData.id;
+                const id2 = edge.target.userData.id;
+                const pairName = `N${id1}→N${id2}`;
+
+                const p1 = edge.source.getWorldPosition(new THREE.Vector3());
+                const p2 = edge.target.getWorldPosition(new THREE.Vector3());
+                
+                const q = Math.round(p1.distanceToSquared(p2) * tScale);
+                const invQNum = q !== 0 ? Math.round(100000 / q) : 0; 
+                
+                const qScale = Math.min((q / 5000) * 100, 100); 
+                
+                matrixHTML += `
+                <div class="grid grid-cols-3 gap-2 font-mono-code text-[10px] items-center border-b border-cyan-900/30 py-1 cursor-pointer hover:bg-cyan-950/40 px-1 rounded transition" onclick="selectEdge(${idx})">
+                    <div class="text-cyan-400 font-bold tracking-widest ${idx === selectedEdgeIndex ? 'text-amber-300 underline' : ''}">${pairName}</div>
+                    ${showFwdQ ? `
+                        <div class="text-emerald-300 flex flex-col justify-center">
+                            <span>${q}</span>
+                            <div class="w-full bg-emerald-900/40 h-[3px] mt-1 rounded overflow-hidden">
+                                <div class="bg-emerald-400 h-full shadow-[0_0_5px_#34d399]" style="width: ${qScale}%"></div>
+                            </div>
+                        </div>
+                    ` : '<div class="text-slate-600">-</div>'}
+                    ${showInvQ ? `
+                        <div class="text-amber-300 flex flex-col justify-center">
+                            <span>1/${Math.max(1, Math.round(q))}</span>
+                        </div>
+                    ` : '<div class="text-slate-600">-</div>'}
+                </div>`;
+            });
+            document.getElementById('matrix-rows').innerHTML = matrixHTML;
+
+            const mid1 = new THREE.Vector3().addVectors(pA, pB).multiplyScalar(0.5);
+            const mid2 = new THREE.Vector3().addVectors(pB, pC).multiplyScalar(0.5);
+            const mid3 = new THREE.Vector3().addVectors(pC, pA).multiplyScalar(0.5);
+            const center = new THREE.Vector3().addVectors(pA, pB).add(pC).divideScalar(3);
+
+            const sMid1 = getScreenPosition(mid1);
+            const sMid2 = getScreenPosition(mid2);
+            const sMid3 = getScreenPosition(mid3);
+            const sCenter = getScreenPosition(center);
+
+            const lblQ1 = document.getElementById('label-q1');
+            const lblQ2 = document.getElementById('label-q2');
+            const lblQ3 = document.getElementById('label-q3');
+            const lblARCenter = document.getElementById('label-ar-center');
+
+            lblQ1.style.left = `${sMid1.x}px`; lblQ1.style.top = `${sMid1.y}px`;
+            lblQ2.style.left = `${sMid2.x}px`; lblQ2.style.top = `${sMid2.y}px`;
+            lblQ3.style.left = `${sMid3.x}px`; lblQ3.style.top = `${sMid3.y}px`;
+            lblARCenter.style.left = `${sCenter.x}px`; lblARCenter.style.top = `${sCenter.y}px`;
+
+            lblQ1.innerText = `Q1 = ${q1}`;
+            lblQ2.innerText = `Q2 = ${q2}`;
+            lblQ3.innerText = `Q3 = ${q3}`;
+        }
+
+        function selectEdge(idx) {
+            selectedEdgeIndex = idx % edges.length;
+        }
+
+        function updateSliderUI() {
+            document.getElementById('frame-slider').value = Math.floor(currentFrame);
+        }
+
+        function updateSystemTime() {
+            const now = new Date();
+            const timeString = now.toISOString().split('T')[1].split('.')[0];
+            const ms = Math.floor(now.getMilliseconds() / 10).toString().padStart(2, '0');
+            document.getElementById('sys-time').innerText = `${timeString}:${ms}`;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            
+            if (isPlaying) {
+                currentFrame = (currentFrame + (delta * 60)) % MANIFOLD_MAX;
+                updateSliderUI();
+            }
+
+            const manifoldFrame = Math.floor(currentFrame);
+            const manifoldPhase = currentFrame / MANIFOLD_MAX;
+            
+            const frameEl = document.getElementById('manifold-frame');
+            if (frameEl) frameEl.innerText = `MANIFOLD: [ ${manifoldFrame.toString().padStart(3, '0')} / 720 ]`;
+
+            updateTerrain(manifoldPhase * Math.PI * 2 * 3);
+
+            if (platonicGroup) {
+                platonicGroup.rotation.y = manifoldPhase * Math.PI * 2;
+                platonicGroup.rotation.x = Math.sin(manifoldPhase * Math.PI * 2) * 0.2;
+
+                const scalePulse = 1.0 + Math.sin(manifoldPhase * Math.PI * 4) * 0.05;
+                nodes.forEach(node => {
+                    const basePos = node.userData.basePosition;
+                    node.position.copy(basePos).multiplyScalar(scalePulse);
+                    
+                    if (isPlaying) {
+                        node.position.x += (Math.random() - 0.5) * 0.2;
+                        node.position.y += (Math.random() - 0.5) * 0.2;
+                        node.position.z += (Math.random() - 0.5) * 0.2;
+                    }
+                });
+            }
+            
+            if (isPlaying) updateSystemTime();
+
+            updateEdges();
+            updateMathAndHUD();
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+    </script>
+</body>
+</html>
