@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Geometric Engine of Time | Architecture & Code</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Robust MathJax Configuration -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                processEscapes: true,
+                processEnvironments: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+            }
+        };
+    </script>
+    <script type="text/javascript" id="MathJax-script" async
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js">
+    </script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    colors: {
+                        darkbg: '#05050A',
+                        panel: '#0D111A',
+                        accent: '#38BDF8',
+                        accentDark: '#0284C7',
+                        codebg: '#080A0F',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #05050A; color: #E2E8F0; }
+        .glass-panel {
+            background: rgba(13, 17, 26, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+        .glow-text {
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #05050A; }
+        ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #38BDF8; }
+        
+        pre {
+            background-color: #080A0F !important;
+            border: 1px solid #1E293B;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #A5B4FC;
+        }
+        .math-block {
+            background: rgba(0,0,0,0.3);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            border-left: 4px solid #38BDF8;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+            text-align: center;
+        }
+        .nav-link.active {
+            color: #38BDF8;
+            border-left: 2px solid #38BDF8;
+            padding-left: 0.75rem;
+            font-weight: 600;
+        }
+        
+        /* 3D Simulation Container Styles */
+        .sim-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 0.75rem;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            background: radial-gradient(circle at center, #0f172a 0%, #05050A 100%);
+            position: relative;
+            overflow: hidden;
+            margin: 2rem 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+        .sim-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid #38BDF8;
+            color: #38BDF8;
+            font-size: 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 4px 8px;
+            border-radius: 4px;
+            z-index: 10;
+            pointer-events: none;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-accent selection:text-white flex flex-col min-h-screen">
+
+    <header class="fixed top-0 w-full z-50 glass-panel border-b-0 border-t-0 border-x-0 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-6 h-6 rounded-full bg-accent animate-pulse" style="box-shadow: 0 0 15px #38BDF8;"></div>
+                <h1 class="font-serif text-xl font-bold tracking-wider text-white">THE GEOMETRIC ENGINE</h1>
+            </div>
+            <nav class="hidden md:flex gap-6 text-sm font-mono text-slate-400">
+                <a href="#abstract" class="hover:text-accent transition-colors">00. Abstract</a>
+                <a href="#step1" class="hover:text-accent transition-colors">01. Topology</a>
+                <a href="#step2" class="hover:text-accent transition-colors">02. Stator</a>
+                <a href="#step3" class="hover:text-accent transition-colors">03. Rotor</a>
+                <a href="#step4" class="hover:text-accent transition-colors">04. TQF Gears</a>
+                <a href="#step5" class="hover:text-accent transition-colors">05. Closure</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-12 flex gap-12 items-start relative w-full flex-grow">
+        
+        <aside class="hidden lg:block w-64 shrink-0 sticky top-28 h-[calc(100vh-8rem)] overflow-y-auto pr-4">
+            <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-6">Table of Contents</h3>
+            <ul class="space-y-4 text-sm font-mono text-slate-400">
+                <li><a href="#abstract" class="nav-link block hover:text-white transition-colors">00. Overview</a></li>
+                <li><a href="#step1" class="nav-link block hover:text-white transition-colors">01. The Topological Clock</a></li>
+                <li><a href="#step2" class="nav-link block hover:text-white transition-colors">02. The 5-Tier Stator</a></li>
+                <li><a href="#step3" class="nav-link block hover:text-white transition-colors">03. 6-Channel Rotor</a></li>
+                <li><a href="#step4" class="nav-link block hover:text-white transition-colors">04. Orthogonal Offload</a></li>
+                <li><a href="#step5" class="nav-link block hover:text-white transition-colors">05. Parity Closure Theorem</a></li>
+            </ul>
+        </aside>
+
+        <main class="flex-1 max-w-4xl min-w-0">
+            
+            <!-- Intro / Abstract -->
+            <section id="abstract" class="mb-20 scroll-mt-28">
+                <h2 class="text-4xl md:text-5xl font-serif font-bold text-white mb-6 glow-text">A Scale-Synchronized Symbolic Homomorphism</h2>
+                <p class="text-lg text-slate-300 leading-relaxed mb-6">
+                    Welcome to the definitive guide on building the <strong>Geometric Engine of Time</strong>. This document maps the rigorous mathematical theorems bridging cosmological time (The Platonic Great Year) with quantum time (The Cesium-133 SI Second) directly to their executable Javascript and WebGL code counterparts.
+                </p>
+                <div class="glass-panel p-6 rounded-xl border-l-4 border-l-accent">
+                    <h4 class="text-sm font-bold text-accent uppercase tracking-widest mb-3">The Epistemological Core</h4>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        This architecture is not a physical quantum-coupled system. It does not entangle with a localized cesium atom. Instead, it functions as a <strong>deterministic orbital calculator</strong>: a symbolic computational manifold that geometrically encodes exact temporal congruences without relying on arbitrary computational framerates.
+                    </p>
+                </div>
+            </section>
+
+            <hr class="border-slate-800 mb-16">
+
+            <!-- Step 1: Topological Clock -->
+            <section id="step1" class="mb-20 scroll-mt-28">
+                <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-accent font-mono text-lg">01.</span> The Intrinsic Topological Clock
+                </h3>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    Previous chronometric engines relied on an external <code class="bg-slate-800 px-1 py-0.5 rounded text-pink-400">requestAnimationFrame</code> running at 60 FPS. To build a universal calculator, time must be parameterized by spatial progression—specifically, the discrete geometric expansion of the manifold's central singularity.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Mathematics</h4>
+                        <p class="text-sm text-slate-400 mb-4">The architecture pairs a 5-tier manifold with an inward accelerating winding density given by:</p>
+                        <div class="math-block">
+                            \[W_n = 16 - 2n \quad \text{for } n = 0, 1, 2, 3, 4\]
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">The total number of integer helical wraps required to traverse the entire macroscopic structure is:</p>
+                        <div class="math-block">
+                            \[W_{\Sigma} = \sum_{n=0}^{4} (16 - 2n) = 60\]
+                        </div>
+                        <p class="text-sm text-slate-400">The dimensionless count of \(60\) is an intrinsic topological invariant of the spatial manifold.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Code Execution</h4>
+                        <p class="text-sm text-slate-400 mb-4">In the <code>buildDualHelix()</code> function, this formula is explicitly coded to derive the structural geometry independent of time.</p>
+                        <pre><code>function buildDualHelix(layerGroup, tConf, index) {
+    // Calculate winding invariant W_n
+    const wraps = 16 - (index * 2); 
+    const totalPoints = wraps * 50;
+
+    for(let p = 0; p <= totalPoints; p++) {
+        const cycleRatio = p / totalPoints;
+        // Phi tracks the helical winding
+        const phi = (cycleRatio * Math.PI * 2 * wraps);
+        // ... build vectors
+    }
+}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Simulation 1: Topological Clock -->
+                <div class="sim-container" id="sim-1">
+                    <div class="sim-badge">LIVE SIM: T0 Winding Density (16 Wraps)</div>
+                </div>
+            </section>
+
+            <!-- Step 2: The Stator -->
+            <section id="step2" class="mb-20 scroll-mt-28">
+                <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-accent font-mono text-lg">02.</span> The Stator: The 5-Tier Toroidal Manifold
+                </h3>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    To process the topological pulses, the architecture defines a 5-tier, nested toroidal spatial manifold. The radii expand according to exact arithmetic sequences to ensure proportional spatial mapping.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Mathematics</h4>
+                        <p class="text-sm text-slate-400 mb-4">The major radii are defined as \(15, 35, 65, 105, 155\). The constant second differences prove the geometry follows a strict quadratic expansion:</p>
+                        <div class="math-block">
+                            \[R_n = 5n^2 + 15n + 15\]
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">The minor radii governing cross-sectional tube thickness (\(4, 6, 8, 10, 12\)) follow a linear progression:</p>
+                        <div class="math-block">
+                            \[r_n = 2n + 4\]
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">Each tier is rotated by \(\frac{\pi}{2}\) along alternating axes:</p>
+                        <div class="math-block">
+                            \[\operatorname{Rot}(T_n)= \begin{cases} \operatorname{Rot}_x\left(\frac{\pi}{2}\right), & n \text{ even} \\ \operatorname{Rot}_y\left(\frac{\pi}{2}\right), & n \text{ odd} \end{cases}\]
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Code Execution</h4>
+                        <p class="text-sm text-slate-400 mb-4">This quadratic and linear expansion is hardcoded as the foundational geometric matrix <code>TOROIDS</code>.</p>
+                        <pre><code>// 5-Tier Toroid Alignment Config
+const TOROIDS = [
+  // T0: R=15, r=4, Rot X
+  { major: 15, minor: 4, 
+    rot: new THREE.Euler(Math.PI/2, 0, 0) },
+  // T1: R=35, r=6, Rot Y
+  { major: 35, minor: 6, 
+    rot: new THREE.Euler(0, Math.PI/2, 0) }, 
+  // T2: R=65, r=8, Rot X
+  { major: 65, minor: 8, 
+    rot: new THREE.Euler(Math.PI/2, 0, 0) },
+  // T3: R=105, r=10, Rot Y
+  { major: 105, minor: 10, 
+    rot: new THREE.Euler(0, Math.PI/2, 0) },
+  // T4: R=155, r=12, Rot X
+  { major: 155, minor: 12, 
+    rot: new THREE.Euler(Math.PI/2, 0, 0) }
+];</code></pre>
+                    </div>
+                </div>
+
+                <!-- Simulation 2: The Stator -->
+                <div class="sim-container" id="sim-2">
+                    <div class="sim-badge">LIVE SIM: 5-Tier Quadratic Manifold</div>
+                </div>
+            </section>
+
+            <!-- Step 3: The Rotor -->
+            <section id="step3" class="mb-20 scroll-mt-28">
+                <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-accent font-mono text-lg">03.</span> The Rotor: 6-Channel Parity Encoding
+                </h3>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    Bounding the SI-defined Cesium-133 frequency (\(\nu_{Cs} = 9{,}192{,}631{,}770\) Hz) by our geometric 60-pulse register yields a fractional residual: exactly \(153{,}210{,}529.5\) cycles per pulse. The engine must geometrically encode this \(0.5\) half-integer parity state.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Mathematics</h4>
+                        <p class="text-sm text-slate-400 mb-4">The two-frame parity oscillation is encoded geometrically through a six-channel dual-helix structure. The channel space carries a product symmetry of \(C_3 \times C_2\).</p>
+                        <ul class="list-disc pl-5 text-sm text-slate-400 mb-4 space-y-2">
+                            <li><strong>The \(C_3\) Triadic Anchor:</strong> Three phases offset at \(\theta = 0^\circ, 120^\circ, -120^\circ\).</li>
+                            <li><strong>The \(C_2\) Chiral Parity:</strong> Two directional braids (Forward \(+1\) and Inverse \(-1\)).</li>
+                        </ul>
+                        <div class="math-block">
+                            \[\pi(+1) = 0, \quad \pi(-1) = 0.5\]
+                        </div>
+                        <p class="text-sm text-slate-400">This defines a formal parity map, spatializing the two-state temporal oscillation directly into the helix directions.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Code Execution</h4>
+                        <p class="text-sm text-slate-400 mb-4">The loops in <code>buildDualHelix</code> explicitly multiply the \(C_3\) stars by the \(C_2\) inverse weaves.</p>
+                        <pre><code>const numStars = state.tripleStar ? 3 : 1;
+// C2 Parity Map: Forward (1) and Inverse (-1)
+const weaves = state.inverseWeave ? [1, -1] : [1]; 
+
+weaves.forEach(wrapDir => {
+    // C3 Triadic Anchor Loop
+    for(let star=0; star<numStars; star++) {
+        // 120 degree offsets
+        const starOffset = star * (Math.PI * 2 / 3);
+        
+        // ... generating points where
+        // phi = direction * wraps + offset
+        const phi = (cycleRatio * Math.PI * 2 * 
+                     wraps * wrapDir) + starOffset;
+    }
+});</code></pre>
+                    </div>
+                </div>
+
+                <!-- Simulation 3: The Rotor -->
+                <div class="sim-container" id="sim-3">
+                    <div class="sim-badge">LIVE SIM: 6-Channel Dual-Helix Rotor (T2 Focus)</div>
+                </div>
+            </section>
+
+            <!-- Step 4: Orthogonal Offload -->
+            <section id="step4" class="mb-20 scroll-mt-28">
+                <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-accent font-mono text-lg">04.</span> Orthogonal Area Stability (TQF Gears)
+                </h3>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    To ensure the \(C_3\) triadic anchors do not deform or collapse, the system generates localized Triple Quad Formula (TQF) monitoring units spaced at exact \(90^\circ\) (\(\frac{\pi}{2}\)) intervals.
+                </p>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Mathematics</h4>
+                        <p class="text-sm text-slate-400 mb-4">Each gear calculates the quadrances (squared Euclidean distances) between the 3 anchors (\(p_A, p_B, p_C\)):</p>
+                        <div class="math-block">
+                            \[Q_1=\|p_A-p_B\|^2, \quad Q_2=\|p_B-p_C\|^2\]
+                        </div>
+                        <p class="text-sm text-slate-400 mb-4">The gear outputs the Archimedean Area Remainder:</p>
+                        <div class="math-block">
+                            \[A_R = (Q_1+Q_2+Q_3)^2 - 2(Q_1^2+Q_2^2+Q_3^2)\]
+                        </div>
+                        <p class="text-sm text-slate-400">By Heron's formula in quadrance form, this guarantees <strong class="text-white">\(A_R = 16A^2\)</strong>. If \(A_R > 0\), the structure forms a valid non-degenerate Euclidean triangle.</p>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-3 border-b border-slate-800 pb-2">The Code Execution</h4>
+                        <p class="text-sm text-slate-400 mb-4">The <code>buildOffloadGears</code> function mathematically constructs this invariant stability monitor.</p>
+                        <pre><code>for (let offIdx = 0; offIdx < totalGears; offIdx++) {
+    // Place gears orthogonally
+    const orbitOffset = (offIdx % 4) * (Math.PI / 2); 
+    
+    // ...
+    const anchors = [];
+    for (let a = 0; a < 3; a++) {
+        // Evaluate the C3 Area nodes
+        const angle = a * (Math.PI * 2 / 3);
+        aMesh.position.set(
+            Math.cos(angle) * tConf.minor * 1.5, 
+            0, 
+            Math.sin(angle) * tConf.minor * 1.5
+        );
+        anchors.push(aMesh);
+    }
+}</code></pre>
+                    </div>
+                </div>
+
+                <!-- Simulation 4: Orthogonal Offload -->
+                <div class="sim-container" id="sim-4">
+                    <div class="sim-badge">LIVE SIM: TQF Heron-Quadrance Monitor</div>
+                </div>
+            </section>
+
+            <!-- Step 5: Closure Theorem -->
+            <section id="step5" class="mb-20 scroll-mt-28">
+                <h3 class="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                    <span class="text-accent font-mono text-lg">05.</span> The Parity Closure Theorem
+                </h3>
+                <p class="text-slate-300 leading-relaxed mb-6">
+                    The synthesis of the 6-channel data streams across the 5-tier manifold establishes a total topological phase space navigating \(6 \times 5 = 30\) structural nodes. This dictates the ultimate formal theorem of the engine.
+                </p>
+
+                <div class="glass-panel p-8 rounded-xl border border-accent/30 relative overflow-hidden mb-8">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-bl-full blur-2xl"></div>
+                    <h4 class="text-xl font-serif font-bold text-white mb-4">Theorem: Temporal Parity Closure</h4>
+                    <p class="text-sm text-slate-300 mb-4 leading-relaxed">
+                        Let the geometric system consist of a 6-channel product symmetry (\(C_3 \times C_2\)) propagated across 5 orthogonal toroidal tiers, yielding exactly 30 structural nodes. 
+                        Let the system map exactly one topological pulse to each structural node. Given the SI reference oscillator frequency of \(\nu_{Cs} = 9{,}192{,}631{,}770\) Hz and bounding \(\Delta t_{geo} = 1\) s (60 Hz base):
+                    </p>
+                    <div class="math-block border-l-green-400 bg-black/40">
+                        \[T_{\text{traversal}} = \frac{30\text{ pulses}}{60\text{ Hz}} = 0.5\text{ seconds}\]
+                    </div>
+                    <p class="text-sm text-slate-300 mb-4 leading-relaxed">
+                        Comparing this to the SI reference oscillator, the number of atomic periods accumulated over this precise duration is:
+                    </p>
+                    <div class="math-block border-l-green-400 bg-black/40">
+                        \[N_{\text{total}} = 9{,}192{,}631{,}770 \cdot 0.5 = 4{,}596{,}315{,}885\]
+                    </div>
+                    <p class="text-sm text-white font-semibold">
+                        Because \(4{,}596{,}315{,}885\) is an exact integer, the half-integer parity state incurred at the individual pulse boundary is structurally perfectly resolved. The 30-node geometric traversal yields a mathematically exact, zero-remainder integer closure. $\blacksquare$
+                    </p>
+                </div>
+
+                <!-- Simulation 5: Closure Theorem -->
+                <div class="sim-container h-96" id="sim-5">
+                    <div class="sim-badge">LIVE SIM: Master Holonomic Synthesis (Full Engine)</div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <footer class="border-t border-slate-800 bg-[#05050A] py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div class="flex justify-center items-center gap-2 mb-4">
+                <div class="w-4 h-4 rounded-full bg-accent"></div>
+                <span class="font-serif font-bold tracking-widest text-white">THE GEOMETRIC ENGINE</span>
+            </div>
+            <p class="text-xs text-slate-500 font-mono">Deterministic Geometric Encoding of Temporal Congruences</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            const observerOptions = {
+                root: null,
+                rootMargin: '-20% 0px -60% 0px',
+                threshold: 0
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => observer.observe(section));
+        });
+    </script>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // Shared Configuration
+        const TOROIDS = [
+            { major: 15, minor: 4, rot: new THREE.Euler(Math.PI/2, 0, 0) },
+            { major: 35, minor: 6, rot: new THREE.Euler(0, Math.PI/2, 0) }, 
+            { major: 65, minor: 8, rot: new THREE.Euler(Math.PI/2, 0, 0) },
+            { major: 105, minor: 10, rot: new THREE.Euler(0, Math.PI/2, 0) },
+            { major: 155, minor: 12, rot: new THREE.Euler(Math.PI/2, 0, 0) }
+        ];
+
+        // Helper to create independent scenes tied to specific divs
+        function createSimulation(containerId, setupFn, renderFn) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            const controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enablePan = false;
+
+            // Basic Lighting
+            const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambient);
+            const point1 = new THREE.PointLight(0x38bdf8, 1, 500);
+            point1.position.set(100, 100, 100);
+            scene.add(point1);
+            const point2 = new THREE.PointLight(0xf59e0b, 1, 500);
+            point2.position.set(-100, -100, -100);
+            scene.add(point2);
+
+            // Execute specific setup
+            const contextData = setupFn(scene, camera, controls);
+
+            // Performance: Only render when visible
+            let isVisible = false;
+            const observer = new IntersectionObserver((entries) => {
+                isVisible = entries[0].isIntersecting;
+            }, { threshold: 0.1 });
+            observer.observe(container);
+
+            const clock = new THREE.Clock();
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (isVisible) {
+                    const dt = clock.getDelta();
+                    const time = clock.getElapsedTime();
+                    controls.update();
+                    if (renderFn) renderFn(scene, contextData, time, dt);
+                    renderer.render(scene, camera);
+                }
+            }
+            animate();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // ---------------------------------------------------------
+        // SIMULATION 1: Topological Clock (T0 Winding)
+        // ---------------------------------------------------------
+        createSimulation('sim-1', (scene, camera, controls) => {
+            camera.position.set(0, 30, 40);
+            const tConf = TOROIDS[0];
+            const group = new THREE.Group();
+            group.rotation.copy(tConf.rot);
+            scene.add(group);
+
+            // Ghost Torus
+            const tMesh = new THREE.Mesh(
+                new THREE.TorusGeometry(tConf.major, tConf.minor, 16, 100),
+                new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.2, wireframe: true })
+            );
+            group.add(tMesh);
+
+            // 16 Wraps Helix
+            const wraps = 16;
+            const totalPoints = 800;
+            const pts = [];
+            for (let p=0; p<=totalPoints; p++) {
+                const cycle = p/totalPoints;
+                const theta = cycle * Math.PI * 2;
+                const phi = cycle * Math.PI * 2 * wraps;
+                const r = tConf.major + tConf.minor * Math.cos(phi);
+                pts.push(new THREE.Vector3(r * Math.cos(theta), r * Math.sin(theta), tConf.minor * Math.sin(phi)));
+            }
+            const curve = new THREE.CatmullRomCurve3(pts);
+            const tube = new THREE.Mesh(
+                new THREE.TubeGeometry(curve, totalPoints, 0.4, 8, false),
+                new THREE.MeshStandardMaterial({ color: 0x38bdf8, emissive: 0x38bdf8, emissiveIntensity: 0.5 })
+            );
+            group.add(tube);
+
+            // Travelling Particle
+            const particle = new THREE.Mesh(
+                new THREE.SphereGeometry(1.5, 16, 16),
+                new THREE.MeshBasicMaterial({ color: 0xffffff })
+            );
+            group.add(particle);
+
+            return { curve, particle, group };
+        }, (scene, data, time, dt) => {
+            data.group.rotation.z += 0.05 * dt; // Slow rotation
+            const t = (time * 0.1) % 1.0;
+            data.particle.position.copy(data.curve.getPointAt(t));
+        });
+
+        // ---------------------------------------------------------
+        // SIMULATION 2: 5-Tier Stator Manifold
+        // ---------------------------------------------------------
+        createSimulation('sim-2', (scene, camera, controls) => {
+            camera.position.set(0, 150, 200);
+            const group = new THREE.Group();
+            scene.add(group);
+
+            const colors = [0xef4444, 0xf59e0b, 0x10b981, 0x3b82f6, 0xa855f7];
+
+            TOROIDS.forEach((tConf, i) => {
+                const mesh = new THREE.Mesh(
+                    new THREE.TorusGeometry(tConf.major, tConf.minor, 16, 100),
+                    new THREE.MeshStandardMaterial({ color: colors[i], transparent: true, opacity: 0.3, wireframe: true })
+                );
+                mesh.rotation.copy(tConf.rot);
+                group.add(mesh);
+            });
+
+            return { group };
+        }, (scene, data, time, dt) => {
+            data.group.rotation.y = Math.sin(time * 0.2) * 0.5;
+            data.group.rotation.x = Math.cos(time * 0.2) * 0.2;
+        });
+
+        // ---------------------------------------------------------
+        // SIMULATION 3: 6-Channel Rotor (on T2)
+        // ---------------------------------------------------------
+        createSimulation('sim-3', (scene, camera, controls) => {
+            camera.position.set(0, 60, 100);
+            const tConf = TOROIDS[2]; // Focus on T2
+            const group = new THREE.Group();
+            group.rotation.copy(tConf.rot);
+            scene.add(group);
+
+            // Ghost Torus
+            group.add(new THREE.Mesh(
+                new THREE.TorusGeometry(tConf.major, tConf.minor, 16, 100),
+                new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.1, wireframe: true })
+            ));
+
+            const wraps = 12; // T2 wrap density
+            const weaves = [1, -1]; // Forward and Inverse
+            const fwdColors = [0xef4444, 0x22c55e, 0x3b82f6]; // RGB
+            const invColors = [0xec4899, 0xfacc15, 0x06b6d4]; // CMY
+
+            weaves.forEach((dir, bIdx) => {
+                for(let star=0; star<3; star++) {
+                    const starOffset = star * (Math.PI * 2 / 3);
+                    const pts = [];
+                    for(let p=0; p<=800; p++) {
+                        const cycle = p/800;
+                        const theta = cycle * Math.PI * 2;
+                        const phi = (cycle * Math.PI * 2 * wraps * dir) + starOffset;
+                        const rA = tConf.minor * (dir === 1 ? 0.6 : 0.9); // offset radii for separation
+                        
+                        const r = tConf.major + rA * Math.cos(phi);
+                        pts.push(new THREE.Vector3(r * Math.cos(theta), r * Math.sin(theta), rA * Math.sin(phi)));
+                    }
+                    const curve = new THREE.CatmullRomCurve3(pts);
+                    const mat = new THREE.MeshStandardMaterial({ 
+                        color: dir === 1 ? fwdColors[star] : invColors[star], 
+                        transparent: true, opacity: dir === 1 ? 0.9 : 0.5,
+                        wireframe: dir === -1
+                    });
+                    group.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 800, 0.6, 6, false), mat));
+                }
+            });
+
+            return { group };
+        }, (scene, data, time, dt) => {
+            data.group.rotation.z += 0.1 * dt;
+        });
+
+        // ---------------------------------------------------------
+        // SIMULATION 4: Orthogonal Offload (TQF Gears)
+        // ---------------------------------------------------------
+        createSimulation('sim-4', (scene, camera, controls) => {
+            camera.position.set(0, 10, 20);
+            controls.target.set(0,0,0);
+            
+            const group = new THREE.Group();
+            scene.add(group);
+
+            // Minor axis representation (straight tube for local view)
+            group.add(new THREE.Mesh(
+                new THREE.CylinderGeometry(1, 1, 40, 16),
+                new THREE.MeshStandardMaterial({ color: 0x334155, transparent: true, opacity: 0.3, wireframe: true })
+            )).rotation.z = Math.PI/2;
+
+            const gearGroup = new THREE.Group();
+            group.add(gearGroup);
+
+            // The Gear
+            const minorRadius = 8;
+            gearGroup.add(new THREE.Mesh(
+                new THREE.TorusGeometry(minorRadius, 0.2, 8, 32),
+                new THREE.MeshStandardMaterial({ color: 0x94a3b8 })
+            )).rotation.y = Math.PI/2;
+
+            // The 3 Anchors & TQF Triangle
+            const anchors = [];
+            const tqfGeo = new THREE.BufferGeometry();
+            const tqfMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+            const tqfMesh = new THREE.Mesh(tqfGeo, tqfMat);
+            gearGroup.add(tqfMesh);
+
+            // Edges
+            const edgeMat = new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 });
+            const edgeGeo = new THREE.BufferGeometry();
+            const edgeLine = new THREE.LineLoop(edgeGeo, edgeMat);
+            gearGroup.add(edgeLine);
+
+            for(let i=0; i<3; i++) {
+                const a = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 16), new THREE.MeshBasicMaterial({color: 0xffffff}));
+                gearGroup.add(a);
+                anchors.push(a);
+            }
+
+            return { gearGroup, anchors, minorRadius, tqfMesh, edgeLine };
+        }, (scene, data, time, dt) => {
+            // Spin gear
+            data.gearGroup.rotation.x += 1.0 * dt;
+            
+            // Wobble anchors to simulate signal deformation
+            const pts = [];
+            data.anchors.forEach((a, i) => {
+                const baseAngle = i * (Math.PI * 2 / 3);
+                // Introduce local phase wobble
+                const wobble = Math.sin(time * 2 + i) * 1.5; 
+                const r = data.minorRadius + wobble;
+                
+                a.position.set(0, Math.cos(baseAngle) * r, Math.sin(baseAngle) * r);
+                pts.push(a.position.clone());
+            });
+
+            // Update TQF area
+            data.tqfMesh.geometry.setFromPoints(pts);
+            data.tqfMesh.geometry.computeVertexNormals();
+            data.edgeLine.geometry.setFromPoints(pts);
+            
+            // Color shift based on area strain (Archimedean Remainder proxy)
+            const strain = Math.abs(Math.sin(time * 2));
+            data.tqfMesh.material.color.lerpColors(new THREE.Color(0x38bdf8), new THREE.Color(0xef4444), strain * 0.5);
+        });
+
+        // ---------------------------------------------------------
+        // SIMULATION 5: Closure Theorem (Full Synthesis)
+        // ---------------------------------------------------------
+        createSimulation('sim-5', (scene, camera, controls) => {
+            camera.position.set(0, 250, 300);
+            const group = new THREE.Group();
+            scene.add(group);
+
+            const colors = [0xef4444, 0xf59e0b, 0x10b981, 0x3b82f6, 0xa855f7];
+            
+            TOROIDS.forEach((tConf, index) => {
+                const tGroup = new THREE.Group();
+                tGroup.rotation.copy(tConf.rot);
+                group.add(tGroup);
+
+                // Ghost Manifold
+                tGroup.add(new THREE.Mesh(
+                    new THREE.TorusGeometry(tConf.major, tConf.minor, 16, 64),
+                    new THREE.MeshStandardMaterial({ color: colors[index], transparent: true, opacity: 0.1, wireframe: true })
+                ));
+
+                const wraps = 16 - (index * 2);
+                
+                // Draw 1 forward, 1 inverse channel for visual clarity (instead of all 6) to keep performance high
+                [1, -1].forEach((dir, bIdx) => {
+                    const pts = [];
+                    for(let p=0; p<=400; p++) {
+                        const cycle = p/400;
+                        const theta = cycle * Math.PI * 2;
+                        const phi = (cycle * Math.PI * 2 * wraps * dir);
+                        const rA = tConf.minor * (dir === 1 ? 0.5 : 0.8);
+                        const r = tConf.major + rA * Math.cos(phi);
+                        pts.push(new THREE.Vector3(r * Math.cos(theta), r * Math.sin(theta), rA * Math.sin(phi)));
+                    }
+                    const curve = new THREE.CatmullRomCurve3(pts);
+                    tGroup.add(new THREE.Mesh(
+                        new THREE.TubeGeometry(curve, 400, 0.4, 4, false),
+                        new THREE.MeshStandardMaterial({ color: dir === 1 ? 0xffffff : colors[index], transparent: true, opacity: dir === 1 ? 0.9 : 0.4 })
+                    ));
+                });
+            });
+
+            return { group };
+        }, (scene, data, time, dt) => {
+            data.group.rotation.y = time * 0.1;
+            data.group.rotation.z = Math.sin(time * 0.1) * 0.1;
+        });
+
+    </script>
+</body>
+</html>
