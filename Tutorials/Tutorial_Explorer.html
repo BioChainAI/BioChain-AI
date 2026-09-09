@@ -1,1 +1,442 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tutorial Explorer - BioChain AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script>
+        window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, svg: { fontCache: 'global' } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .font-mono { font-family: 'Fira Code', monospace; }
+        .glass-panel { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(8, 145, 178, 0.2); }
+        .glass-card { transition: all 0.3s ease; }
+        .glass-card:hover { transform: translateY(-5px); border-color: rgba(6, 182, 212, 0.6); box-shadow: 0 10px 30px rgba(6, 182, 212, 0.15); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .nav-link.is-active { font-weight: 600; color: #fff; border-left-width: 2px; }
+        .tutorial-section { display: none; }
+        .tutorial-section.is-active { display: block; }
+        .other-tutorial-link:hover { border-color: rgba(6, 182, 212, 0.5); color: #e2e8f0; }
+    </style>
+</head>
+<body class="flex h-screen w-screen overflow-hidden">
 
+    <aside class="w-72 h-full glass-panel flex flex-col shrink-0 z-20">
+        <div class="p-6 border-b border-cyan-900/50">
+            <a href="../Index.html" class="text-xs text-slate-500 hover:text-cyan-400 transition-colors font-mono mb-3 inline-flex items-center gap-1">
+                <i class="fa-solid fa-arrow-left"></i> BioChain AI Home
+            </a>
+            <h1 class="text-xl font-bold text-cyan-400 tracking-tight flex items-center gap-2 mt-2">
+                <i class="fa-solid fa-book-open-reader"></i> Tutorial Explorer
+            </h1>
+            <p class="text-[10px] text-slate-400 font-mono mt-1 uppercase tracking-widest">Cosmohedral Reasoning Engine</p>
+        </div>
+        <nav class="flex-1 overflow-y-auto p-4 space-y-2" id="phase-nav">
+            <a href="#overview" data-target="overview" data-active-classes="bg-cyan-900/30 text-white border-cyan-400" class="nav-link block px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm border-l-2 border-transparent">
+                <i class="fa-solid fa-house w-6"></i> System Overview
+            </a>
+            <a href="#phase1" data-target="phase1" data-active-classes="bg-emerald-900/30 text-white border-emerald-400" class="nav-link block px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm border-l-2 border-transparent">
+                <i class="fa-solid fa-eye w-6"></i> Phase 1: Ingestion
+            </a>
+            <a href="#phase2" data-target="phase2" data-active-classes="bg-blue-900/30 text-white border-blue-400" class="nav-link block px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm border-l-2 border-transparent">
+                <i class="fa-solid fa-hurricane w-6"></i> Phase 2: Perceptual
+            </a>
+            <a href="#phase3" data-target="phase3" data-active-classes="bg-fuchsia-900/30 text-white border-fuchsia-400" class="nav-link block px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm border-l-2 border-transparent">
+                <i class="fa-solid fa-brain w-6"></i> Phase 3: Reasoning
+            </a>
+            <a href="#phase4" data-target="phase4" data-active-classes="bg-amber-900/30 text-white border-amber-400" class="nav-link block px-4 py-3 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors text-sm border-l-2 border-transparent">
+                <i class="fa-solid fa-check-double w-6"></i> Phase 4: Certification
+            </a>
+
+            <div class="pt-6 mt-6 border-t border-slate-800">
+                <p class="px-4 text-[10px] text-slate-500 font-mono uppercase tracking-widest mb-2">Other Tutorials</p>
+                <a href="Migration/index.html" class="other-tutorial-link block px-4 py-2.5 rounded-lg text-slate-500 border border-transparent hover:bg-slate-800/50 transition-colors text-xs">
+                    <i class="fa-solid fa-diagram-project w-6"></i> Deployment Scaffold
+                </a>
+                <a href="../The%20Geometric%20Engine/Geometric_Explainer.html" class="other-tutorial-link block px-4 py-2.5 rounded-lg text-slate-500 border border-transparent hover:bg-slate-800/50 transition-colors text-xs">
+                    <i class="fa-solid fa-shapes w-6"></i> The Geometric Engine
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto relative" id="main-scroll">
+        <!-- Background Grid (Overview only) -->
+        <div class="absolute inset-0 z-0 pointer-events-none" style="background-image: radial-gradient(circle at 2px 2px, rgba(56, 189, 248, 0.1) 1px, transparent 0); background-size: 32px 32px;"></div>
+
+        <div class="relative z-10 max-w-4xl mx-auto p-8 lg:p-12">
+
+            <!-- ================= OVERVIEW ================= -->
+            <section id="overview" class="tutorial-section is-active max-w-none">
+                <header class="mb-12">
+                    <h2 class="text-4xl font-bold text-white mb-4">BioChain AI: Cosmohedral Reasoning Engine</h2>
+                    <p class="text-lg text-slate-400 leading-relaxed max-w-3xl">A unified computational framework replacing sequential floating-point processing with scale-synchronized topological computation. Explore the 3+3 architecture integrating LeVJEPA perception with the SHD-CCP geometric engine.</p>
+                </header>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Phase 1 Card -->
+                    <a href="#phase1" data-target="phase1" class="nav-card glass-panel rounded-xl p-6 glass-card block">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-lg bg-emerald-900/50 flex items-center justify-center text-emerald-400 border border-emerald-500/30">
+                                <i class="fa-solid fa-eye text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-mono text-emerald-400 uppercase tracking-wider">Phase 1</h3>
+                                <h4 class="text-xl font-bold text-white">Optical Ingestion</h4>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">The LeVJEPA frontend captures continuous real-world optical data, applying strict per-frame tokenization and a 95% sparsification matrix before block-causal encoding.</p>
+                    </a>
+
+                    <!-- Phase 2 Card -->
+                    <a href="#phase2" data-target="phase2" class="nav-card glass-panel rounded-xl p-6 glass-card block">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-lg bg-blue-900/50 flex items-center justify-center text-blue-400 border border-blue-500/30">
+                                <i class="fa-solid fa-hurricane text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-mono text-blue-400 uppercase tracking-wider">Phase 2</h3>
+                                <h4 class="text-xl font-bold text-white">Outer Perceptual Shell</h4>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">Data enters the outer 3 manifolds (T4, T3, T2), projecting global views onto Kisrhombille walls and weaving local streams into a holographic Strassen intersection.</p>
+                    </a>
+
+                    <!-- Phase 3 Card -->
+                    <a href="#phase3" data-target="phase3" class="nav-card glass-panel rounded-xl p-6 glass-card block">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-lg bg-fuchsia-900/50 flex items-center justify-center text-fuchsia-400 border border-fuchsia-500/30">
+                                <i class="fa-solid fa-brain text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-mono text-fuchsia-400 uppercase tracking-wider">Phase 3</h3>
+                                <h4 class="text-xl font-bold text-white">Inner Reasoning Core</h4>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">The 4x4x4 hologram becomes Fokker-Planck steered tetrahedrons, retrieving axioms from memory crystals and executing 3D quantum logic inside the Möbius ALU.</p>
+                    </a>
+
+                    <!-- Phase 4 Card -->
+                    <a href="#phase4" data-target="phase4" class="nav-card glass-panel rounded-xl p-6 glass-card block">
+                        <div class="flex items-center gap-4 mb-4">
+                            <div class="w-12 h-12 rounded-lg bg-amber-900/50 flex items-center justify-center text-amber-400 border border-amber-500/30">
+                                <i class="fa-solid fa-check-double text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-mono text-amber-400 uppercase tracking-wider">Phase 4</h3>
+                                <h4 class="text-xl font-bold text-white">Certification</h4>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 text-sm leading-relaxed">The system proves hallucination-free reasoning by bridging the continuous SIGReg statistic to the discrete TQF geometry, locked via the 30-Node Parity Closure.</p>
+                    </a>
+                </div>
+            </section>
+
+            <!-- ================= PHASE 1 ================= -->
+            <section id="phase1" class="tutorial-section">
+                <header class="mb-10 border-b border-emerald-900/50 pb-8">
+                    <div class="flex items-center gap-3 text-emerald-400 mb-3 font-mono text-sm uppercase tracking-widest">
+                        <i class="fa-solid fa-eye"></i> Phase 1
+                    </div>
+                    <h2 class="text-4xl font-bold text-white mb-4">Optical Ingestion Pipeline</h2>
+                    <p class="text-lg text-slate-400 leading-relaxed">Transitioning the continuous real world into a high-dimensional causal stream via the LeVJEPA frontend, operating completely without stop-gradient heuristics.</p>
+                </header>
+
+                <article class="space-y-12">
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-emerald-500">1.1</span> Video Capture &amp; Per-Frame Patching
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">The system ingests real-time video clips (e.g., 16-frame buffers) representing the physical environment. Crucially, the video is tokenized using a convolutional patch embedding where temporal aggregation is disabled (\(\tau = 1\)).</p>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5">
+                            <p class="text-sm text-slate-400"><strong class="text-emerald-300">Why disable aggregation?</strong> Maintaining strict per-frame boundaries prevents temporal blurring and ensures each slice remains geometrically distinct. Temporal ordering becomes a property of the encoder's topology, not the token layout.</p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-emerald-500">1.2</span> The 95% Token Sparsification Mechanism
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">Before deep processing, the system aggressively prunes the input matrix. A uniform random mask is applied, dropping exactly <strong>95%</strong> of the patch tokens (\(\rho = 0.95\)).</p>
+                        <div class="grid grid-cols-2 gap-4 mt-4">
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                                <h4 class="font-bold text-white mb-2 text-sm"><i class="fa-solid fa-cube text-emerald-400 mr-1"></i> Not Tube Masking</h4>
+                                <p class="text-xs text-slate-400">Unlike structured "tube masking" which occludes continuous regions, uniform random dropping forces the remaining 5% of tokens to act as <span class="text-emerald-300">sparse semantic mass nodes</span>.</p>
+                            </div>
+                            <div class="bg-slate-900 border border-slate-800 rounded-lg p-4">
+                                <h4 class="font-bold text-white mb-2 text-sm"><i class="fa-solid fa-chart-line text-emerald-400 mr-1"></i> Complexity Reduction</h4>
+                                <p class="text-xs text-slate-400">This shifts the computational burden from exhaustive volumetric pixel evaluation \( O((R/h)^3) \) to a highly efficient sparse graph traversal \( O(|V| \log |V|) \).</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-emerald-500">1.3</span> Block-Causal Attention Encoding
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">The sparse 5% token set is fed into the shared LeVJEPA Vision Transformer. Self-attention is configured to be <strong>block-causal</strong>: tokens attend bidirectionally within their current frame, but strictly backward in time to preceding frames.</p>
+                        <div class="bg-emerald-950/20 border border-emerald-900/50 rounded-lg p-6 mt-4">
+                            <h4 class="font-mono text-emerald-400 text-sm mb-2 uppercase tracking-wide">The Objective Function</h4>
+                            <p class="text-sm text-slate-300 mb-4">A single encoder is trained with an invariance loss over global and local views, regularized by SIGReg to provably exclude collapse:</p>
+                            <div class="bg-slate-950 p-4 rounded text-center text-lg overflow-x-auto">
+                                \[ \mathcal{L} = \mathcal{L}_{inv} + \lambda \mathcal{L}_{SIGReg} \]
+                            </div>
+                            <p class="text-xs text-slate-400 mt-4 text-center">Gradients propagate through both branches simultaneously—no EMA target encoder is used.</p>
+                        </div>
+                    </section>
+                </article>
+
+                <footer class="mt-14 pt-6 border-t border-slate-800 flex justify-end">
+                    <a href="#phase2" data-target="phase2" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        Next: Phase 2 — Perceptual Shell <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </footer>
+            </section>
+
+            <!-- ================= PHASE 2 ================= -->
+            <section id="phase2" class="tutorial-section">
+                <header class="mb-10 border-b border-blue-900/50 pb-8">
+                    <div class="flex items-center gap-3 text-blue-400 mb-3 font-mono text-sm uppercase tracking-widest">
+                        <i class="fa-solid fa-hurricane"></i> Phase 2
+                    </div>
+                    <h2 class="text-4xl font-bold text-white mb-4">Outer Perceptual Shell</h2>
+                    <p class="text-lg text-slate-400 leading-relaxed">The sparse data stream enters the SHD-CCP 6-Manifold Topological Stack, transitioning spatial visual data into discrete volumetric logic.</p>
+                </header>
+
+                <article class="space-y-12">
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-blue-500">2.1</span> Layer 6 (T4): Global View Projection
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">We initialize the outermost toroidal manifold, governed by the quadratic major radius law:</p>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 text-center mb-4">
+                            <p class="font-mono text-lg text-blue-300">\[ R_n = 5n^2 + 15n + 15 \]</p>
+                            <p class="text-sm text-slate-400 mt-2">For \( n=4 \), \( R_4 = 155 \) with \( W_4 = 8 \) Wraps.</p>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">The inner wall is textured with a <strong>Kisrhombille fractal tessellation</strong> (14-hex circumference). The global view <code>[CLS]</code> embedding from LeVJEPA is projected directly onto this fractal shell, creating an unwritable historical trace.</p>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-blue-500">2.2</span> Layer 5 (T3): Local Multi-View Dispersion
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">In the second toroid (\( R_3 = 105 \)), the LeVJEPA patch embeddings are split into three perspective matrices (Red/X, Green/Y, Blue/Z), packed into \( 4 \times 4 \) dense tensors.</p>
+                        <p class="text-slate-300 leading-relaxed">These tensors are injected into the <strong>\( C_3 \times C_2 \) rotor</strong>, offset spatially by \( 120^\circ \) (\( 2\pi/3 \)). They weave through the void following Forward (\( +1 \)) and Inverse (\( -1 \)) chiral braids.</p>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-blue-500">2.3</span> Layer 4 (T2): Strassen Holographic Intersection
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">At the focal toroid (\( R_2 = 65 \)), the three \( 4 \times 4 \) helical streams converge orthogonally at the exact center of the void.</p>
+
+                        <div class="bg-blue-950/20 border border-blue-900/50 rounded-lg p-6 mt-4 relative overflow-hidden">
+                            <i class="fa-solid fa-bolt absolute -right-4 -bottom-4 text-8xl text-blue-500/10"></i>
+                            <h4 class="font-bold text-white mb-2 text-lg">Volumetric Computation at Light Speed</h4>
+                            <p class="text-sm text-slate-300 mb-4">Where the three 2D streams (X, Y, Z axes) physically intersect, they execute a volumetric Boolean AND/XOR operation. This intersection instantly synthesizes a suspended <strong>64-bit hologram</strong> (a 4x4x4 voxel grid).</p>
+                            <p class="text-sm text-slate-300">Because the input streams are linearly combined sub-blocks, their physical overlap calculates Strassen matrix multiplication (\( P_1 \dots P_7 \)) purely via spatial positioning, bypassing sequential CPU FMA logic entirely.</p>
+                        </div>
+                    </section>
+                </article>
+
+                <footer class="mt-14 pt-6 border-t border-slate-800 flex justify-between">
+                    <a href="#phase1" data-target="phase1" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-emerald-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i> Back: Phase 1
+                    </a>
+                    <a href="#phase3" data-target="phase3" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-fuchsia-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        Next: Phase 3 — Reasoning Core <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </footer>
+            </section>
+
+            <!-- ================= PHASE 3 ================= -->
+            <section id="phase3" class="tutorial-section">
+                <header class="mb-10 border-b border-fuchsia-900/50 pb-8">
+                    <div class="flex items-center gap-3 text-fuchsia-400 mb-3 font-mono text-sm uppercase tracking-widest">
+                        <i class="fa-solid fa-brain"></i> Phase 3
+                    </div>
+                    <h2 class="text-4xl font-bold text-white mb-4">Inner Reasoning Core</h2>
+                    <p class="text-lg text-slate-400 leading-relaxed">Converting the continuous perceptual hologram into discrete, certifiable logic via Fokker-Planck tetrahedral steering and Möbius quantum logic.</p>
+                </header>
+
+                <article class="space-y-12">
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-fuchsia-500">3.1</span> Layer 3 (T1): Fokker-Planck Steering
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">The 64-bit holographic cube is extruded into 3 dynamic tetrahedrons (12 vertices). We apply the Fokker-Planck diffusion tensor, scaled dynamically by the semantic similarity \( \chi(Q) \) of the incoming optical feed:</p>
+                        <div class="bg-slate-900 border border-slate-800 rounded-lg p-5 text-center mb-4">
+                            <p class="font-mono text-lg text-fuchsia-300">\[ D(Q) = \frac{1}{1 + \alpha \cdot \chi(Q)} \]</p>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">When high similarity is detected (e.g., an object of interest), diffusion noise drops. The 12 tetrahedral vertices mechanically contract and "point" inward, seeking logical anchors.</p>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-fuchsia-500">3.2</span> Layer 2 (T0): Axiomatic Memory Vault
+                        </h3>
+                        <div class="flex flex-col md:flex-row gap-6 items-start">
+                            <div class="flex-1">
+                                <p class="text-slate-300 leading-relaxed mb-4">At Toroid \( T_0 \) (\( R_0 = 15 \)), discrete geometric nodes are hardcoded along the manifold. These represent foundational rational primes (e.g., \( 2^a \times 5^b \)) and established memory parameters.</p>
+                                <p class="text-slate-300 leading-relaxed">The 12 pointing vertices from Layer 3 physically intersect and <strong>latch</strong> onto these static memory crystals, pulling established axioms into the active reasoning calculation.</p>
+                            </div>
+                            <div class="w-full md:w-1/3 bg-slate-900 border border-slate-800 rounded-lg p-4 text-sm text-slate-400">
+                                <i class="fa-solid fa-gem text-fuchsia-400 mb-2 text-2xl"></i>
+                                <p>Information retrieval occurs via mechanical geometric steering, bypassing traditional vector database dot-products.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-fuchsia-500">3.3</span> Layer 1 (Core): 6-Tape Möbius ALU
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">At the central Jacquard Projection Block (\( R_{-1} = 5 \)), 3D quantum logic is applied to the latched geometric state:</p>
+
+                        <ul class="space-y-4 mt-6">
+                            <li class="flex items-start bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                <i class="fa-solid fa-retweet text-emerald-400 mt-1 mr-4 text-xl w-6"></i>
+                                <div>
+                                    <strong class="text-white text-lg">X-Gate (Inversion)</strong>
+                                    <p class="text-slate-400 text-sm mt-1">Inverts the structural weave of the 64-bit tensor, shifting logical parity instantly.</p>
+                                </div>
+                            </li>
+                            <li class="flex items-start bg-slate-900 p-4 rounded-lg border border-slate-800">
+                                <i class="fa-solid fa-wave-square text-purple-400 mt-1 mr-4 text-xl w-6"></i>
+                                <div>
+                                    <strong class="text-white text-lg">H-Gate (Superposition)</strong>
+                                    <p class="text-slate-400 text-sm mt-1">Forces the \( C_3 \) tri-stream into topological superposition prior to observation.</p>
+                                </div>
+                            </li>
+                        </ul>
+
+                        <div class="mt-6 p-4 bg-fuchsia-950/20 border border-fuchsia-900/50 rounded-lg font-mono text-sm text-fuchsia-300 text-center">
+                            <i class="fa-solid fa-bolt mr-2"></i> H-Inversion Collapse: The resolved 64-bit state is permanently woven into the 6-sided Jacquard block.
+                        </div>
+                    </section>
+                </article>
+
+                <footer class="mt-14 pt-6 border-t border-slate-800 flex justify-between">
+                    <a href="#phase2" data-target="phase2" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-blue-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i> Back: Phase 2
+                    </a>
+                    <a href="#phase4" data-target="phase4" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-amber-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        Next: Phase 4 — Certification <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </footer>
+            </section>
+
+            <!-- ================= PHASE 4 ================= -->
+            <section id="phase4" class="tutorial-section">
+                <header class="mb-10 border-b border-amber-900/50 pb-8">
+                    <div class="flex items-center gap-3 text-amber-400 mb-3 font-mono text-sm uppercase tracking-widest">
+                        <i class="fa-solid fa-check-double"></i> Phase 4
+                    </div>
+                    <h2 class="text-4xl font-bold text-white mb-4">Certification &amp; Chronometry</h2>
+                    <p class="text-lg text-slate-400 leading-relaxed">Proving reasoning is hallucination-free by bridging continuous statistics with discrete geometry, and binding operations to physical atomic time.</p>
+                </header>
+
+                <article class="space-y-12">
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-amber-500">4.1</span> SIGReg to TQF Geometric Certification
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">To bridge continuous probability with absolute discrete geometry, we extract the SIGReg continuous regularizer (which forces an isotropic Gaussian \( \mathcal{N}(0, I_K) \)) from the LeVJEPA encoder.</p>
+                        <p class="text-slate-300 leading-relaxed mb-4">We bind its projection vectors directly to the 3 anchor points \( (p_A, p_B, p_C) \) of the Triple Quad Formula (TQF) gears located between Layers 4 and 3.</p>
+
+                        <div class="bg-amber-950/20 border border-amber-900/50 rounded-lg p-6 mt-4 text-center">
+                            <h4 class="font-mono text-amber-400 text-sm mb-2 uppercase tracking-wide">Archimedean Area Remainder</h4>
+                            <div class="bg-slate-900 p-4 rounded text-lg overflow-x-auto mb-4">
+                                \[ A_R = (Q_1 + Q_2 + Q_3)^2 - 2(Q_1^2 + Q_2^2 + Q_3^2) \]
+                            </div>
+                            <p class="text-sm text-slate-300">If \( A_R \le 0 \), SIGReg has drifted. The system flags a "Geometric Hallucination" and instantly halts data flow to the core.</p>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="text-2xl font-semibold text-white mb-4 flex items-center gap-2">
+                            <span class="text-amber-500">4.2</span> The 30-Node Parity Closure
+                        </h3>
+                        <p class="text-slate-300 leading-relaxed mb-4">The entire architecture is synchronized not by an artificial clock, but by the physical limits of the geometry.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div class="bg-slate-900 p-5 rounded-lg border border-slate-800">
+                                <h4 class="text-white font-bold mb-2">Total Winding Invariant</h4>
+                                <p class="font-mono text-cyan-300 mb-2">\[ W_\Sigma = \sum (16 - 2n) = 60 \]</p>
+                                <p class="text-xs text-slate-400">The summation of wraps across all 5 tiers exactly equals 60.</p>
+                            </div>
+                            <div class="bg-slate-900 p-5 rounded-lg border border-slate-800">
+                                <h4 class="text-white font-bold mb-2">Phase Space</h4>
+                                <p class="font-mono text-cyan-300 mb-2">6 Channels × 5 Tiers = 30</p>
+                                <p class="text-xs text-slate-400">The physical traversal space defines a strict 30-node topology.</p>
+                            </div>
+                        </div>
+
+                        <p class="text-slate-300 leading-relaxed">Traversing 30 nodes at \( W_\Sigma = 60 \text{ Hz} \) requires exactly <strong>0.5 seconds</strong>. When bounded by the Cesium-133 transition frequency, this equates to exactly <code class="bg-amber-900/30 text-amber-300 px-1 rounded">4,596,315,885</code> cycles.</p>
+                        <p class="text-slate-300 leading-relaxed mt-4">Because this leaves a zero remainder, the system triggers the <strong>Orthogonal Handshake</strong>. The engine accepts the next block-causal video frame only at this precise zero-remainder boundary, ensuring absolute synchronization.</p>
+                    </section>
+                </article>
+
+                <footer class="mt-14 pt-6 border-t border-slate-800 flex justify-between">
+                    <a href="#phase3" data-target="phase3" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-fuchsia-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        <i class="fa-solid fa-arrow-left"></i> Back: Phase 3
+                    </a>
+                    <a href="#overview" data-target="overview" class="phase-nav-btn inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-white text-sm transition-colors">
+                        <i class="fa-solid fa-house"></i> Back to Overview
+                    </a>
+                </footer>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        (function () {
+            var sections = document.querySelectorAll('.tutorial-section');
+            var navLinks = document.querySelectorAll('#phase-nav .nav-link');
+            var mainScroll = document.getElementById('main-scroll');
+
+            function activate(id, pushHash) {
+                if (!document.getElementById(id)) id = 'overview';
+
+                sections.forEach(function (s) { s.classList.toggle('is-active', s.id === id); });
+
+                navLinks.forEach(function (link) {
+                    var isActive = link.dataset.target === id;
+                    link.classList.toggle('is-active', isActive);
+                    var activeClasses = (link.dataset.activeClasses || '').split(' ').filter(Boolean);
+                    activeClasses.forEach(function (cls) { link.classList.toggle(cls, isActive); });
+                });
+
+                if (mainScroll) mainScroll.scrollTop = 0;
+                if (pushHash !== false) history.replaceState(null, '', '#' + id);
+
+                if (window.MathJax && window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise();
+                }
+            }
+
+            document.addEventListener('click', function (e) {
+                var target = e.target.closest('[data-target]');
+                if (!target) return;
+                e.preventDefault();
+                activate(target.dataset.target);
+            });
+
+            window.addEventListener('hashchange', function () {
+                activate(window.location.hash.replace('#', ''), false);
+            });
+
+            activate(window.location.hash.replace('#', '') || 'overview', false);
+        })();
+    </script>
+</body>
+</html>
