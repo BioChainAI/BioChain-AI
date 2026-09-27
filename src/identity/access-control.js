@@ -5,26 +5,28 @@
  *   OPERATOR — validated authority; can author operator content.
  *   ADMIN    — root authority; can grant OPERATOR and ADMIN roles.
  *
- * A Role Certificate = Identity + Validation Certificate
- * Validation Certificate = HMAC-SHA-256 over (issuer, role, scope, subject, issuedAt)
- *                          keyed by the issuer's Identity ID.
+ * Role authority comes ONLY from records a user cannot write for themselves —
+ * the same two sources firestore.rules trusts (see roleOf() there):
+ *   config/rootAdmins  { uids: [...] } — set by hand in the Firebase console;
+ *                                        clients can never write it → ADMIN
+ *   roleGrants/{uid}   { role, scope, grantedByUid, grantedAt }
+ *                                      — written only by an ADMIN (rules-enforced)
+ * Nothing on the user's own identity doc confers a role. (The earlier HMAC
+ * "certificates" were keyed by the issuer's public Identity ID, so anyone could
+ * forge one; they are gone.)
  *
  * Roles are designed to collapse cleanly: drop OPERATOR and you have a plain
  * admin/member model without touching call sites.
  */
 
-import { readIdentity } from "./identity-registry.js";
-import { setDocument } from "../firebase/firestore.js";
+import { getDocument, setDocument, addToCollection } from "../firebase/firestore.js";
 
 // ─── Root Admin List ──────────────────────────────────────────────────
-// Firebase UIDs that self-validate as ADMIN at the root layer.
-// IMPORTANT: these are per-project UIDs for the `biochain-ai` project — NOT the
-// same as any Owl Academy UID. Add your biochain-ai Authentication UID here
-// before using the operations console, or no one can hold ADMIN.
-//   Firebase console → Authentication → Users → copy your UID.
-export const ROOT_ADMIN_UIDS = [
-  // "PASTE_YOUR_biochain-ai_FIREBASE_UID_HERE",
-];
+// Bootstrap: in the Firebase console → Firestore, create the document
+//   config/rootAdmins   with field   uids: ["<your biochain-ai Auth UID>"]
+// (Authentication → Users → copy your UID). Clients cannot write it, so it can
+// only be set from the console / Admin SDK. Until it exists, no one is ADMIN.
+export const ROOT_ADMINS_DOC = "config/rootAdmins";
 
 // ─── Role Definitions ─────────────────────────────────────────────────
 export const ROLES = {
@@ -33,116 +35,52 @@ export const ROLES = {
   ADMIN:    { name: "Admin",    level: 2, canAuthor: true,  canGrantOperator: true,  canGrantAdmin: true  },
 };
 
-// ─── HMAC Signing ─────────────────────────────────────────────────────
-async function hmacSign(key, payload) {
-  const enc = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw", enc.encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, enc.encode(payload));
-  return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, "0")).join("");
-}
-async function hmacVerify(key, payload, signatureHex) {
-  const expected = await hmacSign(key, payload);
-  if (expected.length !== signatureHex.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signatureHex.charCodeAt(i);
-  return diff === 0;
-}
-function certificatePayload(cert) {
-  return [cert.issuer, cert.role, cert.scope, cert.subject, cert.issuedAt].join("|");
+/** Whether `uid` is listed in config/rootAdmins. */
+export async function isRootAdmin(uid) {
+  const doc = await getDocument(ROOT_ADMINS_DOC);
+  return !!(doc && Array.isArray(doc.uids) && doc.uids.includes(uid));
 }
 
-// ─── Certificate Issue / Verify ───────────────────────────────────────
+/** The caller-independent role grant for `uid` (null if none). */
+export const readRoleGrant = (uid) => getDocument(`roleGrants/${uid}`);
+
+/** Resolve the effective role of a user — mirrors roleOf() in firestore.rules. */
+export async function resolveRole(uid) {
+  if (await isRootAdmin(uid)) return "ADMIN";
+  const grant = await readRoleGrant(uid);
+  return grant && ROLES[grant.role] ? grant.role : "MEMBER";
+}
 
 /**
- * Issue a role certificate. Caller must hold sufficient role.
- *   issuerIdentity — the issuing user's identity doc (read from Firestore)
- *   subjectId      — Identity ID of the user being certified
- *   targetRole     — "OPERATOR" | "ADMIN"
- *   scope          — namespace string (e.g. "*", "tenant-x")
+ * Grant (or demote to MEMBER) a role. Caller must be ADMIN — checked here for a
+ * clear error, and enforced by the rules on roleGrants/{uid}.
+ *   issuerUid  — the granting ADMIN's uid
+ *   subjectUid — the uid receiving the role
+ *   targetRole — "MEMBER" | "OPERATOR" | "ADMIN"
+ *   scope      — namespace string (e.g. "*", "tenant-x")
  */
-export async function issueCertificate(issuerIdentity, subjectId, targetRole, scope) {
-  if (!issuerIdentity || !issuerIdentity.identityId) throw new Error("Issuer has no identity.");
-  const issuerRole = issuerIdentity.role || "MEMBER";
-  if (!ROLES[issuerRole]) throw new Error(`Unknown issuer role: ${issuerRole}`);
+export async function grantRole(issuerUid, subjectUid, targetRole, scope = "*") {
+  if (!ROLES[targetRole]) throw new Error(`Unknown role: ${targetRole}`);
+  const issuerRole = await resolveRole(issuerUid);
   if (targetRole === "OPERATOR" && !ROLES[issuerRole].canGrantOperator) throw new Error("Issuer cannot grant Operator.");
   if (targetRole === "ADMIN"    && !ROLES[issuerRole].canGrantAdmin)    throw new Error("Issuer cannot grant Admin.");
-
-  const cert = {
-    issuer: issuerIdentity.identityId,
-    subject: subjectId,
-    role: targetRole,
-    scope: scope || "*",
-    issuedAt: new Date().toISOString(),
+  if (targetRole === "MEMBER"   && issuerRole !== "ADMIN")               throw new Error("Only an Admin can change roles.");
+  const grant = {
+    subjectUid, role: targetRole, scope: scope || "*",
+    certifiedScopes: scope === "*" || !scope ? ["*"] : [scope],
+    grantedByUid: issuerUid, grantedAt: new Date().toISOString(),
   };
-  cert.signature = await hmacSign(issuerIdentity.identityId, certificatePayload(cert));
-  return cert;
+  await setDocument(`roleGrants/${subjectUid}`, grant);
+  await addToCollection("auditLog", { kind: "role.granted", uid: issuerUid, subjectUid, role: targetRole, scope: grant.scope });
+  return grant;
 }
 
-/** Verify a certificate against the issuer's known Identity ID. */
-export async function verifyCertificate(cert, issuerIdentityId) {
-  if (!cert || !cert.signature) return { valid: false, reason: "no_signature" };
-  if (cert.issuer !== issuerIdentityId) return { valid: false, reason: "issuer_mismatch" };
-  const ok = await hmacVerify(issuerIdentityId, certificatePayload(cert), cert.signature);
-  return { valid: ok, reason: ok ? "ok" : "bad_signature" };
-}
-
-/** Self-issue an ADMIN certificate for a root-admin UID (bootstrap path). */
-export async function bootstrapAdminCertificate(uid, identity) {
-  if (!ROOT_ADMIN_UIDS.includes(uid)) throw new Error("UID is not in the root admin list.");
-  const cert = {
-    issuer: identity.identityId, subject: identity.identityId,
-    role: "ADMIN", scope: "*", issuedAt: new Date().toISOString(), selfSigned: true,
-  };
-  cert.signature = await hmacSign(identity.identityId, certificatePayload(cert));
-  return cert;
-}
-
-// ─── Role application ─────────────────────────────────────────────────
-
-/** Apply a role upgrade to the caller's own identity. Verifies the certificate. */
-export async function applyCertificate(uid, cert) {
-  const myId = await readIdentity(uid);
-  if (!myId) throw new Error("Commit an Identity first.");
-  if (cert.subject !== myId.identityId) throw new Error("Certificate subject does not match your Identity ID.");
-
-  if (cert.selfSigned) {
-    if (!ROOT_ADMIN_UIDS.includes(uid)) throw new Error("Self-signed certificates only permitted for root admin UIDs.");
-    const { valid } = await verifyCertificate(cert, myId.identityId);
-    if (!valid) throw new Error("Self-signed certificate failed verification.");
-  } else {
-    const { valid, reason } = await verifyCertificate(cert, cert.issuer);
-    if (!valid) throw new Error(`Certificate invalid: ${reason}`);
-  }
-
-  const scopes = cert.scope === "*" ? ["*"] : [cert.scope];
-  await setDocument(`users/${uid}/identity/main`, {
-    ...myId, role: cert.role, certificate: cert, certifiedScopes: scopes,
-    certifiedAt: new Date().toISOString(),
-  });
-  return cert;
-}
-
-/** Resolve the effective role of a user. Falls back to MEMBER. */
-export async function resolveRole(uid) {
-  const id = await readIdentity(uid);
-  if (!id || !id.certificate) return ROOT_ADMIN_UIDS.includes(uid) ? "ADMIN" : "MEMBER";
-  if (id.certificate.selfSigned) {
-    if (!ROOT_ADMIN_UIDS.includes(uid)) return "MEMBER";
-    const { valid } = await verifyCertificate(id.certificate, id.identityId);
-    return valid ? "ADMIN" : "MEMBER";
-  }
-  const { valid } = await verifyCertificate(id.certificate, id.certificate.issuer);
-  if (valid) return id.certificate.role;
-  return ROOT_ADMIN_UIDS.includes(uid) ? "ADMIN" : "MEMBER";
-}
-
-/** Whether a user can author content on a given scope. */
-export function canAuthorOnScope(identity, scope) {
-  if (!identity || !identity.certificate) return false;
-  const roleDef = ROLES[identity.role || "MEMBER"];
+/** Whether a user (by their role grant) can author content on a given scope. */
+export function canAuthorOnScope(grant, scope) {
+  if (!grant) return false;
+  const roleDef = ROLES[grant.role || "MEMBER"];
   if (!roleDef || !roleDef.canAuthor) return false;
-  const scopes = identity.certifiedScopes || [];
+  const scopes = grant.certifiedScopes || [];
   return scopes.includes("*") || scopes.includes(scope);
 }
 

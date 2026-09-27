@@ -40,8 +40,9 @@ lossless grow→recreate roundtrip · `verifyIntegrity` all layers · ECDSA
 sign/verify + tamper-rejection · deterministic key vector · offline-stable epoch token.
 
 **Two inputs still needed from you** before the live loop works:
-1. Set `ROOT_ADMIN_UIDS` in `src/identity/access-control.js` to your `biochain-ai`
-   Firebase Auth UID (per-project — not any Owl Academy UID), or no one can hold ADMIN.
+1. In the Firebase console → Firestore, create `config/rootAdmins` with field
+   `uids: ["<your biochain-ai Auth UID>"]` (per-project — not any Owl Academy UID),
+   or no one can hold ADMIN. Clients cannot write this doc; it is console-only.
 2. Confirm the epoch service choice: it currently uses a **local, offline-safe**
    window token (NOAA enrichment is optional/off) — the recommended decoupled default.
 
@@ -161,7 +162,7 @@ porting Layer 3 and Layer 4.
 | Genesis Registrar / `genesis-registrar.js` | **Access Control** / `access-control.js` | module |
 | Genesis Seed / Validation Certificate | **Role Certificate** | concept |
 | Tier: `ARCHON` / `INSTRUCTOR` / `ACOLYTE` | Role: **`ADMIN` / `OPERATOR` / `MEMBER`** | enum |
-| `GENESIS_MASTER_UIDS` | **`ROOT_ADMIN_UIDS`** | const |
+| `GENESIS_MASTER_UIDS` | **`config/rootAdmins`** (`uids`) | Firestore doc (console-managed) |
 | `resolveTier` / `stampPriority` | `resolveRole` / `contentPriority` | fn |
 | priority `canonical/validated/experimental` | **`certified/reviewed/draft`** | enum |
 
@@ -254,7 +255,7 @@ Every file that must move, with the transformation applied. This is the
 | Source | Target | Transform |
 |---|---|---|
 | `scripts/spire-registrar.js` | `src/identity/identity-registry.js` | Rename symbols/§4; drop `owlAcademy_codex` localStorage key → `biochain_identity` |
-| `scripts/genesis-registrar.js` | `src/identity/access-control.js` | Roles ADMIN/OPERATOR/MEMBER; `ROOT_ADMIN_UIDS` (set the real admin UID); `resolveRole` |
+| `scripts/genesis-registrar.js` | `src/identity/access-control.js` | Roles ADMIN/OPERATOR/MEMBER; `config/rootAdmins` + `roleGrants/{uid}`; `resolveRole`, `grantRole` |
 | `scripts/seal-crypto.js` | `src/identity/crypto-core.js` | Rename `seal*`→`key*`/`attestation*`; keep ECDSA P-256 + SHD-CCP vector math intact |
 | `scripts/minor-tome.js` | `src/identity/signing-key.js` | Rename fns/collections (`minorTomes`→`signingKeys`, `seals`→`keyRegistry`) |
 | `scripts/schumann-oracle.js` | `src/identity/epoch-service.js` | `tick`→`epoch`; keep the NOAA-Kp math (or stub to a monotonic epoch — see note) |
@@ -320,7 +321,7 @@ console/*.html
          ├─ src/identity/epoch-service.js        (NOAA Kp, soft-fail)
          ├─ src/identity/signing-key.js
          │     └─ src/identity/crypto-core.js    (ECDSA P-256, pure)
-         │     └─ src/identity/access-control.js (ROOT_ADMIN_UIDS, roles)
+         │     └─ src/identity/access-control.js (config/rootAdmins, roleGrants, roles)
          └─ src/biomesh/identicon.js
 protocol/*.py   (standalone; no browser coupling — the pinned reference)
 ```
@@ -388,7 +389,7 @@ Sign-off gate. "Everything accounted for" = every box ticked.
 | Import-path breakage during Layer 3 rename | Med | The §5 manifest is exhaustive; port module-by-module and run the Node self-checks after each. |
 | Missing composite index at runtime | Low | Firestore prints the exact index link; §11 pre-seeds the known one. |
 | NOAA Kp dependency flaky | Low | Epoch service soft-fails to local base (option (b)). |
-| Role gate lockout (no admin) | Med | Set `ROOT_ADMIN_UIDS` to your real Firebase UID **before** Phase 4; the master-UID path grants ADMIN even with no certificate. |
+| Role gate lockout (no admin) | Med | Create `config/rootAdmins` with your real Firebase UID **before** Phase 4; root-admin UIDs resolve to ADMIN with no grant needed. |
 | Accidental writes to Owl Academy | Low | Work only in `BioChain-AI/`; the acceptance checklist verifies Owl Academy is unchanged. |
 
 **Rollback:** the platform is greenfield in a repo that currently only serves a
