@@ -46,6 +46,7 @@
         #seedPanel button.amber { background:rgba(245,166,35,.12); color:#ffe6c2; border-color:rgba(245,166,35,.45); }
         #seedPanel button.amber:hover { background:rgba(245,166,35,.24); }
         #seedStatus { font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#9fb4c8; line-height:1.5; min-height:15px; word-break:break-all; }
+        #seedStatus a { color:#7fe9c4; text-decoration:underline; }
         #seedStatus .ok { color:#00ff88; } #seedStatus .bad { color:#f87171; } #seedStatus .warn { color:#f5a623; }
         #helpBtn {
             position:absolute; right:14px; bottom:200px; z-index:60; width:40px; height:40px; border-radius:50%;
@@ -92,7 +93,8 @@
         <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move · <kbd>Z</kbd>/<kbd>C</kbd> up/down<br>
         <kbd>Shift</kbd>+click multi-select · <kbd>G</kbd> chain mode<br>
         <kbd>Space</kbd> flow · <kbd>Esc</kbd> orbit<br>
-        <a href="guides/Lattice_Forge_Guide.html" target="_blank">How this works →</a>
+        <a href="guides/Lattice_Forge_Guide.html" target="_blank">How this works →</a><br>
+        <a href="../index.html">Home</a> · <a href="Operations_Console.html">Operations Console</a>
     </div>
 
     <div id="chainBadge" class="panel"><b>⛓ CHAIN MODE</b> · click vertices to link<br><span id="chainBadgeInfo"></span></div>
@@ -990,19 +992,31 @@
             r.onload = () => { document.getElementById('seedBox').value = r.result; setStatus(`Loaded ${f.name}. Click Regrow to rebuild.`, 'ok'); };
             r.readAsText(f); e.target.value = '';
         }
+        // Mesh session for Publish / Crystallize. Waits for Firebase to restore
+        // the signed-in session (auth.currentUser is null until it does) and picks
+        // the caller's first ACTIVE signing key from the owner-only key store.
+        async function meshSession() {
+            const BM = await import('../src/biomesh/biomesh.js');
+            const { onAuthChange } = await import('../src/firebase/auth.js');
+            const user = await new Promise((resolve) => { const off = onAuthChange((u) => { off(); resolve(u); }); });
+            if (!user) return { BM, uid: null, keyId: null };
+            const { listSigningKeys } = await import('../src/identity/signing-key.js');
+            const keys = await listSigningKeys(user.uid);
+            const key = keys.find((k) => k.status === 'active');
+            return { BM, uid: user.uid, keyId: key ? key.keyId : null };
+        }
+        const SIGN_IN_URL = '../login.html?redirect=console/Lattice_Forge.html';
+
         async function publish() {
             const s = parseSeedBox() || collectSeed();
             document.getElementById('seedBox').value = JSON.stringify(s);
             setStatus('Publishing seed to the mesh…', 'warn');
             try {
-                const BM = await import('../src/biomesh/biomesh.js');
-                const { auth } = await import('../src/firebase/config.js');
-                const uid = auth?.currentUser?.uid;
-                if (!uid) { setStatus('Sign in to publish. Seed is still exportable as a file/clipboard — that is the portable decentralized artifact.', 'warn'); return; }
+                const { BM, uid, keyId } = await meshSession();
+                if (!uid) { setStatus(`<a href="${SIGN_IN_URL}">Sign in</a> to publish. The seed is still exportable as a file or to the clipboard, which is the portable decentralized artifact.`, 'warn'); return; }
+                if (!keyId) { setStatus('Publishing needs an active signing key. Create one in the <a href="Operations_Console.html">Operations Console</a> (Keys tab), then publish again.', 'warn'); return; }
                 const seedString = JSON.stringify(s);
                 const chain = await BM.growBiochain(seedString, {});
-                const keys = await BM.listSigningKeys?.(uid).catch(() => []);
-                const keyId = Array.isArray(keys) && keys[0] ? (keys[0].keyId || keys[0].id) : null;
                 await BM.publishBiochain(uid, keyId, chain, { title: 'Lattice Forge lattice ' + s.hash, kind: 'latticeforge.lattice_seed' });
                 setStatus(`Published as biochain ${chain.chainId || ''} — decentralized nodes can fetch it and Regrow the identical lattice. hash ${s.hash}`, 'ok');
             } catch (err) {
@@ -1485,13 +1499,11 @@
             const env = collectEnvironment(); const cost = crystEstimate(); CRYST.lastCost = cost;
             pumpLog(`◈ CRYST commit — window OK · cost ≈ ${cost} CRYST · env ${env.hash}. FLUX simulation was free.`, 'scal');
             try {
-                const BM = await import('../src/biomesh/biomesh.js');
-                const { auth } = await import('../src/firebase/config.js');
-                const uid = auth?.currentUser?.uid;
-                if (uid) {
+                const { BM, uid, keyId } = await meshSession();
+                if (uid && !keyId) {
+                    pumpLog('◈ CRYST commit needs an active signing key. Create one in the Operations Console (Keys tab), then commit again.', 'sys');
+                } else if (uid) {
                     const chain = await BM.growBiochain(JSON.stringify(env), {});
-                    const keys = await BM.listSigningKeys?.(uid).catch(() => []);
-                    const keyId = Array.isArray(keys) && keys[0] ? (keys[0].keyId || keys[0].id) : null;
                     await BM.publishBiochain(uid, keyId, chain, { title: 'Lattice Forge environment ' + env.hash, kind: 'latticeforge.environment', crystCost: cost });
                     pumpLog(`◈ crystallized as biochain ${chain.chainId || ''} · ${cost} CRYST issued against compute.`, 'scal');
                 } else {
