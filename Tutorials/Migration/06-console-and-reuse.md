@@ -53,7 +53,7 @@ it free, and rate — with no Academy dependency anywhere.
 
 ## 6.4 Relink the landing page
 
-`Index.html` already exists. Add entry points to `login.html` and the console so
+`index.html` (the landing page) already exists. Add entry points to `login.html` and the console so
 the standalone site is navigable. Deployment stays on GitHub Pages
 (`.github/workflows/static.yml`) — no server needed; Firestore + rules are the
 backend.

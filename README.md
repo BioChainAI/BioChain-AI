@@ -16,6 +16,7 @@ implementation and is never modified.
 
 | If you want to… | Read |
 |---|---|
+| Understand what BioChain does, how to use it, and the roadmap | [`index.html`](index.html) — the landing page ([live site](https://biochainai.github.io/BioChain-AI/)) |
 | Verify the migration is fully accounted for | [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) — the authoritative plan + acceptance checklist |
 | Actually perform / repeat the deployment | [`Tutorials/Migration/`](Tutorials/Migration/README.md) — the step-by-step scaffold ([browsable page](Tutorials/Migration/index.html)) |
 | Understand the protocol core | `protocol/README.md` (added in Phase 2) |
