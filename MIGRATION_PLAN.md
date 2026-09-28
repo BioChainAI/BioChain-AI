@@ -94,7 +94,7 @@ protocol.
 
 ```
 BioChain-AI/
-├── Index.html                      # existing landing (kept; relink to console)
+├── index.html                      # landing page (Human_Interface_Guide.html = former Index.html)
 ├── login.html                      # NEW — auth entry point
 ├── firebase.json                   # ✅ staged — rules/indexes/emulator config
 ├── firestore.rules                 # ✅ staged — standalone enterprise rules

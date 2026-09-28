@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioChain AI — Lossless, Attested, Traceable Data</title>
+<meta name="description" content="BioChain turns data into a biochain: a record that rebuilds the original bytes exactly, proves it has not been altered, is signed by its maker, and records every change of owner — all on the 64-bit SHD-CCP protocol.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#05030a; --panel:#0c0918; --panel-2:#110d22; --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.14);
+    --text:#cbd5e1; --muted:#8b93a7; --faint:#5f6678; --white:#f4f6fb;
+    --cyan:#00d4ff; --emerald:#10b981; --purple:#a26bff; --gold:#d4af37; --rose:#f87171; --amber:#f5b945;
+    --bar-good:#2f8fe0; --bar-bad:#e5484d;
+    --serif:'Cinzel',serif; --sans:'Inter',system-ui,sans-serif; --mono:'Fira Code',ui-monospace,monospace;
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:72px}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+  body{margin:0;background:var(--void);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.65;
+    background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(138,43,226,.16),transparent 70%),
+      radial-gradient(ellipse 50% 40% at 90% 30%,rgba(16,185,129,.05),transparent 70%);background-attachment:fixed;overflow-x:hidden}
+  a{color:var(--cyan);text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,.mono{font-family:var(--mono);font-size:.86em}
+  code{background:rgba(255,255,255,.06);border:1px solid var(--line);padding:.08em .38em;border-radius:5px;color:#e2e8f0;word-break:break-word}
+  h1,h2,h3{color:var(--white);line-height:1.2;margin:0}
+  h1,h2{font-family:var(--serif);letter-spacing:.01em}
+  h2{font-size:clamp(1.6rem,3.2vw,2.2rem)}
+  h3{font-family:var(--sans);font-size:1.08rem;font-weight:600}
+  p{margin:0 0 1em}
+  strong{color:var(--white);font-weight:600}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 20px}
+  .muted{color:var(--muted)} .faint{color:var(--faint)}
+
+  /* ---------- nav ---------- */
+  .nav{position:sticky;top:0;z-index:50;background:rgba(5,3,10,.82);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+  .nav .wrap{display:flex;align-items:center;gap:16px;height:60px}
+  .brand{display:flex;align-items:center;gap:10px;color:var(--white);font-family:var(--serif);font-weight:700;letter-spacing:.14em;font-size:.95rem;white-space:nowrap}
+  .brand:hover{text-decoration:none}
+  .brand svg{flex:none}
+  .brand b{color:var(--emerald);font-weight:700}
+  .nav-links{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links a{color:var(--muted);font-size:.84rem;padding:6px 10px;border-radius:6px;white-space:nowrap}
+  .nav-links a:hover,.nav-links a.active{color:var(--white);background:rgba(255,255,255,.06);text-decoration:none}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:8px;font-weight:600;font-size:.9rem;border:1px solid transparent;white-space:nowrap;transition:transform .15s,filter .15s,background .15s}
+  .btn:hover{text-decoration:none;transform:translateY(-1px);filter:brightness(1.1)}
+  .btn-primary{background:linear-gradient(90deg,var(--cyan),var(--emerald));color:#03140f}
+  .btn-ghost{border-color:var(--line-2);color:var(--white);background:rgba(255,255,255,.03)}
+  .btn-sm{padding:7px 13px;font-size:.82rem}
+  @media (max-width:860px){.nav-links{display:none}.nav .btn-sm{margin-left:auto}}
+
+  /* ---------- sections ---------- */
+  section{padding:88px 0;border-top:1px solid var(--line)}
+  .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.16em;text-transform:uppercase;color:var(--emerald);margin-bottom:12px;display:block}
+  .lead{font-size:1.08rem;color:#aeb7c8;max-width:760px;margin-top:14px}
+  .sec-head{margin-bottom:40px}
+  .sub{margin:56px 0 18px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .sub .num{font-family:var(--mono);color:var(--faint);font-size:.82rem}
+
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+  @media (max-width:900px){.g3,.g4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:620px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}}
+  .card{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:14px;padding:22px}
+  .card h3{margin-bottom:8px}
+  .card p:last-child{margin-bottom:0}
+  .card p{font-size:.94rem}
+  .icon{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;margin-bottom:14px;border:1px solid var(--line-2);background:rgba(255,255,255,.03)}
+
+  /* ---------- hero ---------- */
+  .hero{padding:96px 0 72px;border-top:0;position:relative}
+  .hero canvas{position:absolute;inset:0;width:100%;height:100%;z-index:-1;opacity:.55;mask-image:linear-gradient(180deg,#000 40%,transparent);-webkit-mask-image:linear-gradient(180deg,#000 40%,transparent)}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:5px 12px;border:1px solid rgba(16,185,129,.35);background:rgba(16,185,129,.08);color:#6ee7b7;border-radius:999px;font-family:var(--mono);font-size:.74rem;letter-spacing:.06em}
+  .pill i{width:7px;height:7px;border-radius:50%;background:var(--emerald);box-shadow:0 0 10px var(--emerald)}
+  .hero h1{font-size:clamp(2.1rem,5.4vw,3.7rem);margin:22px 0 18px;max-width:900px}
+  .hero h1 span{background:linear-gradient(90deg,var(--cyan),var(--emerald));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .lead{font-size:1.15rem;max-width:720px}
+  .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+  .props{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:56px}
+  @media (max-width:860px){.props{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .prop{border-left:2px solid var(--c,var(--cyan));padding:4px 0 4px 14px}
+  .prop b{display:block;color:var(--white);font-weight:600;font-size:.98rem}
+  .prop span{color:var(--muted);font-size:.86rem}
+
+  .stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:40px}
+  @media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  .stat{background:rgba(255,255,255,.025);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat b{display:block;font-family:var(--mono);font-size:1.55rem;color:var(--white);font-weight:500;line-height:1.2}
+  .stat span{font-size:.8rem;color:var(--muted);line-height:1.4;display:block;margin-top:4px}
+
+  /* ---------- tags ---------- */
+  .tag{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:2px 8px;border-radius:5px;letter-spacing:.03em;white-space:nowrap;vertical-align:middle}
+  .t-live{background:rgba(16,185,129,.12);color:#6ee7b7;border:1px solid rgba(16,185,129,.3)}
+  .t-sim{background:rgba(162,107,255,.12);color:#c4a6ff;border:1px solid rgba(162,107,255,.3)}
+  .t-api{background:rgba(0,212,255,.1);color:#7ee6ff;border:1px solid rgba(0,212,255,.28)}
+  .t-plan{background:rgba(245,185,69,.1);color:#f8d27f;border:1px solid rgba(245,185,69,.3)}
+  .t-admin{background:rgba(248,113,113,.1);color:#fca5a5;border:1px solid rgba(248,113,113,.3)}
+
+  /* ---------- tables ---------- */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+  table{width:100%;border-collapse:collapse;font-size:.9rem;min-width:560px}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-weight:600;color:var(--white);background:rgba(255,255,255,.03);font-size:.8rem;letter-spacing:.03em}
+  tr:last-child td{border-bottom:0}
+  td:first-child{color:var(--white)}
+
+  /* ---------- architecture diagram ---------- */
+  .arch{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:20px;align-items:center}
+  @media (max-width:820px){.arch{grid-template-columns:minmax(0,1fr)}}
+  .layers{display:flex;flex-direction:column;gap:10px}
+  .layer{border:1px solid var(--line-2);border-radius:12px;padding:14px 18px;background:var(--panel);position:relative}
+  .layer + .layer::before{content:"";position:absolute;left:50%;top:-11px;height:10px;border-left:1px dashed var(--faint)}
+  .layer .ln{font-family:var(--mono);font-size:.72rem;color:var(--faint);letter-spacing:.08em}
+  .layer h3{font-size:1rem;margin:2px 0 4px}
+  .layer p{font-size:.86rem;margin:0;color:var(--muted)}
+  .layer.core{border-color:rgba(0,212,255,.55);background:linear-gradient(180deg,rgba(0,212,255,.08),var(--panel));box-shadow:0 0 30px -12px rgba(0,212,255,.5)}
+  .refstack{border:1px dashed rgba(162,107,255,.5);border-radius:12px;padding:18px;background:rgba(162,107,255,.04)}
+  .refstack h3{font-size:1rem;margin-bottom:8px}
+  .refstack ul{margin:0 0 10px;padding-left:18px;font-size:.88rem}
+  .refstack p{font-size:.82rem;color:var(--muted);margin:0}
+
+  /* ---------- packet ---------- */
+  .packet{display:grid;grid-template-columns:repeat(32,minmax(0,1fr));gap:3px;margin:20px 0 8px}
+  .bit{aspect-ratio:1/1.35;border-radius:3px;background:var(--c);opacity:.78;cursor:pointer;position:relative;transition:opacity .12s,transform .12s;border:0;padding:0}
+  .bit.dim{opacity:.18}
+  .bit.hl{opacity:1;transform:translateY(-2px)}
+  .bit-idx{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.68rem;color:var(--faint)}
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0}
+  .legend button{font:inherit;font-size:.8rem;color:var(--text);background:rgba(255,255,255,.03);border:1px solid var(--line-2);border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+  .legend button[aria-pressed="true"]{border-color:var(--c);background:rgba(255,255,255,.08);color:var(--white)}
+  .legend i{width:10px;height:10px;border-radius:3px;background:var(--c)}
+  .field-info{min-height:84px;border:1px solid var(--line);border-radius:12px;padding:14px 18px;background:var(--panel);font-size:.92rem}
+  .field-info b{color:var(--white)}
+
+  /* ---------- steps / pipeline ---------- */
+  .pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;counter-reset:s}
+  @media (max-width:900px){.pipeline{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:520px){.pipeline{grid-template-columns:minmax(0,1fr)}}
+  .pipe{border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel);counter-increment:s}
+  .pipe::before{content:counter(s,decimal-leading-zero);font-family:var(--mono);font-size:.74rem;color:var(--cyan)}
+  .pipe h3{font-size:.96rem;margin:4px 0 6px}
+  .pipe p{font-size:.85rem;margin:0;color:var(--muted)}
+
+  .formula{font-family:var(--mono);font-size:clamp(.82rem,2vw,1rem);background:#07050f;border:1px solid var(--line-2);border-radius:10px;padding:16px 18px;color:#e2e8f0;overflow-x:auto;line-height:1.9;margin:14px 0}
+  .formula .v{color:var(--cyan)} .formula .o{color:var(--faint)}
+
+  .howto{display:flex;flex-direction:column;gap:0;counter-reset:h}
+  .hstep{display:grid;grid-template-columns:52px minmax(0,1fr);gap:18px;position:relative;padding-bottom:28px;counter-increment:h}
+  .hstep::before{content:counter(h);width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:500;color:var(--white);background:var(--panel-2);border:1px solid rgba(0,212,255,.45);box-shadow:0 0 18px -6px rgba(0,212,255,.6);grid-row:1/span 3}
+  .hstep:not(:last-child)::after{content:"";position:absolute;left:20px;top:44px;bottom:4px;border-left:1px dashed var(--line-2)}
+  .hstep h3{margin:8px 0 6px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .hstep p{font-size:.95rem;margin-bottom:.5em}
+  .where{font-size:.84rem;color:var(--muted)}
+  .where b{color:var(--text);font-weight:500}
+
+  .callout{border:1px solid rgba(245,185,69,.35);background:rgba(245,185,69,.06);border-radius:12px;padding:14px 18px;font-size:.92rem;margin:18px 0}
+  .callout.info{border-color:rgba(0,212,255,.3);background:rgba(0,212,255,.05)}
+  .callout b{color:var(--white)}
+
+  pre{background:#07050f;border:1px solid var(--line-2);border-radius:10px;padding:16px 18px;overflow-x:auto;font-family:var(--mono);font-size:.84rem;line-height:1.7;color:#d7dce6;margin:0}
+  pre .c{color:var(--faint)} pre .ok{color:#6ee7b7}
+
+  /* ---------- lifecycle ---------- */
+  .flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:stretch}
+  @media (max-width:860px){.flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media (max-width:520px){.flow{grid-template-columns:minmax(0,1fr)}}
+  .node{border:1px solid var(--line-2);border-radius:12px;padding:14px 16px;background:var(--panel);position:relative}
+  .node h3{font-size:.95rem;margin-bottom:4px}
+  .node p{font-size:.82rem;color:var(--muted);margin:0}
+  .node code{font-size:.78em}
+  .node.hot{border-color:rgba(0,212,255,.55);box-shadow:0 0 24px -12px rgba(0,212,255,.6)}
+  .node .arrow{position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:.9rem;z-index:1}
+  @media (max-width:860px){.node .arrow{display:none}}
+  .flow-note{margin-top:12px;border:1px dashed var(--line-2);border-radius:10px;padding:10px 14px;font-size:.84rem;color:var(--muted);text-align:center}
+
+  /* ---------- chart ---------- */
+  .chart{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
+  .chart h3{margin-bottom:2px}
+  .chart .cap{font-size:.84rem;color:var(--muted);margin-bottom:18px}
+  .bars{position:relative}
+  .brow{display:grid;grid-template-columns:minmax(120px,230px) minmax(0,1fr);gap:14px;align-items:center;padding:5px 0;border-radius:6px}
+  .brow:hover{background:rgba(255,255,255,.03)}
+  .blabel{font-size:.84rem;color:var(--text);text-align:right;line-height:1.3}
+  .btrack{position:relative;height:22px}
+  .bar{position:absolute;left:0;top:3px;height:16px;border-radius:0 4px 4px 0;background:var(--bc)}
+  .bval{position:absolute;top:0;font-family:var(--mono);font-size:.8rem;color:var(--white);line-height:22px;padding-left:8px}
+  .bline{position:absolute;top:-6px;bottom:-6px;border-left:1px dashed var(--muted);pointer-events:none}
+  .bline span{position:absolute;top:-18px;left:4px;font-family:var(--mono);font-size:.7rem;color:var(--muted);white-space:nowrap}
+  .baxis{display:grid;grid-template-columns:minmax(120px,230px) minmax(0,1fr);gap:14px;margin-top:6px}
+  .baxis .ticks{position:relative;height:18px;border-top:1px solid var(--line-2);font-family:var(--mono);font-size:.7rem;color:var(--faint)}
+  .baxis .ticks span{position:absolute;top:4px;transform:translateX(-50%)}
+  .chart-legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px;font-size:.82rem;color:var(--muted)}
+  .chart-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--bc);vertical-align:-1px;margin-right:6px}
+  .tip{position:fixed;pointer-events:none;background:#15112a;border:1px solid var(--line-2);border-radius:8px;padding:8px 12px;font-size:.8rem;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:100;opacity:0;transition:opacity .1s;max-width:260px}
+  .tip b{color:var(--white);display:block}
+  @media (max-width:520px){.brow,.baxis{grid-template-columns:96px minmax(0,1fr)}.blabel{font-size:.74rem}}
+
+  /* ---------- roadmap ---------- */
+  .road{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  @media (max-width:760px){.road{grid-template-columns:minmax(0,1fr)}}
+  .ritem{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+  .ritem header{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .ritem h3{font-size:1rem}
+  .ritem .now,.ritem .next{font-size:.88rem;margin:0;padding-left:12px;border-left:2px solid var(--line-2)}
+  .ritem .next{border-left-color:var(--amber);color:var(--white)}
+  .ritem .k{display:block;font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:2px}
+  .ritem .next .k{color:var(--amber)}
+  .rfilter{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+  .rfilter button{font:inherit;font-size:.82rem;color:var(--muted);background:transparent;border:1px solid var(--line-2);border-radius:999px;padding:6px 14px;cursor:pointer}
+  .rfilter button[aria-pressed="true"]{color:var(--white);background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.3)}
+
+  details{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:10px}
+  summary{cursor:pointer;padding:14px 18px;font-weight:600;color:var(--white);list-style:none;display:flex;justify-content:space-between;gap:12px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";font-family:var(--mono);color:var(--muted)}
+  details[open] summary::after{content:"–"}
+  details .body{padding:0 18px 16px;font-size:.93rem}
+
+  .tools a.card{display:block;color:inherit;transition:border-color .15s,transform .15s}
+  .tools a.card:hover{text-decoration:none;border-color:rgba(0,212,255,.45);transform:translateY(-2px)}
+  .tools .card h3{display:flex;justify-content:space-between;gap:8px;align-items:center}
+
+  footer{border-top:1px solid var(--line);padding:48px 0 64px;font-size:.88rem;color:var(--muted)}
+  footer .cols{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:28px}
+  @media (max-width:760px){footer .cols{grid-template-columns:1fr 1fr}}
+  footer h4{color:var(--white);font-size:.82rem;margin:0 0 10px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+  footer ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+  footer a{color:var(--muted)} footer a:hover{color:var(--white)}
+  :focus-visible{outline:2px solid var(--cyan);outline-offset:2px;border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<nav class="nav" aria-label="Primary">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="BioChain AI home">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="16" cy="16" r="14.5" stroke="#10b981" stroke-opacity=".7"/>
+        <path d="M11 7c6 3 6 6 0 9s-6 6 0 9M21 7c-6 3-6 6 0 9s6 6 0 9" stroke="#00d4ff" stroke-width="1.6" stroke-linecap="round"/>
+        <path d="M12.5 11.5h7M12.5 20.5h7" stroke="#10b981" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      BIOCHAIN <b>AI</b>
+    </a>
+    <div class="nav-links" id="navlinks">
+      <a href="#overview">Overview</a>
+      <a href="#capabilities">Capabilities</a>
+      <a href="#get-started">How to use</a>
+      <a href="#how-it-works">How it works</a>
+      <a href="#security">Security</a>
+      <a href="#mesh">Reference mesh</a>
+      <a href="#results">Results</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+    <a class="btn btn-primary btn-sm" href="login.html">Open the platform →</a>
+  </div>
+</nav>
+
+<main id="top">
+
+<!-- ================= HERO ================= -->
+<header class="hero">
+  <canvas id="net" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <span class="pill"><i></i>Built on the SHD-CCP 64-bit packet protocol</span>
+    <h1>Lossless, attested, <span>traceable data chains.</span></h1>
+    <p class="lead">BioChain turns a piece of data into a <strong>biochain</strong>: a record that anyone can rebuild, check and trace back to its makers, without having to trust whoever stores it. Every claim about a record is something any party can recompute. Nothing is taken on a node's word.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="login.html">Sign in &amp; grow a biochain</a>
+      <a class="btn btn-ghost" href="#get-started">Read the how-to guide</a>
+      <a class="btn btn-ghost" href="#roadmap">See the roadmap</a>
+    </div>
+
+    <div class="props">
+      <div class="prop" style="--c:var(--cyan)"><b>Exact</b><span>Rebuilds the original bytes, bit for bit</span></div>
+      <div class="prop" style="--c:var(--emerald)"><b>Unaltered</b><span>Three independent integrity commitments</span></div>
+      <div class="prop" style="--c:var(--gold)"><b>Signed</b><span>ECDSA P-256 attestation by its maker</span></div>
+      <div class="prop" style="--c:var(--purple)"><b>Traceable</b><span>Every change of owner is a permanent signed record</span></div>
+    </div>
+
+    <div class="stats" aria-label="Measured results">
+      <div class="stat"><b>64/64</b><span>bits used by the SHD-CCP packet</span></div>
+      <div class="stat"><b>1.47</b><span>value on structured text (bytes recreated per byte shipped)</span></div>
+      <div class="stat"><b>+56.5%</b><span>residual cut by a pretrained codex on held-out text</span></div>
+      <div class="stat"><b>52/52</b><span>protocol self-checks passing</span></div>
+      <div class="stat"><b>47/47</b><span>security-rule attack &amp; flow checks passing</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ================= OVERVIEW ================= -->
+<section id="overview">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">01 · Overview</span>
+      <h2>One question, answered by recomputation</h2>
+      <p class="lead">Can a shared data record be compact, exactly recoverable, provably unaltered and traceable to its makers, without trusting whoever stores it? BioChain answers yes by making every property something the reader checks for themselves.</p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card">
+        <div class="icon" style="color:var(--cyan)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12h8M12 8v8"/></svg></div>
+        <h3>Determinism is protocol law</h3>
+        <p>Quaternions travel as exact 8-bit fixed-point codes, consensus code reads raw integers, and independent runs must produce bit-identical output.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="color:var(--emerald)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h10M4 17h6"/></svg></div>
+        <h3>Logic is configuration, not code</h3>
+        <p>A <em>codex</em>, the model that drives compression, is a program in a closed, jump-free instruction set. It always halts, and a malformed one is rejected before it runs.</p>
+      </div>
+      <div class="card">
+        <div class="icon" style="color:var(--gold)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></div>
+        <h3>Count everything shipped</h3>
+        <p>A record's value is scored against the total of seed, codex, residual and commitment bytes, so hiding data inside the model gains nothing.</p>
+      </div>
+    </div>
+
+    <div class="sub"><h3>What BioChain contributes</h3></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Contribution</th><th>Where it's explained</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>A 64-bit packet format (SHD-CCP) that serves as instruction, compression unit and commitment element</td><td><a href="#packet">The SHD-CCP packet</a></td></tr>
+          <tr><td>2</td><td>A lossless grow/unfold pipeline with three independent integrity commitments</td><td><a href="#growing">Growing a biochain</a></td></tr>
+          <tr><td>3</td><td>A closed-ISA codex model with a measured, anti-gaming value law and held-out attunement</td><td><a href="#codex">Codexes &amp; the value law</a></td></tr>
+          <tr><td>4</td><td>A signed, revocable, single-use ownership-transfer protocol, enforced server-side by Firestore rules</td><td><a href="#lifecycle">Lifecycle</a> · <a href="#security">Security</a></td></tr>
+          <tr><td>5</td><td>A reference decentralized mesh with sampled validation, a two-token economy, pump time, chiral attestation and sharded storage</td><td><a href="#mesh">Reference mesh</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:.88rem;margin-top:14px">BioChain composes earlier bodies of work: NeuroMesh (transport), the Spire Mesh study (validator anatomy), the Engram Codec and Ontological Codex (quaternion delta-chain math) and POLYCENTRIA (oracle proposes, certifier decides). It began inside Owl Academy and was migrated out as a standalone deployment. Only the names changed; the protocol did not.</p>
+  </div>
+</section>
+
+<!-- ================= CAPABILITIES ================= -->
+<section id="capabilities">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">02 · Capabilities</span>
+      <h2>Built twice: a live platform and a reference network</h2>
+      <p class="lead">BioChain exists as two implementations that share one packet format. The <span class="tag t-live">Live</span> browser platform on Firebase is what you use today. The <span class="tag t-sim">Simulation</span> Python reference stack runs the full decentralized design end to end. Some features are <span class="tag t-api">API only</span>: they work in the BioMesh module but have no console button yet.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Capability</th><th>What it does</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Grow a biochain</td><td>Compress text losslessly into a framed, self-describing packet stream with a Merkle root and chiral weave</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Certify &amp; publish</td><td>Sign a <code>GROWN/1</code> commitment and write the chain with you as grower and owner</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Verify integrity</td><td>Rebuild every byte from the stored stream and check parity, leaves, root and weave</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Signing keys</td><td>Create and revoke ECDSA P-256 keys; revoking a key invalidates every attestation it signed</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Free transfers</td><td>Signed, single-use <code>TRANSFER/1</code> hand-offs the recipient must accept</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Marketplace &amp; ratings</td><td>List chains, rate them (one rating per user per chain), compute a 0–100 success score</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Trace lineage</td><td>Verify certification, every hop's attestation, and full integrity in one call</td><td><span class="tag t-live">Live</span></td></tr>
+          <tr><td>Language Studio</td><td>Retrieval agent that recalls stored passages by engram similarity</td><td><span class="tag t-live">Live</span> <span class="tag t-admin">ADMIN</span></td></tr>
+          <tr><td>Extend a chain</td><td>Grow a child chain by epochs, signed <code>GROWTH/1</code>; parent never changes</td><td><span class="tag t-api">API only</span></td></tr>
+          <tr><td>Codexes</td><td>Distill (<code>deriveCodex</code>), publish (<code>CODEX/1</code>) and pair (<code>PAIR/1</code>) a codex with a chain</td><td><span class="tag t-api">API only</span> · pairing is metadata for now</td></tr>
+          <tr><td>Validator mesh</td><td>9 nodes in 3 tiers, gossip, sampled and full-replay validation</td><td><span class="tag t-sim">Simulation</span></td></tr>
+          <tr><td>FLUX &amp; CRYST tokens</td><td>A non-transferable read meter and a scarce, value-backed compute credit</td><td><span class="tag t-sim">Simulation</span></td></tr>
+          <tr><td>Pump time &amp; chirality</td><td>A deterministic gear clock and an L/R handedness rule that blocks self-attestation</td><td><span class="tag t-sim">Simulation</span></td></tr>
+          <tr><td>Sharded storage</td><td>Split a chain across nodes, rebuild with a node down, verify without identity</td><td><span class="tag t-sim">Simulation</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW TO USE ================= -->
+<section id="get-started">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">03 · How to use BioChain</span>
+      <h2>From sign-in to a traced, transferred biochain</h2>
+      <p class="lead">Everything runs in your browser. There is no application server, and the only server-side code is the Firestore security rules. You need a Google account. Nothing else needs installing.</p>
+    </div>
+
+    <div class="howto">
+      <div class="hstep">
+        <h3>Sign in with Google</h3>
+        <p>Open the platform and choose <strong>Continue with Google</strong>. Your Firebase account becomes the anchor for your identity and keys.</p>
+        <p class="where">Where: <a href="login.html"><b>login.html</b></a></p>
+      </div>
+      <div class="hstep">
+        <h3>Commit your Identity</h3>
+        <p>On first sign-in, enter a private <strong>identity seed</strong> phrase. BioChain folds its SHA-256 into a 64-bit geometric vector and XORs it with a hash of your account ID to produce your permanent <strong>Identity ID</strong>. A live preview shows the ID and its identicon before you commit.</p>
+        <div class="callout"><b>This is one-way.</b> Once committed, the rules freeze your Identity ID, seed and geometric vector forever. The ID is a stable public handle, not a secret.</div>
+        <p class="where">Where: login.html · one-time setup</p>
+      </div>
+      <div class="hstep">
+        <h3>Create a signing key</h3>
+        <p>In the <strong>Keys</strong> tab, give the key a label and choose <strong>Create signing key</strong>. Your browser generates an ECDSA P-256 key pair with WebCrypto. The public key goes to the shared registry, and the private key is stored in a document only you can read. Every certification and transfer you make is signed with this key.</p>
+        <p class="where">Where: <a href="console/Operations_Console.html"><b>Operations Console → Keys</b></a> · <b>revoke</b> a key here too. Revocation is permanent and invalidates everything it signed.</p>
+      </div>
+      <div class="hstep">
+        <h3>Grow a biochain</h3>
+        <p>In <strong>Grow &amp; Certify</strong>, add a title, paste your text, and choose <strong>Grow (preview)</strong>. Growing is pure computation with no network: the text is split into 720-byte chunks, rank-coded, framed, and committed to a Merkle root and a chiral weave. The preview shows the chain ID (<code>BC-…</code>) and its measured value.</p>
+        <p class="where">Limit: up to <b>60,000 bytes</b> of input, so a record fits in one Firestore document.</p>
+      </div>
+      <div class="hstep">
+        <h3>Certify &amp; publish</h3>
+        <p>Choose <strong>Certify &amp; publish</strong>. Your key signs a <code>GROWN/1</code> statement and the chain is written with you as grower and owner, plus the first lineage entry. Tick <em>listed</em> to show it in the marketplace.</p>
+      </div>
+      <div class="hstep">
+        <h3>Verify, rate and list in the Marketplace</h3>
+        <p>Any chain can be <strong>verified</strong>, which rebuilds it byte for byte in your browser. Any signed-in user can <strong>rate</strong> a chain once. As owner you can <strong>list</strong> or <strong>unlist</strong> your own chains.</p>
+      </div>
+      <div class="hstep">
+        <h3>Send a biochain (always free)</h3>
+        <p>In <strong>Transfers</strong>, enter the chain ID and the recipient's user ID, then choose <strong>Send</strong>. This signs a <code>TRANSFER/1</code> record with <code>price: 0</code>, stamped with the chain's current sequence number. It waits as <em>pending</em>.</p>
+        <p class="where">Tip: the recipient's user ID is shown at the top of their console.</p>
+      </div>
+      <div class="hstep">
+        <h3>Accept or decline an incoming transfer</h3>
+        <p>Recipients see pending transfers under <strong>Incoming</strong>. <strong>Accept</strong> moves ownership to you and advances the chain's sequence by one, so the same transfer can never be applied twice. <strong>Decline</strong> leaves the owner unchanged. No transfer document is ever deleted, and together they are the chain's lineage.</p>
+      </div>
+      <div class="hstep">
+        <h3>Trace the lineage</h3>
+        <p>In <strong>Trace</strong>, enter any chain ID. <code>traceBiochain</code> verifies the certification, every hop's transfer attestation in date order, and the chain's full integrity, then returns them together.</p>
+      </div>
+    </div>
+
+    <div class="sub"><h3>Roles</h3></div>
+    <p>Everyone starts as a <strong>MEMBER</strong>, and any signed-in member can grow, transfer and rate. <strong>ADMIN</strong> and <strong>OPERATOR</strong> roles gate only the operations consoles and the weight of a rating (ADMIN counts 3×, OPERATOR 2×). Roles come only from a root-admin list editable in the Firebase console, or from grants written by an ADMIN. Nobody can grant a role to themselves.</p>
+
+    <div class="sub"><h3>Tools &amp; guides</h3></div>
+    <div class="grid g3 tools">
+      <a class="card" href="console/Operations_Console.html"><h3>Operations Console <span class="tag t-live">Live</span></h3><p class="muted">Keys, grow &amp; certify, marketplace, transfers and trace in one place.</p></a>
+      <a class="card" href="console/Language_Studio.html"><h3>Language Studio <span class="tag t-admin">ADMIN</span></h3><p class="muted">Engram retrieval agent over your biochains. Recalls genuine stored text.</p></a>
+      <a class="card" href="console/Lattice_Forge.html"><h3>Lattice Forge <span class="tag t-live">Live</span></h3><p class="muted">Design SHD-CCP packets, build and verify lattice seeds, run the synchronization pump.</p></a>
+      <a class="card" href="console/guides/Language_Studio_Guide.html"><h3>Language Studio Guide</h3><p class="muted">Walkthrough of seeds, recall, crystallize, replay and burn.</p></a>
+      <a class="card" href="console/guides/Lattice_Forge_Guide.html"><h3>Lattice Forge Guide</h3><p class="muted">Field-by-field guide to the packet designer and pump.</p></a>
+      <a class="card" href="Tutorials/Tutorial_Explorer.html"><h3>Tutorial Explorer</h3><p class="muted">Tutorials, including the Migration scaffold for redeploying the stack.</p></a>
+    </div>
+
+    <div class="sub"><h3>For developers: run the reference stack</h3></div>
+    <div class="grid g2">
+      <div>
+        <p>The Python stack in <code>protocol/</code> is pure standard library, deterministic, and dependency-free. Each module imports the one below it (kernel → codex → mesh), so the mesh run exercises the whole system.</p>
+        <p>The live platform binds to Firebase in exactly one file, <code>src/firebase/config.js</code>. Point it at another project to redeploy the whole stack. GitHub Pages serves the repository as static files.</p>
+        <p class="muted" style="font-size:.9rem">Want the architecture in depth? Start with <a href="https://github.com/BioChainAI/BioChain-AI/blob/main/protocol/README.md">protocol/README.md</a> and <a href="https://github.com/BioChainAI/BioChain-AI/blob/main/MIGRATION_PLAN.md">MIGRATION_PLAN.md</a>.</p>
+      </div>
+<pre><span class="c"># clone, then from the repo root:</span>
+python3 protocol/shdccp_kernel.py   <span class="ok">#  8/8  packet ABI</span>
+python3 protocol/codex_engine.py    <span class="ok"># 11/11 codex VM + growth</span>
+python3 protocol/biochain_mesh.py   <span class="ok"># 11/11 3-tier economy</span>
+python3 protocol/pump_clock.py      <span class="ok"># 13/13 pump + chiral layer</span>
+python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</span>
+<span class="c"># → 52/52 self-checks</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= HOW IT WORKS ================= -->
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">04 · How it works</span>
+      <h2>Four layers over one 64-bit core</h2>
+      <p class="lead">Each layer calls only the one below it. The browser copy of the protocol core is byte-identical to the Python kernel. A golden ABI hash (<code>882a8413…</code>) pins the format, and fixed test vectors such as <code>crystallize(0..59) = 9841D88D8B003CEA</code> check that both implementations agree.</p>
+    </div>
+
+    <div class="arch" aria-label="Architecture diagram">
+      <div class="layers">
+        <div class="layer"><div class="ln">LAYER 4</div><h3>Console / UI</h3><p>Operations Console, Language Studio, Lattice Forge, login. The auth guard hides every page until Google sign-in resolves.</p></div>
+        <div class="layer"><div class="ln">LAYER 3</div><h3>BioMesh services</h3><p>grow · certify · pair · send · accept · rate · trace. Identity, ECDSA signing keys, attestations, epochs, roles.</p></div>
+        <div class="layer core"><div class="ln" style="color:var(--cyan)">LAYER 2 · SHARED CORE</div><h3>Protocol core (SHD-CCP)</h3><p>64-bit packets · rank coder · Merkle root · chiral weave</p></div>
+        <div class="layer"><div class="ln">LAYER 1</div><h3>Data &amp; rules (Firestore)</h3><p>biochains, transfers, codices, ratings, keyRegistry, roleGrants. Security rules are the only server-side enforcement.</p></div>
+      </div>
+      <div class="refstack">
+        <span class="tag t-sim" style="margin-bottom:10px">Reference stack · protocol/</span>
+        <h3>The decentralized design, simulated</h3>
+        <ul>
+          <li>Pure Python, deterministic</li>
+          <li>3-tier mesh, FLUX and CRYST</li>
+          <li>Pump clock, chiral layer</li>
+          <li>Sharded engram storage</li>
+        </ul>
+        <p>Shares only Layer 2's packet format with the live app. It is not wired to the live platform.</p>
+      </div>
+    </div>
+
+    <!-- Packet -->
+    <div class="sub" id="packet"><span class="num">4.1</span><h3>The SHD-CCP packet: seven fields, exactly 64 bits</h3></div>
+    <p>Every object in BioChain, whether an instruction, a compressed chunk or a commitment, is built from one 64-bit word. Select a field to see what it holds.</p>
+    <div class="legend" id="pkt-legend" role="group" aria-label="Packet fields"></div>
+    <div class="bit-idx"><span>bit 63</span><span>bit 32</span></div>
+    <div class="packet" id="pkt-hi"></div>
+    <div class="bit-idx"><span>bit 31</span><span>bit 0</span></div>
+    <div class="packet" id="pkt-lo" style="margin-top:4px"></div>
+    <div class="field-info" id="pkt-info" aria-live="polite"></div>
+
+    <div class="grid g3" style="margin-top:20px">
+      <div class="card"><h3>No free floats on the wire</h3><p>Quaternion components are signed 8-bit codes. Code −128 normalizes to −127, so the range is symmetric. Worst measured error: 0.003937, within the 1/254 bound.</p></div>
+      <div class="card"><h3>Parity catches any flipped bit</h3><p>The self-test flips each of the 64 bits in turn and catches all 64.</p></div>
+      <div class="card"><h3>The layout is pinned</h3><p>A golden ABI hash is computed over the field map, and any change to the layout changes it. <code>crystallize(chunk)</code> folds any byte string into one packet.</p></div>
+    </div>
+
+    <!-- Growing -->
+    <div class="sub" id="growing"><span class="num">4.2</span><h3>Growing a biochain</h3></div>
+    <div class="pipeline">
+      <div class="pipe"><h3>Chunk</h3><p>Split input into 720-byte chunks. Each starts with a fresh model, so any chunk decodes on its own.</p></div>
+      <div class="pipe"><h3>Predict</h3><p>An order-2 model ranks candidate next bytes by count from the two bytes before.</p></div>
+      <div class="pipe"><h3>Correct</h3><p>Store only the byte's <em>rank</em> as an Elias-gamma code, so well-predicted bytes cost as little as 1 bit.</p></div>
+      <div class="pipe"><h3>Frame</h3><p>Crystal packet + 32-bit residual length + residual. The stream describes itself.</p></div>
+      <div class="pipe"><h3>Commit</h3><p>Merkle root, chiral weave and per-packet parity: three independent checks.</p></div>
+    </div>
+
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card"><h3>Merkle root</h3><p>Each leaf binds a chunk to its position: <code>ℓᵢ = SHA256(i ‖ SHA256(cᵢ))</code>. Leaves are hashed in pairs up to one root <code>R</code>.</p></div>
+      <div class="card"><h3>Chiral weave</h3><p>The ordered product of each chunk's unit quaternion, <code>W = q̂ₙ ⋯ q̂₁</code>. Multiplication doesn't commute, so swapping two chunks changes the result.</p></div>
+      <div class="card"><h3>Parity</h3><p>Every packet's parity bit is checked before its frame is decoded.</p></div>
+    </div>
+    <div class="callout info"><b>Chain ID</b> binds the first two commitments: <code>chainId = "BC-" + SHA256(R | W)[0:24]</code>. <b>verifyIntegrity</b> rebuilds everything and fails at the first mismatch: parity → each chunk vs its leaf → Merkle root → chiral weave → token-engram stream. <b>extendBiochain</b> grows a child chain by epochs and never changes the parent.</div>
+
+    <!-- Codex -->
+    <div class="sub" id="codex"><span class="num">4.3</span><h3>Codexes and the value law</h3></div>
+    <div class="grid g2">
+      <div>
+        <p>A codex is the model that drives compression, written as a program of packets in a closed instruction set with no jumps. It must open with <code>GEAR</code>, end with <code>HALT</code>, and contain only <code>PRIME</code> in between. The parser rejects a malformed codex before anything runs, and predictor work is fuel-metered on top of that.</p>
+        <div class="table-wrap"><table style="min-width:0">
+          <thead><tr><th>Opcode</th><th>Name</th><th>Meaning</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="mono">GEAR</td><td>Header: chunk size (64–4096 bytes), model order (1–3)</td></tr>
+            <tr><td class="mono">2</td><td class="mono">PRIME</td><td>One pretrained entry: context, next byte, count</td></tr>
+            <tr><td class="mono">0</td><td class="mono">HALT</td><td>End of program</td></tr>
+          </tbody>
+        </table></div>
+        <p style="margin-top:14px;font-size:.93rem">In the browser, <code>deriveCodex</code> keeps the 120 most frequent order-2 pairs. A codex is content-addressed (<code>CX-</code> + SHA-256 prefix), signed by its author (<code>CODEX/1</code>) and immutable once published.</p>
+      </div>
+      <div>
+        <p><strong>Value</strong> scores a growth by how many bytes it recreates per byte it ships, counting everything a verifier needs:</p>
+        <div class="formula"><span class="v">value</span> <span class="o">=</span> recreated bytes <span class="o">/</span> ( 8 <span class="o">+</span> 8·|codex|<span class="o">/</span>k <span class="o">+</span> |residual| <span class="o">+</span> 8·|chain| )</div>
+        <p style="font-size:.93rem"><code>k</code> is the number of growths a codex serves. Counting the codex closes the obvious loophole: a 528-packet codex stuffed with the corpus scores <strong>0.97</strong>, below the honest 2-packet codex at <strong>1.47</strong>.</p>
+        <p><strong>Attunement</strong> checks that a codex carries real knowledge rather than a memorized copy, by testing on held-out text:</p>
+        <div class="formula"><span class="v">ε</span> <span class="o">=</span> 1 <span class="o">−</span> |residual<sub>attuned</sub>| <span class="o">/</span> |residual<sub>fresh</sub>|</div>
+        <p style="font-size:.93rem">A 400-entry codex cuts the residual from 3,350 to 1,457 bytes (<strong>ε = +56.5%</strong>). On random data it gives ε = −0.001, an honest null. Spread over 50 growths, its value reaches <strong>3.29</strong>. That shared-dictionary effect is what the economy is designed to reward.</p>
+      </div>
+    </div>
+
+    <!-- Engrams -->
+    <div class="sub" id="engrams"><span class="num">4.4</span><h3>Token engrams and retrieval</h3></div>
+    <div class="grid g2">
+      <div>
+        <p>An <strong>engram</strong> is a 64-bit fingerprint of a word. Each letter A–Z maps to a fixed 8×8 bit grid, and a token's engram is the XOR of its letters' grids. The shared test vector is <code>engram("GEODESIC") = 5C896A4801C9C24C</code>.</p>
+        <p>A biochain's engram index turns it into a library. Text is split into passages of up to 320 characters, each keyed by its engram. Queries match by Hamming distance, and the nearest passages come back <strong>verbatim</strong>, so recall never makes up text.</p>
+      </div>
+      <div class="card">
+        <h3>What the fingerprint captures</h3>
+        <p>Because it XORs letter grids, an engram depends only on which letters appear an odd number of times. Anagrams collide and doubled letters cancel. The recalled text is always genuine, but the ranking is a lexical heuristic, not a measure of meaning.</p>
+        <p class="muted" style="font-size:.88rem">The <a href="console/Language_Studio.html">Language Studio</a> (ADMIN) wraps this as a retrieval agent that can optionally pass recalled context to an external language model. Destroying a session logs only the turn count and a parity word, never the content.</p>
+      </div>
+    </div>
+
+    <!-- Identity -->
+    <div class="sub" id="identity"><span class="num">4.5</span><h3>Identity, signing keys and attestations</h3></div>
+    <div class="grid g3">
+      <div class="card"><h3>Identity ID</h3><p>Fold₄ₓ₄ₓ₄(SHA256(seed)) ⊕ SHA256(uid)[0:8]. It is frozen forever once committed and serves as a stable public handle.</p></div>
+      <div class="card"><h3>Signing keys</h3><p>WebCrypto P-256 pairs, identified by <code>K-</code> + SHA-256(x | y). The private key sits in an owner-only document, and the public key is mirrored to <code>keyRegistry</code>.</p></div>
+      <div class="card"><h3>Attestations</h3><p><code>ATTEST/1 | keyId | keyVector | SHA256(content) | epochToken</code>. They verify only against an <em>active</em> registry key.</p></div>
+    </div>
+    <p style="margin-top:16px;font-size:.94rem">Each operation signs its own typed statement (<code>GROWN/1</code>, <code>GROWTH/1</code>, <code>CODEX/1</code>, <code>PAIR/1</code>, <code>TRANSFER/1</code>), and the verifier rehashes it from the record's fields. A signature is therefore bound to the exact record, not merely to some content. Time is stamped as <code>EPOCH.&lt;window&gt;</code> in 3-hour windows, which stay stable offline.</p>
+
+    <!-- Lifecycle -->
+    <div class="sub" id="lifecycle"><span class="num">4.6</span><h3>The BioMesh lifecycle: ownership moves only when the recipient accepts a current transfer</h3></div>
+    <div class="flow">
+      <div class="node"><h3>Grow</h3><p>In the browser: rank-coded chunks, Merkle root + weave</p><span class="arrow">→</span></div>
+      <div class="node"><h3>Certify + publish</h3><p>Grower signs <code>GROWN/1</code>, writes the chain doc</p><span class="arrow">→</span></div>
+      <div class="node"><h3>Send</h3><p>Owner signs <code>TRANSFER/1</code>, stamps <code>chainSeq</code></p><span class="arrow">→</span></div>
+      <div class="node hot"><h3>Recipient accepts?</h3><p><strong>Yes:</strong> rules check sender and sequence, ownership moves, seq + 1, and the next hop can begin.<br><strong>No:</strong> declined, owner unchanged.</p></div>
+    </div>
+    <div class="flow-note">Every write also appends to <code>auditLog</code>, which is append-only and never readable by clients.</div>
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card"><h3>Pair</h3><p>The owner attaches a published codex with a signed <code>PAIR/1</code>, so the two travel together through every transfer.</p></div>
+      <div class="card"><h3>Rate → success score</h3><p>0–100: measured value (40, full at value 2.0) + successful recreations (25) + role-weighted stars (25) + adoption (10, full at 5 transfers).</p></div>
+      <div class="card"><h3>Trace</h3><p>Certification, every hop's attestation in date order, and full integrity, returned together.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= SECURITY ================= -->
+<section id="security">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">05 · Security model</span>
+      <h2>The rules are the boundary</h2>
+      <p class="lead">All cryptography runs in the browser, so Firestore security rules are the only server-side enforcement. A guarantee holds against a hostile client only if the rules enforce it. Nothing whose history must survive can be deleted.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Collection</th><th>Who may write</th><th>Invariant enforced server-side</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">users/{uid}/identity</td><td>Owner</td><td>ID, seed and geometric vector frozen; no role fields ever</td></tr>
+          <tr><td class="mono">users/{uid}/signingKeys</td><td>Owner</td><td>Owner-only; never deleted</td></tr>
+          <tr><td class="mono">keyRegistry/{keyId}</td><td>Key owner</td><td>Born active with the owner's real role; status moves one way, to revoked or retired</td></tr>
+          <tr><td class="mono">config/rootAdmins</td><td>Nobody (console only)</td><td>Root ADMIN list cannot be changed by any client</td></tr>
+          <tr><td class="mono">roleGrants/{uid}</td><td>ADMIN</td><td>Only an ADMIN grants roles, under their own UID</td></tr>
+          <tr><td class="mono">biochains/{chainId}</td><td>Grower, owner, recipient</td><td>Grower = owner at creation; owner may edit only the listing and codex pairing; ownership moves only by a current, accepted transfer</td></tr>
+          <tr><td class="mono">transfers/{id}</td><td>Owner creates; recipient resolves</td><td>Free (<code>price == 0</code>); sender owns the chain; stamped with the current sequence; only the recipient accepts or declines</td></tr>
+          <tr><td class="mono">codices/{hash}</td><td>Creator</td><td>Immutable once created</td></tr>
+          <tr><td class="mono">ratings/{chain}_{uid}</td><td>Rater</td><td>One per user per chain; rater role must equal the real role</td></tr>
+          <tr><td class="mono">auditLog</td><td>Any signed-in user</td><td>Append-only; clients can never read it</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sub"><h3>Hardening applied: four attacks, four fixes</h3></div>
+    <div class="grid g2">
+      <div class="card"><h3>Ownership replay</h3><p class="muted">A previous owner re-submits an old accepted transfer to pull the chain back.</p><p><strong>Fix:</strong> a per-chain transfer sequence. A transfer applies once, and only from the current owner at the current sequence.</p></div>
+      <div class="card"><h3>Self-granted roles</h3><p class="muted">A user writes <code>role: ADMIN</code> onto their own identity. The old HMAC role certificates were keyed by a public ID, so anyone could forge one.</p><p><strong>Fix:</strong> roles come only from <code>config/rootAdmins</code> and ADMIN-written <code>roleGrants</code>.</p></div>
+      <div class="card"><h3>Reversible revocation</h3><p class="muted">An owner flips a revoked key back to active, reviving every attestation it signed.</p><p><strong>Fix:</strong> registry status is one-way, and keys are born active.</p></div>
+      <div class="card"><h3>Self-declared rater role</h3><p class="muted">A rater claims ADMIN to triple their rating's weight.</p><p><strong>Fix:</strong> the rules check <code>raterRole</code> against the rater's real role.</p></div>
+    </div>
+    <div class="callout">A <b>47-case emulator suite</b> (<code>tests/rules/</code>) checks every attack and every legitimate flow, and all 47 pass. Run against the original rules, 25 fail. <b>Deployment status:</b> this hardening lives on the <code>claude/loving-dirac-41k6at</code> branch and is pending merge into <code>main</code>.</div>
+
+    <details>
+      <summary>Residual risks we're open about</summary>
+      <div class="body">
+        <ul>
+          <li><strong>Private keys live in Firestore</strong>, in owner-only documents, not on your device. Anyone who compromises the Firebase project or your Google account obtains the keys.</li>
+          <li><strong>The lineage array is written by the client.</strong> The rules restrict which fields change on a hand-off, not what new lineage entries say. The <code>transfers</code> collection is the authoritative history.</li>
+          <li><strong>Accept is two writes.</strong> A client that marks a transfer accepted and then stops leaves ownership unmoved. The pair is not atomic.</li>
+          <li>Records written before the hardening keep their old values. Ratings that claimed a false role keep that weight until edited.</li>
+        </ul>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ================= MESH ================= -->
+<section id="mesh">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">06 · Reference mesh <span class="tag t-sim" style="margin-left:6px">Simulation</span></span>
+      <h2>The fully decentralized design</h2>
+      <p class="lead">The Python reference stack simulates 9 nodes in three tiers that exchange records by gossip. Every node re-verifies every record itself and treats nothing it receives as trusted.</p>
+    </div>
+
+    <div class="grid g3">
+      <div class="card" style="border-top:3px solid var(--emerald)"><span class="eyebrow" style="margin:0 0 6px">Tier 1</span><h3>Biostrata (edge)</h3><p>2 growers, one of them hostile. They author codexes and grow biochain claims.</p></div>
+      <div class="card" style="border-top:3px solid var(--cyan)"><span class="eyebrow" style="margin:0 0 6px;color:var(--cyan)">Tier 2</span><h3>HyperSim (mesh)</h3><p>4 validators that gossip and independently validate every record, earning FLUX.</p></div>
+      <div class="card" style="border-top:3px solid var(--purple)"><span class="eyebrow" style="margin:0 0 6px;color:var(--purple)">Tier 3</span><h3>Spire Core</h3><p>1 root anchor and 2 governors that run full replay, the twin attunement bench, crystallization and CRYST sequencing.</p></div>
+    </div>
+
+    <div class="sub"><h3>Validation processor</h3></div>
+    <p>Each node samples 3 chunks per claim, chosen by hashing the Merkle root with its own name so each node picks differently, replays them against their leaves, and recomputes the value score. Sampling is probabilistic: a tampered residual was caught by 2 of 9 nodes through sampling, and with certainty by the core's full replay. Crystallization therefore always waits for full replay.</p>
+
+    <div class="grid g2" style="margin-top:20px">
+      <div class="card">
+        <h3 style="color:var(--cyan)">FLUX: a meter, not a currency</h3>
+        <p>Earned at 1.0 per claim or codex validated and 0.1 per other record. It maps to a read quota: 5 FLUX unlocks 10 reads/min, 15 unlocks 30, 40 unlocks 60, and 80 unlocks 200. It never appears in any record, so it can't be transferred or traded.</p>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--gold)">CRYST: scarce, backed by measured value</h3>
+        <div class="formula" style="margin:6px 0 10px">CRYST issued = 100 × value × ε</div>
+        <p>Every validator recomputes the value, and two governors must agree bit for bit on ε. It is redeemable at 12 compute-seconds per CRYST. In the run, a claim with value 1.45 and ε 0.250 issued 36 CRYST. Replayed transfers and overdrafts were rejected everywhere.</p>
+      </div>
+    </div>
+
+    <div class="grid g3" style="margin-top:16px">
+      <div class="card">
+        <h3>Pump time</h3>
+        <p>A gear counter any node computes identically: 720 frames per cycle, 12 sectors. Positions read <code>PUMP.&lt;cycle&gt;.&lt;sector&gt;.&lt;middle&gt;.&lt;inner&gt;</code>. For example, frame 437 is <code>PUMP.0.7.43.6</code>. Gear alignments define handoff windows (12 per cycle) and crystallization windows (ticks 6 and 12).</p>
+      </div>
+      <div class="card">
+        <h3>Chirality &amp; the pairing rule</h3>
+        <p>Every identity has a public hand, L or R. Crystallization needs at least 2 attesters of the hand <em>opposite</em> the grower's, so a grower can never attest its own growth. The genesis anchors must include one L and one R. The limits are stated plainly: chirality is structure, not cryptographic hardness, and ECDSA remains the lock.</p>
+      </div>
+      <div class="card">
+        <h3>Sharded engram storage</h3>
+        <p>A chain is cut into segments (7 over 15 chunks) stored on 2 of 5 nodes. Quaternion multiplication is associative, so segment products rebuild the exact global weave (0.0 rad error). The chain rebuilds with a node dead, tampered shards are refused, and validation takes no identity argument.</p>
+      </div>
+    </div>
+
+    <div class="callout"><b>Why order must be committed:</b> XOR is commutative, so swapping chunks 2 and 5 leaves an XOR holonomy word unchanged. The chiral weave catches the same swap, moving by 1.771 rad. That is why browser records commit to the weave.</div>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section id="results">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">07 · Measured results</span>
+      <h2>Only structured text beats break-even</h2>
+      <p class="lead">Every one of the eight configurations round-trips losslessly. Value falls below 1 on random data whatever the codex, which is the correct result, because no model beats entropy. The codex-stuffing attack loses to honest compression.</p>
+    </div>
+
+    <figure class="chart" style="margin:0">
+      <h3>Compression value by configuration</h3>
+      <div class="cap">Value = original bytes ÷ everything shipped (seed + codex + residual + chain). Higher is better.</div>
+      <div class="bars" id="bars" role="img" aria-label="Bar chart of compression value by configuration; see values listed beside each bar."></div>
+      <div class="baxis"><div></div><div class="ticks" id="ticks"></div></div>
+      <div class="chart-legend">
+        <span><i style="--bc:var(--bar-good)"></i>Above break-even (value &gt; 1)</span>
+        <span><i style="--bc:var(--bar-bad)"></i>Below break-even (value &lt; 1)</span>
+      </div>
+      <figcaption class="faint" style="font-size:.78rem;margin-top:10px">Source: <code>protocol/codex_engine.py</code> self-test output, re-run 2026-09-27. Structured corpus: 5,363 bytes of generated wiki-style text; random corpus: 3,000 bytes. A separate 10,600-byte corpus grew at value 1.68 in the sharding run.</figcaption>
+    </figure>
+
+    <div class="sub"><h3>Suite results</h3></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Suite</th><th>Checks</th><th>Key results</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">shdccp_kernel.py</td><td>8/8</td><td>10,000 random packets round-trip; parity catches 64/64 single-bit flips; worst quaternion error 0.003937</td></tr>
+          <tr><td class="mono">codex_engine.py</td><td>11/11</td><td>Lossless on all corpora; ε = +56.5% held-out, −0.001 on noise; three malformed codexes rejected; bit-identical replay</td></tr>
+          <tr><td class="mono">biochain_mesh.py</td><td>11/11</td><td>Claim verified on 9/9 nodes in 2 gossip rounds; inflated value and illegal opcode rejected; 36 CRYST issued; replay and overdraft rejected; ~2 s</td></tr>
+          <tr><td class="mono">pump_clock.py</td><td>13/13</td><td>All 12 ticks exact; crystallization windows at ticks 6 and 12; reorder caught by the chiral weave (1.771 rad) but not by XOR</td></tr>
+          <tr><td class="mono">engram_shard.py</td><td>9/9</td><td>Woven weave exact (0.0 rad); rebuild with one node dead; tampered shard refused; identical outcome with identity links present, absent or swapped</td></tr>
+          <tr><td class="mono">tests/rules (emulator)</td><td>47/47</td><td>Every hardening attack denied; legitimate grow, transfer, grant, revoke and rate flows allowed</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:.88rem;margin-top:12px">The self-tests are deterministic, with fixed seeds and pinned golden hashes. They show the protocol behaves as specified on these inputs. They are not benchmarks against other compressors or networks, and the corpora are small and synthetic.</p>
+  </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section id="roadmap">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">08 · Roadmap</span>
+      <h2>Planned upgrades</h2>
+      <p class="lead">The core protocol is sound and measured. The largest gap is between the two implementations: most of the decentralized design exists only in simulation. Each item below pairs today's limitation with the upgrade planned to close it.</p>
+    </div>
+
+    <div class="rfilter" role="group" aria-label="Filter roadmap">
+      <button data-f="all" aria-pressed="true">All</button>
+      <button data-f="platform" aria-pressed="false">Live platform</button>
+      <button data-f="protocol" aria-pressed="false">Protocol &amp; compression</button>
+      <button data-f="network" aria-pressed="false">Network &amp; economy</button>
+      <button data-f="security" aria-pressed="false">Security &amp; assurance</button>
+    </div>
+    <div class="road" id="road"></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <a class="brand" href="#top" style="margin-bottom:12px">BIOCHAIN <b>AI</b></a>
+        <p style="margin-top:12px;max-width:380px">A standalone platform for lossless, attested, traceable data on the SHD-CCP protocol. Content on this page is drawn from <em>BioChain: Lossless, Attested, Traceable Data Chains on the SHD-CCP Protocol</em> (Sep 27, 2026).</p>
+      </div>
+      <div><h4>Platform</h4><ul>
+        <li><a href="login.html">Sign in</a></li>
+        <li><a href="console/Operations_Console.html">Operations Console</a></li>
+        <li><a href="console/Language_Studio.html">Language Studio</a></li>
+        <li><a href="console/Lattice_Forge.html">Lattice Forge</a></li>
+      </ul></div>
+      <div><h4>Learn</h4><ul>
+        <li><a href="Tutorials/Tutorial_Explorer.html">Tutorial Explorer</a></li>
+        <li><a href="console/guides/Language_Studio_Guide.html">Language Studio Guide</a></li>
+        <li><a href="console/guides/Lattice_Forge_Guide.html">Lattice Forge Guide</a></li>
+        <li><a href="Human_Interface_Guide.html">Human Interface Guide</a></li>
+      </ul></div>
+      <div><h4>Source</h4><ul>
+        <li><a href="https://github.com/BioChainAI/BioChain-AI">GitHub repository</a></li>
+        <li><a href="https://github.com/BioChainAI/BioChain-AI/blob/main/protocol/README.md">Protocol README</a></li>
+        <li><a href="https://github.com/BioChainAI/BioChain-AI/blob/main/MIGRATION_PLAN.md">Migration plan</a></li>
+        <li><a href="https://github.com/BioChainAI/BioChain-AI/blob/main/LICENSE">License</a></li>
+      </ul></div>
+    </div>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+(() => {
+  /* ---------- SHD-CCP packet map ---------- */
+  const FIELDS = [
+    { name: "Structural Form ID", hi: 63, lo: 60, cls: "HALO",     c: "#e5484d", role: "Opcode or seed form. Codex: 0 HALT, 1 GEAR, 2 PRIME. Grow cell: 9 (crystal)." },
+    { name: "Parity",             hi: 59, lo: 59, cls: "HALO",     c: "#f5b945", role: "Even parity over the other 63 bits, so any single flipped bit is caught." },
+    { name: "Spin Class",         hi: 58, lo: 56, cls: "STANDARD", c: "#a26bff", role: "Model order or spin selector." },
+    { name: "Compressed quaternion", hi: 55, lo: 24, cls: "CORE",  c: "#00d4ff", role: "4 × 8-bit exact fixed point, value = code / 127. crystallize() places its 32-bit fold here." },
+    { name: "Payload Scale",      hi: 23, lo: 8,  cls: "STANDARD", c: "#10b981", role: "uint16: chunk length, codex context, or scale. In the grow cell it carries the chunk length, so the stream describes itself." },
+    { name: "Frequency ID",       hi: 7,  lo: 3,  cls: "STANDARD", c: "#3b82f6", role: "Selector. In the grow cell: checksum high bits." },
+    { name: "Amplitude ID",       hi: 2,  lo: 0,  cls: "STANDARD", c: "#dc6a3a", role: "Selector. In the grow cell: checksum low bits." },
+  ];
+  const fieldOf = b => FIELDS.findIndex(f => b <= f.hi && b >= f.lo);
+  const hiEl = document.getElementById("pkt-hi"), loEl = document.getElementById("pkt-lo");
+  const legend = document.getElementById("pkt-legend"), info = document.getElementById("pkt-info");
+  const bits = [];
+  for (let b = 63; b >= 0; b--) {
+    const fi = fieldOf(b), el = document.createElement("button");
+    el.className = "bit"; el.style.setProperty("--c", FIELDS[fi].c);
+    el.dataset.f = fi; el.setAttribute("aria-label", `bit ${b}: ${FIELDS[fi].name}`); el.tabIndex = -1;
+    el.addEventListener("click", () => select(fi));
+    el.addEventListener("mouseenter", () => preview(fi));
+    el.addEventListener("mouseleave", () => preview(current));
+    (b >= 32 ? hiEl : loEl).appendChild(el); bits.push(el);
+  }
+  const btns = FIELDS.map((f, i) => {
+    const b = document.createElement("button");
+    b.style.setProperty("--c", f.c); b.innerHTML = `<i></i>${f.name}`;
+    b.setAttribute("aria-pressed", "false"); b.addEventListener("click", () => select(i));
+    legend.appendChild(b); return b;
+  });
+  let current = 3;
+  function preview(i) {
+    bits.forEach(el => { const on = +el.dataset.f === i; el.classList.toggle("hl", on); el.classList.toggle("dim", !on); });
+    const f = FIELDS[i], w = f.hi - f.lo + 1;
+    info.innerHTML = `<b>${f.name}</b> <span class="tag t-api" style="margin-left:6px">bits ${f.hi === f.lo ? f.hi : f.hi + "–" + f.lo}</span> <span class="tag t-sim">${w} bit${w > 1 ? "s" : ""}</span> <span class="tag t-plan">${f.cls}</span><p style="margin:8px 0 0">${f.role}</p>`;
+  }
+  function select(i) { current = i; btns.forEach((b, j) => b.setAttribute("aria-pressed", String(j === i))); preview(i); }
+  select(current);
+
+  /* ---------- value chart ---------- */
+  const DATA = [
+    ["Attuned codex, amortized over 50 growths", 3.29],
+    ["Fresh model, held-out text", 1.52],
+    ["Prose codex, structured text", 1.47],
+    ["Attuned codex, one growth", 1.10],
+    ["Generic codex, structured text", 1.07],
+    ["Corpus stuffed into codex (attack)", 0.97],
+    ["Prose codex, random data", 0.87],
+    ["Generic codex, random data", 0.79],
+  ];
+  const MAX = 4, pct = v => (v / MAX * 100) + "%";
+  const bars = document.getElementById("bars"), tip = document.getElementById("tip");
+  DATA.forEach(([label, v], idx) => {
+    const row = document.createElement("div"); row.className = "brow";
+    const good = v > 1;
+    row.innerHTML = `<div class="blabel">${label}</div><div class="btrack">
+      <div class="bar" style="width:${pct(v)};--bc:var(${good ? "--bar-good" : "--bar-bad"})"></div>
+      <span class="bval" style="left:${pct(v)}">${v.toFixed(2)}</span>
+      <div class="bline" style="left:${pct(1)}">${idx === 0 ? "<span>break-even (1.0)</span>" : ""}</div></div>`;
+    row.addEventListener("mousemove", e => {
+      tip.innerHTML = `<b>${label}</b>value ${v.toFixed(2)} · ${good ? "recreates more than it ships" : "ships more than it recreates"}`;
+      const x = Math.min(e.clientX + 14, innerWidth - 280);
+      tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px"; tip.style.opacity = 1;
+    });
+    row.addEventListener("mouseleave", () => tip.style.opacity = 0);
+    bars.appendChild(row);
+  });
+  const ticks = document.getElementById("ticks");
+  [0, 1, 2, 3, 4].forEach(t => { const s = document.createElement("span"); s.style.left = pct(t); s.textContent = t.toFixed(1); ticks.appendChild(s); });
+
+  /* ---------- roadmap ---------- */
+  const ROAD = [
+    ["platform", "Merge the hardened ruleset", "The Section 9 hardening and its 47-case rules suite live on a feature branch.", "Merge into main so the live platform enforces transfer sequencing, one-way revocation and real-role checks."],
+    ["platform", "Codex-powered growth in the browser", "The browser distills and pairs codexes, but its grow cell always starts from a fresh model, so pairing brings no compression gain yet.", "Let growBiochain take a paired codex as its prior, as codex_engine.grow already does."],
+    ["platform", "Validator mesh for the live app", "The live app has no validator mesh, no FLUX or CRYST, no pump time and no chiral pairing rule. Firestore is the single server.", "Port the mesh validation processor to a service, or run validators beside Firestore."],
+    ["platform", "Lift the 60 KB input cap", "Browser input is capped at 60 KB so the stream fits in one Firestore document.", "Store streams in object storage, using the Merkle root as the index."],
+    ["protocol", "Stronger predictor", "The order-2 rank coder is a reference model, not a state-of-the-art compressor.", "Add a stronger predictor as a new GEAR mode. The value law and verification stay unchanged."],
+    ["protocol", "Order-aware engrams", "Engram similarity is letter parity, so anagrams collide and repeated letters cancel.", "An order-aware token fingerprint that keeps the verbatim-recall property."],
+    ["protocol", "Replace the mirror weave", "The mirror weave is the conjugate of the forward weave and adds no independent check.", "Keep the forward weave, and drop the mirror or replace it with a different commitment."],
+    ["protocol", "Task-based attunement", "ε measures prediction uplift on held-out text, not results on real downstream tasks.", "Replace the bench with task batteries whose results are also receipt-verified."],
+    ["network", "Fraud-proof gossip", "Sampling at one node is probabilistic (2 of 9 caught a tampered chunk). Full replay is the real guarantee.", "A fraud-proof gossip channel, so one node's catch reaches every node."],
+    ["network", "Close the CRYST transfer gap", "CRYST transfers accept any two registered signatures, and operator registrations (seals) are unchecked.", "Require the sender's signature and a governor quorum, and certify seals before accepting them."],
+    ["network", "Decentralized governance", "The core quorum is permissioned, and CRYST ordering trusts governors for sequencing.", "Rotate anchors at tick 12 and publish the audit chronicle."],
+    ["network", "Sybil-resistant handedness", "A party that can mint identities freely can grind until it gets the hand it wants.", "Bind handedness to an ID issued by the anchors, not chosen by the user."],
+    ["security", "Device-bound keys & atomic accept", "Private keys are stored in Firestore, the lineage array is client-written, and accept is two non-atomic writes.", "Non-extractable device keys, lineage derived from transfers, and an atomic batched accept."],
+    ["security", "Continuous conformance CI", "The two implementations are compared only on fixed test vectors, and CI only deploys Pages.", "A CI job that runs both suites plus a browser-vs-Python conformance set on every change."],
+  ];
+  const LABEL = { platform: "Live platform", protocol: "Protocol", network: "Network", security: "Security" };
+  const road = document.getElementById("road");
+  function renderRoad(f) {
+    road.innerHTML = ROAD.filter(r => f === "all" || r[0] === f).map(([cat, title, now, next]) => `
+      <article class="ritem"><header><h3>${title}</h3><span class="tag t-plan">${LABEL[cat]}</span></header>
+      <p class="now"><span class="k">Today</span>${now}</p>
+      <p class="next"><span class="k">Planned upgrade</span>${next}</p></article>`).join("");
+  }
+  document.querySelectorAll(".rfilter button").forEach(b => b.addEventListener("click", () => {
+    document.querySelectorAll(".rfilter button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderRoad(b.dataset.f);
+  }));
+  renderRoad("all");
+
+  /* ---------- nav highlight ---------- */
+  const links = [...document.querySelectorAll("#navlinks a")];
+  const secs = links.map(a => document.querySelector(a.getAttribute("href")));
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) links.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + e.target.id));
+  }), { rootMargin: "-40% 0px -55% 0px" });
+  secs.forEach(s => s && io.observe(s));
+
+  /* ---------- hero node network ---------- */
+  const cv = document.getElementById("net"), ctx = cv.getContext("2d");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W, H, pts;
+  function resize() {
+    const r = cv.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    W = r.width; H = r.height; cv.width = W * d; cv.height = H * d; ctx.setTransform(d, 0, 0, d, 0, 0);
+    const n = Math.round(Math.min(70, W * H / 16000));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .25, vy: (Math.random() - .5) * .25 }));
+  }
+  function frame() {
+    ctx.clearRect(0, 0, W, H);
+    for (const p of pts) { p.x += p.vx; p.y += p.vy; if (p.x < 0 || p.x > W) p.vx *= -1; if (p.y < 0 || p.y > H) p.vy *= -1; }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) {
+      const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y);
+      if (d < 130) { ctx.strokeStyle = `rgba(0,212,255,${(1 - d / 130) * .18})`; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    }
+    ctx.fillStyle = "rgba(16,185,129,.55)";
+    for (const p of pts) { ctx.beginPath(); ctx.arc(p.x, p.y, 1.6, 0, 7); ctx.fill(); }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  resize(); frame(); addEventListener("resize", () => { resize(); if (reduce) frame(); });
+})();
+</script>
+</body>
+</html>
