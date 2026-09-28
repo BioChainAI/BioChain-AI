@@ -47,7 +47,14 @@ the plan.
 
 Client-side ECDSA crypto with Firestore rules as the backstop. Rules pin
 grower/owner identity on create, free-only transfers, recipient-only resolution,
-ownership-moves-only-via-accepted-transfer (joined server-side), and no deletes
+ownership-moves-only-via-accepted-transfer (joined server-side, sequenced per
+chain so each transfer is single-use and cannot be replayed), and no deletes
 where history must survive. Attestations are real, publicly verifiable, and
 revocable — revoking a signing key invalidates every attestation it signed,
-everywhere, at once.
+everywhere, at once, and revocation is one-way (a revoked key cannot be
+reactivated).
+
+Roles come only from records users cannot write for themselves:
+`config/rootAdmins` (console-managed) and `roleGrants/{uid}` (ADMIN-written).
+The rules check the role stamped on signing keys and ratings against those
+records, so a role — and the rating weight it carries — cannot be self-claimed.

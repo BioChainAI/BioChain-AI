@@ -37,17 +37,16 @@ The composite index for `transfers (toUid, status)` deploys with it.
 
 ## 3.3 Set the bootstrap admin
 
-Before porting `access-control.js`, decide who is ADMIN. In the ported
-`src/identity/access-control.js`, set:
+Decide who is ADMIN. In the **Firebase console → Firestore**, create the
+document `config/rootAdmins` with one field:
 
-```js
-export const ROOT_ADMIN_UIDS = [
-  "<YOUR_FIREBASE_UID>",   // resolves to ADMIN even with no certificate
-];
+```
+uids: ["<YOUR_FIREBASE_UID>"]   // array — resolves to ADMIN with no grant needed
 ```
 
 Find your UID in **Firebase console → Authentication → Users** after your first
-sign-in. This is the lockout safety valve called out in the plan's risk table.
+sign-in. The rules forbid all client writes to `config/`, so this list can only
+be edited from the console (or the Admin SDK) — no user can add themselves. This is the lockout safety valve called out in the plan's risk table.
 
 ## 3.4 Port the identity substrate
 
@@ -59,7 +58,7 @@ modules; port in this dependency order and they slot together:
 | 1 | `seal-crypto.js` | `src/identity/crypto-core.js` | Pure ECDSA P-256 + SHD-CCP vector math. Rename `seal*`→`key*`/`attestation*`. **Do not touch the math.** |
 | 2 | `schumann-oracle.js` | `src/identity/epoch-service.js` | `tick`→`epoch`. Keep NOAA-Kp math with its existing soft-fail to local base. |
 | 3 | `spire-registrar.js` | `src/identity/identity-registry.js` | Cosmological ID → Identity ID. Change localStorage key `owlAcademy_codex` → `biochain_identity`. |
-| 4 | `genesis-registrar.js` | `src/identity/access-control.js` | Roles ADMIN/OPERATOR/MEMBER; `ROOT_ADMIN_UIDS`; `resolveRole`; priority `certified/reviewed/draft`. |
+| 4 | `genesis-registrar.js` | `src/identity/access-control.js` | Roles ADMIN/OPERATOR/MEMBER; `config/rootAdmins` + `roleGrants`; `resolveRole`; priority `certified/reviewed/draft`. |
 | 5 | `minor-tome.js` | `src/identity/signing-key.js` | Collections `minorTomes`→`signingKeys`, `seals`→`keyRegistry`; fns per Chapter 02. |
 
 ### What each one does (so you can sanity-check the port)
@@ -73,8 +72,10 @@ modules; port in this dependency order and they slot together:
 - **identity-registry** — derives the immutable **Identity ID** from an identity
   seed via SHD-CCP 4×4×4 compression XOR'd with the uid hash; writes
   `users/{uid}/identity/main`.
-- **access-control** — HMAC role certificates; `resolveRole(uid)` →
-  ADMIN/OPERATOR/MEMBER; `ROOT_ADMIN_UIDS` self-validate as ADMIN.
+- **access-control** — `resolveRole(uid)` → ADMIN/OPERATOR/MEMBER, read from
+  `config/rootAdmins` (always ADMIN) and `roleGrants/{uid}` (written only by an
+  ADMIN via `grantRole`). The identity doc never carries a role — the rules
+  reject one — so roles cannot be self-granted.
 - **signing-key** — `createSigningKey` writes the private key to
   `users/{uid}/signingKeys/{keyId}` and mirrors the public key to
   `keyRegistry/{keyId}`; `signWithKey`/`verifyAttestation` produce and check
@@ -101,7 +102,7 @@ console.log("keyId", id, "verify", await CC.verifyPayload(kp.publicJwk, "hello",
 
 - [ ] Google auth + Firestore enabled on `biochain-ai`.
 - [ ] `firebase deploy --only firestore:rules,firestore:indexes` succeeded.
-- [ ] `ROOT_ADMIN_UIDS` contains your real UID.
+- [ ] `config/rootAdmins.uids` contains your real UID.
 - [ ] Five identity modules ported; crypto-core smoke test prints `verify true`.
 
 → Continue to [Chapter 04 — Protocol core & BioMesh services](04-protocol-and-biomesh.md).

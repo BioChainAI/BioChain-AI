@@ -21,7 +21,7 @@ technical or domain term.
 | Domain | Esoteric → Enterprise |
 |---|---|
 | Identity | Cosmological ID → **Identity ID**; Ledger Seed → **Identity Seed**; spire-registrar → **identity-registry**; genesis-registrar → **access-control** |
-| Roles | ARCHON/INSTRUCTOR/ACOLYTE → **ADMIN/OPERATOR/MEMBER**; GENESIS_MASTER_UIDS → **ROOT_ADMIN_UIDS**; resolveTier → **resolveRole** |
+| Roles | ARCHON/INSTRUCTOR/ACOLYTE → **ADMIN/OPERATOR/MEMBER**; GENESIS_MASTER_UIDS → **`config/rootAdmins`** (Firestore doc); resolveTier → **resolveRole** |
 | Signing | Minor Tome → **Signing Key**; Seal → **Attestation**; seal-crypto → **crypto-core**; sealId `S-…` → keyId `K-…`; signWithMinorTome → **signWithKey**; verifySealBlock → **verifyAttestation** |
 | Registry | `seals/` → **`keyRegistry/`**; `users/{uid}/minorTomes/` → **`users/{uid}/signingKeys/`** |
 | Visual | Sigil → **Identicon**; renderSealSigil → **renderKeyIdenticon** |
