@@ -440,7 +440,7 @@ export async function publishBiochain(uid, keyId, chain, meta = {}) {
       uid, identityId: id.identityId, epoch: epoch.token, at: new Date().toISOString(),
       ...(chain.parentChainId ? { parentChainId: chain.parentChainId, chainEpoch: chain.epoch } : {}),
     }],
-    lastTransferId: null,
+    lastTransferId: null, transferSeq: 0,
     status: meta.listed ? "listed" : "grown",
     epochToken: epoch.token,
     createdAt: new Date().toISOString(),
@@ -576,6 +576,13 @@ export async function verifyPair(chain) {
 }
 
 // ─── free transfers (TRANSFER/1) — the lineage spine ─────────────────────────
+// Transfers are sequenced per chain: each is stamped with the chain's current
+// `transferSeq` (its `chainSeq`), and accepting one advances the chain to
+// chainSeq + 1. The rules only move ownership for a transfer sent by the
+// CURRENT owner at the CURRENT sequence, so every transfer is single-use and an
+// old accepted one can never be replayed to reclaim the chain.
+
+const chainSeqOf = (chain) => chain.transferSeq || 0;
 
 export async function sendBiochain(uid, keyId, chainId, toUid) {
   const chain = await getBiochain(chainId);
@@ -588,6 +595,7 @@ export async function sendBiochain(uid, keyId, chainId, toUid) {
   const doc = await addToCollection("transfers", {
     chainId, fromUid: uid, fromIdentityId: id.identityId, toUid,
     payload, xferAttestation, price: 0,           // transfers are ALWAYS free
+    chainSeq: chainSeqOf(chain),
     status: "pending", epochToken: epoch.token, sentAt: new Date().toISOString(),
   });
   await addToCollection("auditLog", { kind: "biomesh.sent", uid, chainId, toUid, transferId: doc.id });
@@ -595,7 +603,8 @@ export async function sendBiochain(uid, keyId, chainId, toUid) {
 }
 
 /** Recipient accepts: transfer flips to accepted, then ownership moves (rules
- *  verify the accepted transfer addressed to the caller before allowing it). */
+ *  verify the accepted transfer addressed to the caller, sent by the current
+ *  owner at the chain's current sequence, before allowing it). */
 export async function acceptBiochain(uid, transferId) {
   const t = await getDocument(`transfers/${transferId}`);
   if (!t) throw new Error("Unknown transfer.");
@@ -603,11 +612,17 @@ export async function acceptBiochain(uid, transferId) {
   if (t.status !== "pending") throw new Error(`Transfer already ${t.status}.`);
   const check = await verifyAttestation(t.xferAttestation);
   if (!check.valid) throw new Error("Sender's transfer attestation fails verification: " + check.reason);
+  // Refuse stale transfers BEFORE flipping status, so a transfer the rules would
+  // not honor is never left marked "accepted" with ownership unmoved.
+  const chain = await getBiochain(t.chainId);
+  if (!chain) throw new Error("Unknown biochain.");
+  if (chain.ownerUid !== t.fromUid || typeof t.chainSeq !== "number" || t.chainSeq !== chainSeqOf(chain))
+    throw new Error("This transfer is stale — the chain has changed hands since it was sent. Ask the current owner to send it again.");
   const id = await readIdentity(uid);
   await updateDocument(`transfers/${transferId}`, { status: "accepted", acceptedAt: new Date().toISOString() });
-  const chain = await getBiochain(t.chainId);
   await updateDocument(`biochains/${t.chainId}`, {
     ownerUid: uid, ownerIdentityId: id?.identityId || null, lastTransferId: transferId,
+    transferSeq: t.chainSeq + 1,
     lineage: [...(chain.lineage || []), {
       event: "transfer", transferId, fromUid: t.fromUid, fromIdentityId: t.fromIdentityId,
       toUid: uid, toIdentityId: id?.identityId || null, epoch: t.epochToken, at: new Date().toISOString(),

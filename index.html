@@ -427,16 +427,28 @@
     </div>
 
     <div class="sub"><h3>Roles</h3></div>
-    <p>Everyone starts as a <strong>MEMBER</strong>, and any signed-in member can grow, transfer and rate. <strong>ADMIN</strong> and <strong>OPERATOR</strong> roles gate only the operations consoles and the weight of a rating (ADMIN counts 3×, OPERATOR 2×). Roles come only from a root-admin list editable in the Firebase console, or from grants written by an ADMIN. Nobody can grant a role to themselves.</p>
+    <p>Everyone starts as a <strong>MEMBER</strong>, and any signed-in member can grow, transfer and rate. <strong>ADMIN</strong> and <strong>OPERATOR</strong> roles gate only the operations consoles and the weight of a rating (ADMIN counts 3×, OPERATOR 2×). Roles come only from a root-admin list editable in the Firebase console, or from grants written by an ADMIN. Nobody can grant a role to themselves. Admins grant roles in the Operations Console's <strong>Roles</strong> tab, which only admins can see.</p>
 
     <div class="sub"><h3>Tools &amp; guides</h3></div>
     <div class="grid g3 tools">
-      <a class="card" href="console/Operations_Console.html"><h3>Operations Console <span class="tag t-live">Live</span></h3><p class="muted">Keys, grow &amp; certify, marketplace, transfers and trace in one place.</p></a>
+      <a class="card" href="console/Operations_Console.html"><h3>Operations Console <span class="tag t-live">Live</span></h3><p class="muted">Keys, grow &amp; certify, marketplace, transfers and trace in one place. Admins also get a Roles tab.</p></a>
       <a class="card" href="console/Language_Studio.html"><h3>Language Studio <span class="tag t-admin">ADMIN</span></h3><p class="muted">Engram retrieval agent over your biochains. Recalls genuine stored text.</p></a>
       <a class="card" href="console/Lattice_Forge.html"><h3>Lattice Forge <span class="tag t-live">Live</span></h3><p class="muted">Design SHD-CCP packets, build and verify lattice seeds, run the synchronization pump.</p></a>
       <a class="card" href="console/guides/Language_Studio_Guide.html"><h3>Language Studio Guide</h3><p class="muted">Walkthrough of seeds, recall, crystallize, replay and burn.</p></a>
       <a class="card" href="console/guides/Lattice_Forge_Guide.html"><h3>Lattice Forge Guide</h3><p class="muted">Field-by-field guide to the packet designer and pump.</p></a>
       <a class="card" href="Tutorials/Tutorial_Explorer.html"><h3>Tutorial Explorer</h3><p class="muted">Tutorials, including the Migration scaffold for redeploying the stack.</p></a>
+    </div>
+
+    <div class="sub" id="experiments"><h3>Geometric Engine &amp; experiments</h3></div>
+    <p class="muted" style="font-size:.93rem;margin-bottom:16px">Standalone 3D visualizations of the geometry behind SHD-CCP. They run entirely in your browser, need no sign-in, and don't touch your data.</p>
+    <div class="grid g3 tools">
+      <a class="card" href="The%20Geometric%20Engine/Geometric_Explainer.html"><h3>Geometric Explainer</h3><p class="muted">The Geometric Engine of Time: architecture and code, explained in 3D.</p></a>
+      <a class="card" href="The%20Geometric%20Engine/Supergalactic_Geometric_Engine.html"><h3>Supergalactic Geometric Engine</h3><p class="muted">The scale-synchronized homomorphism, run at supergalactic scale.</p></a>
+      <a class="card" href="The%20Geometric%20Engine/Geometric_Calculator.html"><h3>Geometric Calculator</h3><p class="muted">An interactive 3D geometric calculator.</p></a>
+      <a class="card" href="The%20Geometric%20Engine/Geometric_Scientific_Calculator.html"><h3>SHD-CCP Geometric Calculator</h3><p class="muted">The scientific variant of the calculator, built on SHD-CCP.</p></a>
+      <a class="card" href="The%20Geometric%20Engine/Archimedean_Physics_Simulator.html"><h3>Archimedean Physics Simulator</h3><p class="muted">Archimedean and Platonic solids in a physics sandbox.</p></a>
+      <a class="card" href="Testing_Experimental/Topological_Quantum_Computing/SHD-CCP_Tessellation_Crystal_%5BV0.2A%5D.html"><h3>Tessellation Crystal <span class="tag t-plan">Experimental</span></h3><p class="muted">Multi-cell SHD-CCP kernel group design.</p></a>
+      <a class="card" href="Testing_Experimental/Anechoic_Audio/Environment_0.2A/Acousto-Topological_Biofield_Metrology_V0.2A.html"><h3>Anechoic Chamber <span class="tag t-plan">Experimental</span></h3><p class="muted">A 3,200-coil virtual anechoic chamber for acousto-topological metrology.</p></a>
     </div>
 
     <div class="sub"><h3>For developers: run the reference stack</h3></div>
@@ -618,7 +630,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
       <div class="card"><h3>Reversible revocation</h3><p class="muted">An owner flips a revoked key back to active, reviving every attestation it signed.</p><p><strong>Fix:</strong> registry status is one-way, and keys are born active.</p></div>
       <div class="card"><h3>Self-declared rater role</h3><p class="muted">A rater claims ADMIN to triple their rating's weight.</p><p><strong>Fix:</strong> the rules check <code>raterRole</code> against the rater's real role.</p></div>
     </div>
-    <div class="callout">A <b>47-case emulator suite</b> (<code>tests/rules/</code>) checks every attack and every legitimate flow, and all 47 pass. Run against the original rules, 25 fail. <b>Deployment status:</b> this hardening lives on the <code>claude/loving-dirac-41k6at</code> branch and is pending merge into <code>main</code>.</div>
+    <div class="callout">A <b>47-case emulator suite</b> (<code>tests/rules/</code>) checks every attack and every legitimate flow, and all 47 pass. Run against the original rules, 25 fail. Run it with <code>cd tests/rules &amp;&amp; npm install &amp;&amp; npm test</code> (needs Java for the Firestore emulator).</div>
 
     <details>
       <summary>Residual risks we're open about</summary>
@@ -762,6 +774,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
         <li><a href="console/guides/Language_Studio_Guide.html">Language Studio Guide</a></li>
         <li><a href="console/guides/Lattice_Forge_Guide.html">Lattice Forge Guide</a></li>
         <li><a href="Human_Interface_Guide.html">Human Interface Guide</a></li>
+        <li><a href="#experiments">Geometric Engine</a></li>
       </ul></div>
       <div><h4>Source</h4><ul>
         <li><a href="https://github.com/BioChainAI/BioChain-AI">GitHub repository</a></li>
@@ -848,7 +861,6 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
 
   /* ---------- roadmap ---------- */
   const ROAD = [
-    ["platform", "Merge the hardened ruleset", "The Section 9 hardening and its 47-case rules suite live on a feature branch.", "Merge into main so the live platform enforces transfer sequencing, one-way revocation and real-role checks."],
     ["platform", "Codex-powered growth in the browser", "The browser distills and pairs codexes, but its grow cell always starts from a fresh model, so pairing brings no compression gain yet.", "Let growBiochain take a paired codex as its prior, as codex_engine.grow already does."],
     ["platform", "Validator mesh for the live app", "The live app has no validator mesh, no FLUX or CRYST, no pump time and no chiral pairing rule. Firestore is the single server.", "Port the mesh validation processor to a service, or run validators beside Firestore."],
     ["platform", "Lift the 60 KB input cap", "Browser input is capped at 60 KB so the stream fits in one Firestore document.", "Store streams in object storage, using the Merkle root as the index."],

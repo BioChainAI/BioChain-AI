@@ -40,7 +40,7 @@
 <script type="module">
 import { signInWithGoogle, onAuthChange } from "./src/firebase/auth.js";
 import { readIdentity, registerIdentity, computeIdentityId, renderIdentityIcon } from "./src/identity/identity-registry.js";
-import { ROOT_ADMIN_UIDS } from "./src/identity/access-control.js";
+import { resolveRole } from "./src/identity/access-control.js";
 
 const stage = document.getElementById("stage");
 const params = new URLSearchParams(location.search);
@@ -57,17 +57,17 @@ function signedOut() {
   };
 }
 
-function needsIdentity(uid) {
-  const isAdmin = ROOT_ADMIN_UIDS.includes(uid);
+async function needsIdentity(uid) {
+  const role = await resolveRole(uid).catch(() => "MEMBER");
   stage.innerHTML = `
     <p class="text-sm opacity-80 mb-2">One-time setup: commit your <strong class="text-white">Identity</strong>.
       Your Identity ID is derived from a private seed and your account — immutable once committed.</p>
     <input id="seed" type="text" placeholder="Identity seed (a private phrase only you know)" class="w-full rounded-lg px-3 py-2.5 text-sm mono"/>
     <div id="preview" class="flex items-center gap-3 mt-3 min-h-[64px]"></div>
     <button id="commit" class="btn w-full py-3 rounded-lg font-medium text-black mt-3" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">
-      Commit Identity ${isAdmin ? "· ADMIN" : "· MEMBER"}
+      Commit Identity · ${esc(role)}
     </button>
-    <p class="text-[11px] opacity-50 mt-2">Role: <span class="mono">${isAdmin ? "ADMIN (root admin uid)" : "MEMBER"}</span></p>`;
+    <p class="text-[11px] opacity-50 mt-2">Role: <span class="mono">${esc(role)}</span> <span class="opacity-70">(granted by an admin — not part of your identity)</span></p>`;
   const seed = document.getElementById("seed"), preview = document.getElementById("preview");
   seed.oninput = async () => {
     if (!seed.value.trim()) { preview.innerHTML = ""; return; }
@@ -81,7 +81,7 @@ function needsIdentity(uid) {
     const s = seed.value.trim();
     if (!s) return;
     try {
-      await registerIdentity(uid, s, { role: isAdmin ? "ADMIN" : "MEMBER" });
+      await registerIdentity(uid, s);
       location.replace(dest);
     } catch (e) { preview.insertAdjacentHTML("afterend", `<p class="text-red-400 text-sm mt-2">${esc(e.message)}</p>`); }
   };

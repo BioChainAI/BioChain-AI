@@ -90,10 +90,11 @@ export async function computeIdentityId(identitySeed, uid, latticeKey = "E8") {
 
 /**
  * Commit the identity to Firestore. Refuses to overwrite once committed — the
- * identity seed and derived ID are immutable. `role` seeds the initial role
- * (default MEMBER; the login flow passes ADMIN for root-admin uids).
+ * identity seed and derived ID are immutable. The identity carries no role:
+ * roles come only from config/rootAdmins + roleGrants (see access-control.js),
+ * and firestore.rules reject any role field written here.
  */
-export async function registerIdentity(uid, identitySeed, { latticeKey = "E8", role = "MEMBER" } = {}) {
+export async function registerIdentity(uid, identitySeed, { latticeKey = "E8" } = {}) {
   const existing = await getDocument(`users/${uid}/identity/main`);
   if (existing && existing.identityId) {
     throw new Error("Identity already committed. Identity ID cannot be regenerated.");
@@ -106,7 +107,6 @@ export async function registerIdentity(uid, identitySeed, { latticeKey = "E8", r
     coords: result.geoVector.coords,
     entropy: result.geoVector.entropy,
     latticeSpace: latticeKey,
-    role,
     committedAt: new Date().toISOString(),
     committed: true,
   };

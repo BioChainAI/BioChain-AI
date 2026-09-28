@@ -24,6 +24,8 @@
   .card{ border:1px solid rgba(255,255,255,.08); border-radius:.6rem; background:rgba(255,255,255,.02); }
   .pill{ font-size:.68rem; padding:.1rem .5rem; border-radius:9999px; border:1px solid rgba(255,255,255,.12); }
   .hidden{ display:none; }
+  .navlink{ font-size:.8rem; opacity:.7; color:var(--text); text-decoration:none; padding:.3rem .55rem; border-radius:.4rem; }
+  .navlink:hover{ opacity:1; background:rgba(255,255,255,.06); color:#fff; }
 </style>
 </head>
 <body>
@@ -34,6 +36,12 @@
       <h1 class="text-2xl font-bold text-white">Operations Console</h1>
       <p class="text-xs opacity-60 mono" id="whoami">…</p>
     </div>
+    <nav class="flex flex-wrap items-center gap-1" aria-label="Site">
+      <a class="navlink" href="../index.html">Home</a>
+      <a class="navlink" href="Language_Studio.html">Language Studio</a>
+      <a class="navlink" href="Lattice_Forge.html">Lattice Forge</a>
+      <a class="navlink" href="../Tutorials/Tutorial_Explorer.html">Tutorials</a>
+    </nav>
     <div class="flex items-center gap-3">
       <span id="roleBadge" class="pill" style="color:var(--gold)">…</span>
       <button class="btn text-sm px-3 py-1.5 rounded-lg glass" onclick="globalLogout()">Sign out</button>
@@ -46,6 +54,7 @@
     <div class="tab" data-tab="market">Marketplace</div>
     <div class="tab" data-tab="transfers">Transfers</div>
     <div class="tab" data-tab="trace">Trace</div>
+    <div class="tab hidden" data-tab="roles" id="rolesTab">Roles</div>
   </nav>
 
   <div id="toast" class="hidden fixed bottom-5 right-5 glass rounded-lg px-4 py-3 text-sm z-50 max-w-sm"></div>
@@ -106,6 +115,25 @@
     </div>
   </section>
 
+  <!-- ROLES (ADMIN only; rules also enforce it on roleGrants/{uid}) -->
+  <section data-panel="roles" class="hidden space-y-4">
+    <div class="glass rounded-xl p-5 space-y-3">
+      <h2 class="text-lg text-white">Grant a role</h2>
+      <p class="text-sm opacity-70">Roles come only from this list and from <span class="mono">config/rootAdmins</span> in the Firebase console. To demote someone, grant MEMBER; the grant record is kept. The person sees their new role the next time they load a page.</p>
+      <div class="flex flex-wrap gap-2">
+        <input id="grantUid" placeholder="user uid (shown at the top of their console)" class="px-3 py-2 text-sm flex-1 min-w-[240px] mono"/>
+        <select id="grantRole" class="px-3 py-2 text-sm">
+          <option value="MEMBER">MEMBER</option>
+          <option value="OPERATOR">OPERATOR</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+        <button id="lookupBtn" class="btn px-4 py-2 rounded-lg glass font-medium">Look up</button>
+        <button id="grantBtn" class="btn px-4 py-2 rounded-lg text-black font-medium" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">Grant role</button>
+      </div>
+      <div id="grantOut" class="text-sm mono opacity-80"></div>
+    </div>
+  </section>
+
   <!-- TRACE -->
   <section data-panel="trace" class="hidden space-y-4">
     <div class="glass rounded-xl p-5">
@@ -124,7 +152,7 @@
 import { auth } from "../src/firebase/config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
 import { readIdentity } from "../src/identity/identity-registry.js";
-import { resolveRole } from "../src/identity/access-control.js";
+import { resolveRole, grantRole, readRoleGrant, isRootAdmin } from "../src/identity/access-control.js";
 import { createSigningKey, listSigningKeys, revokeSigningKey } from "../src/identity/signing-key.js";
 import { renderKeyIdenticon } from "../src/biomesh/identicon.js";
 import * as BM from "../src/biomesh/biomesh.js";
@@ -279,6 +307,27 @@ $("#traceBtn").onclick = guard(async () => {
     </div>`;
 });
 
+// ── Roles (ADMIN) ─────────────────────────────────────────────────────
+async function showRole(uid) {
+  const [root, grant] = await Promise.all([isRootAdmin(uid), readRoleGrant(uid)]);
+  const role = root ? "ADMIN" : (grant?.role || "MEMBER");
+  const src = root ? "root admin (config/rootAdmins)"
+    : grant ? `granted by ${esc(grant.grantedByUid)} · ${esc(grant.grantedAt || "")}` : "no grant — default";
+  $("#grantOut").innerHTML = `${esc(uid)} → <span style="color:var(--gold)">${esc(role)}</span> <span class="opacity-60">(${src})</span>`;
+}
+$("#lookupBtn").onclick = guard(async () => {
+  const uid = $("#grantUid").value.trim();
+  if (!uid) return toast("Enter a user uid.", false);
+  await showRole(uid);
+});
+$("#grantBtn").onclick = guard(async () => {
+  const uid = $("#grantUid").value.trim(), role = $("#grantRole").value;
+  if (!uid) return toast("Enter a user uid.", false);
+  if (uid === UID) return toast("You can't change your own role here.", false);
+  await grantRole(UID, uid, role);
+  toast(`Granted ${role} to ${uid}.`); await showRole(uid);
+});
+
 // ── Boot ──────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;                       // auth-guard handles redirect
@@ -288,6 +337,7 @@ onAuthStateChanged(auth, async (user) => {
   ROLE = await resolveRole(UID).catch(() => "MEMBER");
   $("#whoami").textContent = "uid " + UID + " · " + id.identityId;
   $("#roleBadge").textContent = ROLE;
+  $("#rolesTab").classList.toggle("hidden", ROLE !== "ADMIN");
   refreshKeys();
 });
 </script>

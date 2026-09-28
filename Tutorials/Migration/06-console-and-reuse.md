@@ -12,8 +12,8 @@ build gets a fresh, minimal one. It must do three things:
 1. Google sign-in (`src/firebase/auth.js`).
 2. On first sign-in, bootstrap the identity doc: derive the **Identity ID** from
    an identity seed and write `users/{uid}/identity/main` (via
-   `src/identity/identity-registry.js`), defaulting `role: "MEMBER"` (or `ADMIN`
-   if the uid is in `ROOT_ADMIN_UIDS`).
+   `src/identity/identity-registry.js`). The identity doc carries no role —
+   roles come from `config/rootAdmins` / `roleGrants` (see Chapter 03).
 3. Redirect back to the page the user requested (the `?redirect=` param that
    `src/ui/auth-guard.js` appends).
 

@@ -14,6 +14,12 @@ rules_version = '2';
 // Roles are ADMIN > OPERATOR > MEMBER (see src/identity/access-control.js).
 // Any signed-in MEMBER can grow, transfer, and rate; roles only gate the
 // operations console and rating weight.
+//
+// Role authority lives ONLY in documents clients cannot grant themselves:
+//   config/rootAdmins  { uids: [...] }  — set by hand in the Firebase console
+//                                          (no client writes) → always ADMIN
+//   roleGrants/{uid}   { role, ... }    — written only by an ADMIN
+// Nothing on the user's own identity doc confers a role.
 // ============================================================================
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -22,18 +28,40 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-    function hasIdentity() {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)/identity/main);
+    function isRootAdmin(uid) {
+      return exists(/databases/$(database)/documents/config/rootAdmins)
+        && uid in get(/databases/$(database)/documents/config/rootAdmins).data.uids;
     }
-    function myRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)/identity/main).data.role;
+    function grantedRole(uid) {
+      return exists(/databases/$(database)/documents/roleGrants/$(uid))
+        ? get(/databases/$(database)/documents/roleGrants/$(uid)).data.role
+        : "MEMBER";
     }
-    function isOperatorOrAdmin() {
-      return hasIdentity() && (myRole() == "OPERATOR" || myRole() == "ADMIN");
+    function roleOf(uid) {
+      return isRootAdmin(uid) ? "ADMIN" : grantedRole(uid);
     }
     function isAdmin() {
-      return hasIdentity() && myRole() == "ADMIN";
+      return isSignedIn() && roleOf(request.auth.uid) == "ADMIN";
+    }
+    // Fields that once conferred a role — clients may never write them.
+    function roleFields() {
+      return ['role', 'certificate', 'certifiedScopes', 'certifiedAt'];
+    }
+
+    // ── Platform config (root admin list) — console-managed only ─────
+    match /config/{doc} {
+      allow read:  if isSignedIn();
+      allow write: if false;
+    }
+
+    // ── Role grants — the sole source of OPERATOR/ADMIN authority ─────
+    match /roleGrants/{uid} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin()
+        && request.resource.data.subjectUid   == uid
+        && request.resource.data.grantedByUid == request.auth.uid
+        && request.resource.data.role in ['MEMBER', 'OPERATOR', 'ADMIN'];
+      allow delete: if false;  // demote by granting MEMBER — the record survives
     }
 
     // ── Account-private space ─────────────────────────────────────────
@@ -41,15 +69,19 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Identity: the immutable account fingerprint. Role/certificate fields may
-    // be appended, but identityId / identitySeed / geoVector are frozen forever.
+    // Identity: the immutable account fingerprint. identityId / identitySeed /
+    // geoVector are frozen forever, and it can never carry a role — roles come
+    // only from roleGrants / config/rootAdmins (a self-written role would be
+    // a self-granted one).
     match /users/{uid}/identity/{doc} {
       allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
-      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && !request.resource.data.keys().hasAny(roleFields());
       allow update: if isSignedIn() && request.auth.uid == uid
         && request.resource.data.identityId   == resource.data.identityId
         && request.resource.data.identitySeed == resource.data.identitySeed
-        && request.resource.data.geoVector    == resource.data.geoVector;
+        && request.resource.data.geoVector    == resource.data.geoVector
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(roleFields());
       allow delete: if false;
     }
 
@@ -70,9 +102,17 @@ service cloud.firestore {
     // ── Public key registry — verification surface, NEVER a private key ──
     match /keyRegistry/{keyId} {
       allow read:   if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
-      // Owner may only flip lifecycle status (revoke / retire) — content frozen.
+      // Keys are born active, and the role stamped on them must be the
+      // caller's real role (it is shown on every attestation the key signs).
+      allow create: if isSignedIn() && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == "active"
+        && request.resource.data.role == roleOf(request.auth.uid);
+      // Owner may only move an ACTIVE key to revoked/retired — content frozen,
+      // and the transition is one-way: a revoked key can never be reactivated,
+      // so the attestations it signed stay invalid.
       allow update: if isSignedIn() && resource.data.ownerUid == request.auth.uid
+        && resource.data.status == "active"
+        && request.resource.data.status in ['revoked', 'retired']
         && request.resource.data.diff(resource.data).affectedKeys()
              .hasOnly(['status','updatedAt','revokedEpoch']);
       allow delete: if false; // revoke via status, never delete — preserves traceability
@@ -82,11 +122,22 @@ service cloud.firestore {
     // A biochain is grown in the growth substrate, certified by the grower's
     // signing-key attestation (GROWN/1), transferred FREE via a signed
     // TRANSFER/1 record, and never deleted — the transfer docs ARE the lineage.
+    // Ownership hand-off is sequenced: a chain carries `transferSeq` (0 when
+    // absent), every transfer is stamped with the `chainSeq` it was sent at,
+    // and accepting one advances the chain to chainSeq + 1. A transfer is
+    // therefore usable exactly once, and only while its sender still owns the
+    // chain — an old accepted transfer can never be replayed to pull the chain
+    // back from a later owner.
+    function xfer(id) {
+      return get(/databases/$(database)/documents/transfers/$(id)).data;
+    }
+
     match /biochains/{chainId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn()
         && request.resource.data.growerUid == request.auth.uid
-        && request.resource.data.ownerUid  == request.auth.uid;
+        && request.resource.data.ownerUid  == request.auth.uid
+        && request.resource.data.get('transferSeq', 0) == 0;
       allow update: if isSignedIn() && (
         // current owner manages listing + codex pairing only — grown record frozen
         (resource.data.ownerUid == request.auth.uid
@@ -94,13 +145,17 @@ service cloud.firestore {
                .hasOnly(['status','description','pairedCodexHash','pairAttestation','updatedAt']))
         ||
         // ownership moves ONLY to the caller, ONLY via an accepted transfer
-        // addressed to them for this exact chain (joined server-side via get())
+        // addressed to them for this exact chain, sent by the CURRENT owner at
+        // the CURRENT sequence (joined server-side via get())
         (request.resource.data.ownerUid == request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['ownerUid','ownerIdentityId','lineage','lastTransferId','updatedAt'])
-          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.chainId == chainId
-          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.toUid  == request.auth.uid
-          && get(/databases/$(database)/documents/transfers/$(request.resource.data.lastTransferId)).data.status == "accepted")
+               .hasOnly(['ownerUid','ownerIdentityId','lineage','lastTransferId','transferSeq','updatedAt'])
+          && xfer(request.resource.data.lastTransferId).chainId  == chainId
+          && xfer(request.resource.data.lastTransferId).toUid    == request.auth.uid
+          && xfer(request.resource.data.lastTransferId).status   == "accepted"
+          && xfer(request.resource.data.lastTransferId).fromUid  == resource.data.ownerUid
+          && xfer(request.resource.data.lastTransferId).chainSeq == resource.data.get('transferSeq', 0)
+          && request.resource.data.transferSeq == resource.data.get('transferSeq', 0) + 1)
       );
       allow delete: if false; // chains never vanish — traceability
     }
@@ -111,7 +166,10 @@ service cloud.firestore {
         && request.resource.data.fromUid == request.auth.uid
         && request.resource.data.status == "pending"
         && request.resource.data.price  == 0       // transfers are ALWAYS free
-        && get(/databases/$(database)/documents/biochains/$(request.resource.data.chainId)).data.ownerUid == request.auth.uid;
+        && get(/databases/$(database)/documents/biochains/$(request.resource.data.chainId)).data.ownerUid == request.auth.uid
+        // stamped with the chain's current sequence → single-use (see biochains)
+        && request.resource.data.chainSeq ==
+             get(/databases/$(database)/documents/biochains/$(request.resource.data.chainId)).data.get('transferSeq', 0);
       // only the recipient resolves, status fields only
       allow update: if isSignedIn() && resource.data.toUid == request.auth.uid
         && resource.data.status == "pending"
@@ -132,11 +190,16 @@ service cloud.firestore {
 
     match /ratings/{rid} {
       allow read: if isSignedIn();
-      // one rating per user per chain — the doc id enforces it
+      // one rating per user per chain — the doc id enforces it. raterRole sets
+      // the rating's weight, so it must be the rater's real role, not a claim.
       allow create: if isSignedIn()
         && request.resource.data.raterUid == request.auth.uid
-        && rid == request.resource.data.chainId + "_" + request.auth.uid;
-      allow update: if isSignedIn() && resource.data.raterUid == request.auth.uid;
+        && rid == request.resource.data.chainId + "_" + request.auth.uid
+        && request.resource.data.raterRole == roleOf(request.auth.uid);
+      allow update: if isSignedIn() && resource.data.raterUid == request.auth.uid
+        && request.resource.data.raterUid  == resource.data.raterUid
+        && request.resource.data.chainId   == resource.data.chainId
+        && request.resource.data.raterRole == roleOf(request.auth.uid);
       allow delete: if false;
     }
 
