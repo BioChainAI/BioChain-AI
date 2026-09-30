@@ -1,0 +1,13 @@
+{
+  "description": "Example fleet. Copy to fleet.json (git-ignored) and list your pucks' mDNS names or IPs. The first host in each group is the canary.",
+  "groups": [
+    {"type": "biopuck_audio", "firmware": "../../firmware/nodes/biopuck_audio/.pio/build/esp32s3/firmware.bin",
+     "hosts": ["cocoon-biopuck-audio-1.local", "cocoon-biopuck-audio-2.local", "cocoon-biopuck-audio-3.local"]},
+    {"type": "photonic_light", "firmware": "../../firmware/nodes/photonic_light/.pio/build/esp32s3/firmware.bin",
+     "hosts": ["cocoon-photonic-light-1.local"]},
+    {"type": "haptic_emdr", "firmware": "../../firmware/nodes/haptic_emdr/.pio/build/esp32s3/firmware.bin",
+     "hosts": ["cocoon-haptic-emdr-1.local", "cocoon-haptic-emdr-2.local"]},
+    {"type": "scalar_coil", "firmware": "../../firmware/nodes/scalar_coil/.pio/build/esp32s3/firmware.bin",
+     "hosts": ["cocoon-scalar-coil-1.local"]}
+  ]
+}

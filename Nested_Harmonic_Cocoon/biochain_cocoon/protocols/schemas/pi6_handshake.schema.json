@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/pi6_handshake.schema.json",
+  "title": "pi6 geometric sync handshake",
+  "description": "Broadcast by the orchestrator when its master entrainment phase crosses a π/6 (30°) marker. Nodes slew, never jump, toward master_phase. The 12 sectors correspond one-to-one to the BioChain pump-clock sectors (PUMP.<cycle>.<sector>).",
+  "type": "object",
+  "required": ["cmd", "sector", "master_phase", "macro_hz"],
+  "additionalProperties": false,
+  "properties": {
+    "cmd": {"const": "pi6"},
+    "sector": {"type": "integer", "minimum": 0, "maximum": 11},
+    "master_phase": {"type": "number", "minimum": 0, "exclusiveMaximum": 6.283185307179586, "description": "radians; the master phase at transmission: sector·π/6 plus the phase elapsed since the marker was crossed (zero for an ideally timed sender)"},
+    "macro_hz": {"type": "number", "minimum": 0.5, "maximum": 45},
+    "cycle": {"type": "integer", "minimum": 0},
+    "slew_ms": {"type": "integer", "minimum": 1, "maximum": 1000, "default": 50},
+    "pump_token": {"type": "string", "pattern": "^PUMP\\.[0-9]+\\.([0-9]|1[01])$"}
+  }
+}

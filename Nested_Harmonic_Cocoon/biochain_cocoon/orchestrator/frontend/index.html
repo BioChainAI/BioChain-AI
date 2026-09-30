@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Harmonic Cocoon: Control Suite</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 16 16%22%3E%3Ccircle cx=%228%22 cy=%228%22 r=%226%22 fill=%22none%22 stroke=%22%237fd1c7%22 stroke-width=%222%22/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="glyph" aria-hidden="true">◎</span> Harmonic Cocoon <small>Control Suite</small></div>
+  <div class="pills">
+    <span class="pill" id="pill-session">idle</span>
+    <span class="pill" id="pill-clock">— Hz</span>
+    <span class="pill mono" id="pill-pump">PUMP.—</span>
+    <span class="pill" id="pill-nodes">0 pucks</span>
+    <span class="pill" id="pill-bridge" hidden>BioChain bridge</span>
+  </div>
+</header>
+
+<main>
+  <section class="panel" id="session-panel" aria-labelledby="h-session">
+    <h2 id="h-session">Session</h2>
+    <label>Profile
+      <div class="row">
+        <select id="profile"><option value="">(anonymous)</option></select>
+        <button id="new-profile" class="ghost" title="Create profile">＋</button>
+      </div>
+    </label>
+    <fieldset>
+      <legend>Target state</legend>
+      <div class="bands" id="bands">
+        <button data-band="delta">Delta<small>0.5–4</small></button>
+        <button data-band="theta">Theta<small>4–8</small></button>
+        <button data-band="alpha" class="on">Alpha<small>8–13</small></button>
+        <button data-band="beta">Beta<small>13–30</small></button>
+        <button data-band="gamma">Gamma<small>30–45</small></button>
+      </div>
+    </fieldset>
+    <label>Audio
+      <select id="audio-mode">
+        <option value="isochronic">Isochronic (omni speakers)</option>
+        <option value="binaural">Binaural (headphones)</option>
+        <option value="monaural">Monaural</option>
+      </select>
+    </label>
+    <fieldset>
+      <legend>Modalities</legend>
+      <label class="check"><input type="checkbox" name="mod" value="audio" checked> Sonic</label>
+      <label class="check"><input type="checkbox" name="mod" value="haptic" checked> Haptic</label>
+      <label class="check"><input type="checkbox" name="mod" value="photonic" checked> Photonic 650 nm</label>
+      <label class="check"><input type="checkbox" name="mod" value="coil"> Scalar coil <em>(experimental)</em></label>
+    </fieldset>
+    <label class="check warn"><input type="checkbox" id="consent">
+      Photosensitive consent. Pulsed light at 3–60 Hz can trigger seizures in
+      photosensitive people. Without this box ticked, light stays off in that band.</label>
+    <div class="row">
+      <button id="start" class="primary">Start guided session</button>
+      <button id="stop">Stop</button>
+    </div>
+    <h3>Standalone presets</h3>
+    <ul id="presets" class="presets"></ul>
+  </section>
+
+  <section class="panel wide" aria-labelledby="h-map">
+    <h2 id="h-map">Spatial mapper <small>drag pucks to their physical positions (top view, metres)</small></h2>
+    <svg id="map" viewBox="-1.3 -1.3 2.6 2.6" role="img" aria-label="Top view of the user and puck positions">
+      <defs>
+        <radialGradient id="aura"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></radialGradient>
+      </defs>
+      <g class="grid" id="grid"></g>
+      <circle id="aura-c" r="0.9" fill="url(#aura)"/>
+      <g class="body" transform="scale(1,-1)">
+        <ellipse cx="0" cy="0.72" rx="0.11" ry="0.13"/>
+        <rect x="-0.22" y="-0.05" width="0.44" height="0.62" rx="0.12"/>
+        <rect x="-0.19" y="-0.95" width="0.16" height="0.92" rx="0.07"/>
+        <rect x="0.03" y="-0.95" width="0.16" height="0.92" rx="0.07"/>
+      </g>
+      <g id="zones" transform="scale(1,-1)"></g>
+      <g id="pucks"></g>
+    </svg>
+    <div class="legend">
+      <span><i class="dot t1"></i>Sonic</span><span><i class="dot t2"></i>Photonic</span>
+      <span><i class="dot t3"></i>Haptic</span><span><i class="dot t4"></i>Scalar</span>
+      <span><i class="dot off"></i>offline</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-bio">
+    <h2 id="h-bio">Biostate</h2>
+    <div class="meters" id="meters"></div>
+    <h3>EEG bands</h3>
+    <div class="bandbars" id="bandbars"></div>
+    <div class="kv" id="guide-kv"></div>
+  </section>
+
+  <section class="panel wide" aria-labelledby="h-log">
+    <h2 id="h-log">Guide rationale</h2>
+    <ol id="log" class="log" aria-live="polite"></ol>
+  </section>
+
+  <section class="panel" aria-labelledby="h-manual">
+    <h2 id="h-manual">Manual override <small>pauses the Guide for 30 s</small></h2>
+    <label>Carrier <output id="fc-o">432</output> Hz<input type="range" id="fc" min="40" max="1000" step="1" value="432"></label>
+    <label>Entrainment <output id="fe-o">10</output> Hz<input type="range" id="fe" min="0.5" max="45" step="0.01" value="10"></label>
+    <label>Amplitude <output id="amp-o">0.30</output><input type="range" id="amp" min="0" max="0.8" step="0.01" value="0.3"></label>
+    <label>Glide <output id="ramp-o">5</output> s<input type="range" id="ramp" min="0.25" max="60" step="0.25" value="5"></label>
+    <label>Modality
+      <select id="m-mod">
+        <option value="audio">Sonic</option><option value="photonic">Photonic</option>
+        <option value="haptic">Haptic</option><option value="coil">Scalar coil</option>
+      </select>
+    </label>
+    <div class="row"><button id="send">Send</button><button id="halt" class="danger">Fade all out</button></div>
+    <details>
+      <summary>API token</summary>
+      <input id="token" type="password" placeholder="COCOON_API_TOKEN (if set)" autocomplete="off">
+    </details>
+    <p class="err" id="err" role="alert"></p>
+  </section>
+</main>
+<footer>Wellness and research instrument, not a medical device. Read <code>docs/architecture/SAFETY.md</code> before use.</footer>
+<script src="app.js"></script>
+</body>
+</html>

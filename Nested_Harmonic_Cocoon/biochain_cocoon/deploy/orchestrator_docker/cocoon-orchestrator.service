@@ -1,0 +1,23 @@
+# systemd unit for running the orchestrator directly on a Raspberry Pi (no Docker).
+#   sudo cp deploy/orchestrator_docker/cocoon-orchestrator.service /etc/systemd/system/
+#   sudo systemctl enable --now cocoon-orchestrator
+[Unit]
+Description=Harmonic Cocoon orchestrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=cocoon
+WorkingDirectory=/opt/biochain_cocoon/orchestrator/backend
+EnvironmentFile=/etc/cocoon/cocoon.env
+ExecStart=/usr/bin/python3 -m cocoon_backend
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/cocoon
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

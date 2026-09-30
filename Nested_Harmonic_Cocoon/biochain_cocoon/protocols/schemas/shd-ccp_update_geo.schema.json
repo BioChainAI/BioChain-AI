@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/shd-ccp_update_geo.schema.json",
+  "title": "shd-ccp update_geo (JSON form)",
+  "description": "Human-readable/JSON form of the shd-ccp geometric instruction. The orchestrator API accepts this form. On the mesh it is encoded into the 52-byte binary wire form (protocols/docs/shd-ccp_wire_format.md). Field names match the original Biopuck spec; later additions are optional.",
+  "type": "object",
+  "required": ["cmd", "fc", "fe", "amp"],
+  "additionalProperties": false,
+  "properties": {
+    "cmd": {"const": "update_geo"},
+    "node": {"description": "Target node id, or '*' for broadcast", "oneOf": [{"const": "*"}, {"type": "integer", "minimum": 0, "maximum": 65534}]},
+    "fc": {"type": "number", "minimum": 40, "maximum": 1500, "description": "Carrier frequency (Hz); for coil nodes, PWM base frequency"},
+    "fe": {"type": "number", "minimum": 0.5, "maximum": 45, "description": "Entrainment frequency (Hz)"},
+    "amp": {"type": "number", "minimum": 0, "maximum": 1},
+    "pan": {"type": "number", "minimum": -1, "maximum": 1, "default": 0},
+    "ramp_ms": {"type": "integer", "minimum": 0, "maximum": 600000, "default": 5000},
+    "mode": {"enum": ["binaural", "isochronic", "monaural", "bilateral", "pulse", "continuous"], "default": "isochronic"},
+    "modality": {"type": "array", "uniqueItems": true, "items": {"enum": ["audio", "photonic", "haptic", "coil"]}, "default": ["audio", "photonic", "haptic", "coil"]},
+    "pos": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3, "description": "Spatial coordinate (metres, user-centred: +x right, +y forward, +z up)"},
+    "photosensitive_consent": {"type": "boolean", "default": false}
+  }
+}

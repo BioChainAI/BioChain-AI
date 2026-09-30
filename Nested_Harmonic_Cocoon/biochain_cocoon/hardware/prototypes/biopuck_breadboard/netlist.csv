@@ -1,0 +1,15 @@
+node_type,net,mcu_pin,part,part_pin,notes
+biopuck_audio,I2S_BCLK,GPIO12,MAX98357A,BCLK,
+biopuck_audio,I2S_LRCLK,GPIO11,MAX98357A,LRC,
+biopuck_audio,I2S_DOUT,GPIO13,MAX98357A,DIN,
+biopuck_audio,AMP_SD,GPIO14,MAX98357A,SD,low = mute
+biopuck_audio,STATUS_LED,GPIO2,LED,anode,330R series
+photonic_light,LED_DIM,GPIO5,PT4115,DIM,19.5 kHz PWM
+photonic_light,NTC,GPIO4,NTC_10K,1,10k pull-up to 3V3
+haptic_emdr,MOTOR_L,GPIO6,DRV8833,AIN1,
+haptic_emdr,MOTOR_R,GPIO7,DRV8833,BIN1,
+haptic_emdr,DRV_SLEEP,GPIO8,DRV8833,nSLEEP,
+scalar_coil,COIL_IN1,GPIO9,DRV8871,IN1,LEDC ch0
+scalar_coil,COIL_IN2,GPIO10,DRV8871,IN2,LEDC ch1 (hpoint offset)
+scalar_coil,NTC,GPIO4,NTC_10K,1,on coil former
+all,CONSENT_BTN,GPIO0,BOOT,1,hold 3 s

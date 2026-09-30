@@ -1,0 +1,4 @@
+cocoon_tests
+.pio/
+platformio_override.ini
+

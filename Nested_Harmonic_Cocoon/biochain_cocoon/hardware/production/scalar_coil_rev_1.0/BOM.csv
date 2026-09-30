@@ -1,0 +1,7 @@
+item,qty,part,spec,notes
+1,5 m ×2,enamelled copper wire,22 AWG (0.644 mm) grade 2 solderable,two spools wound together
+2,1,winding former,spooler_jig.scad (PETG),reusable jig; coil potted then released
+3,1,coil varnish / thin CA,electrical grade,wick through jig windows
+4,1,crystal,natural quartz or amethyst point 15–20 mm,log origin + mass per unit
+5,1,NTC 10k B3950 epoxy bead,taped to former,wired to J4-adjacent RT1
+6,1,JST-XH 2-pin pigtail,22 AWG,to Biopuck rev 1.0 variant D

@@ -1,0 +1,20 @@
+ref,qty,part,manufacturer_pn,second_source,package,variant,notes
+U1,1,ESP32-S3 module 8MB flash 2MB PSRAM,ESP32-S3-WROOM-1-N8R2,ESP32-S3-WROOM-1-N16R8,module,all,
+U2,1,3.3V 1A buck,TPS62162DSGR,AP63203WU-7,WSON-8,all,
+U3,1,I2S class-D amp 3W,MAX98357AETE+T,NS4168,TQFN-16,A,audio
+U4,1,USB-C PD trigger,CH224K,IP2721,ESSOP-10,B;D,12 V request
+U5,1,LED buck driver 1.2A,PT4115B89E,AL8860,SOT-89-5,B,Rs 0.33R = 300 mA
+U6,1,dual H-bridge 1.5A,DRV8833PWPR,TC78H653FTG,HTSSOP-16,C,haptic
+U7,1,H-bridge 3.6A with ILIM,DRV8871DDAR,A4950ELJTR-T,SO-8 PowerPAD,D,ILIM 30k = 2 A
+J1,1,USB-C receptacle 16 pin,TYPE-C-31-M-12,GCT USB4105-GF-A,SMD,all,
+J2,1,JST-PH 2 pin,S2B-PH-SM4-TB,,SMD,A;B,speaker / LED
+J3,2,JST-SH 2 pin,SM02B-SRSS-TB,,SMD,C,motors
+J4,1,JST-XH 2 pin,B2B-XH-A,,THT,D,coil
+RT1,1,NTC 10k B3950,NCP18XH103F03RB,NTCG163JF103FT1,0603,B;D,thermal cutoff
+F1,1,polyfuse 1.5A,0ZCJ0150AF2E,MF-MSMF150,1206,all,
+SW1,1,tactile switch (BOOT/consent),PTS815 SJM 250 SMTR LFS,,SMD,all,
+D1,1,status LED green,150060GS75000,,0603,all,
+R1-R2,2,5.1k CC pull-down,,,0402,all,USB-C sink
+L1,1,2.2uH 1.5A,XFL4020-222MEC,,4x4,all,for U2
+L2,1,68uH 1.5A,SRR1260-680M,,12x12,B,for U5
+C*,~20,MLCC decoupling,,,0402/0805,all,per datasheets

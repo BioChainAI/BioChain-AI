@@ -1,0 +1,87 @@
+# Harmonic Cocoon CI. The live copy is .github/workflows/cocoon-ci.yml at the
+# repository root; this file is the canonical source kept with the cocoon so
+# the subsystem stays self-contained. Keep the two identical
+# (ci_cd/check_workflow_sync.sh verifies this).
+name: Harmonic Cocoon CI
+
+on:
+  push:
+    paths: ["Nested_Harmonic_Cocoon/**", ".github/workflows/cocoon-ci.yml"]
+  pull_request:
+    paths: ["Nested_Harmonic_Cocoon/**", ".github/workflows/cocoon-ci.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: Nested_Harmonic_Cocoon/biochain_cocoon
+
+jobs:
+  firmware-host-tests:
+    name: Firmware core (host g++)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C firmware/tests
+
+  presets-and-schemas:
+    name: Presets, schemas, generated code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: python3 protocols/validate.py
+      - run: python3 standalone_presets/compile_presets.py --check
+
+  orchestrator-tests:
+    name: Orchestrator + AI core (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "${{ matrix.python }}"}
+      - run: python3 -m unittest discover -s orchestrator/ai_core/tests -v
+      - run: python3 -m unittest discover -s orchestrator/backend/tests -v
+
+  firmware-build:
+    name: ESP32-S3 build (${{ matrix.node }})
+    runs-on: ubuntu-latest
+    needs: firmware-host-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [biopuck_audio, photonic_light, haptic_emdr, scalar_coil, mesh_gateway]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('Nested_Harmonic_Cocoon/biochain_cocoon/firmware/nodes/*/platformio.ini') }}
+      - run: pip install platformio
+      - run: pio run -d firmware/nodes/${{ matrix.node }} -e esp32s3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.node }}
+          path: Nested_Harmonic_Cocoon/biochain_cocoon/firmware/nodes/${{ matrix.node }}/.pio/build/esp32s3/firmware.bin
+
+  docker:
+    name: Orchestrator image
+    runs-on: ubuntu-latest
+    needs: orchestrator-tests
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f deploy/orchestrator_docker/Dockerfile -t cocoon-orchestrator:ci .
+      - name: Smoke test (simulator)
+        run: |
+          docker run -d --name cocoon -p 8641:8641 cocoon-orchestrator:ci --sim --host 0.0.0.0 --port 8641
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8641/api/status && break; sleep 1; done
+          curl -fs http://127.0.0.1:8641/api/presets | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 7"
+          docker rm -f cocoon

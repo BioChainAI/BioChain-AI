@@ -1,0 +1,64 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 6,
+  "slug": "emdr_bilateral",
+  "name": "Bilateral Tactile Alternation",
+  "description": "Slow left/right haptic alternation (about 1 Hz, one tap per side per cycle) with a quiet isochronic bed. Intended as a practitioner-guided tool, not for unsupervised trauma processing.",
+  "target_state": "alpha",
+  "loop": false,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 10,
+  "steps": [
+    {
+      "hold_s": 30,
+      "ramp_s": 5,
+      "fc": 432,
+      "fe": 1.0,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "bilateral",
+      "modality": [
+        "haptic"
+      ],
+      "note": "haptics first"
+    },
+    {
+      "hold_s": 270,
+      "ramp_s": 10,
+      "fc": 432,
+      "fe": 1.0,
+      "amp": 0.4,
+      "pan": 0.0,
+      "mode": "bilateral",
+      "modality": [
+        "haptic"
+      ]
+    },
+    {
+      "hold_s": 240,
+      "ramp_s": 30,
+      "fc": 432,
+      "fe": 0.8,
+      "amp": 0.4,
+      "pan": 0.0,
+      "mode": "bilateral",
+      "modality": [
+        "haptic"
+      ],
+      "note": "slow down"
+    },
+    {
+      "hold_s": 0,
+      "ramp_s": 20,
+      "fc": 432,
+      "fe": 0.8,
+      "amp": 0.0,
+      "pan": 0.0,
+      "mode": "bilateral",
+      "modality": [
+        "haptic"
+      ]
+    }
+  ]
+}
