@@ -2,3 +2,5 @@ __pycache__/
 *.db
 *.db-wal
 *.db-shm
+.data/
+node_modules/

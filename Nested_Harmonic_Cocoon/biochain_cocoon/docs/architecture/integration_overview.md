@@ -8,7 +8,7 @@
 │  wearables ──biofeedback──▶ ORCHESTRATOR (hub: Pi / PC / Docker)                            │
 │   HRV EEG GSR               ├─ ai_core: BiostateEstimator → RuleGuide (hyperbolic distance)  │
 │                             ├─ backend: SessionEngine · MasterClock · pi6 · DBAP · SQLite    │
-│                             └─ frontend: Control Suite (spatial mapper, rationale log)      │
+│                             └─ frontend: Cocoon Desktop (BioChain sign-in, add-on modules)  │
 │                                   │ shd-ccp (52 B, CRC)   ▲ announce / telemetry            │
 │                                   ▼ UDP or ESP-NOW        │                                  │
 │   PUCKS  A sonic · B photonic · C haptic · D coil ── shared_core: EntrainmentClock, safety,  │
@@ -23,6 +23,11 @@
 │  console/ Lattice Forge → growBiochain() → publish under the user's own signing key         │
 └──────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+**Shared identity, nothing else.** Users sign in to the Cocoon Desktop with
+their BioChain account (Firebase Auth), and the hub verifies the ID token
+itself. No BioChain data, roles or code are used. See
+`identity_and_isolation.md`.
 
 **Standalone guarantee.**
 * Pucks run their presets with no hub at all.

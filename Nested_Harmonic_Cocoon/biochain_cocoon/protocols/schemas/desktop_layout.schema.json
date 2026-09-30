@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/desktop_layout.schema.json",
+  "title": "Cocoon Desktop layout",
+  "description": "A user's personal desktop: which modules are installed, in what order, at what size, with what per-module settings. Stored per Firebase uid in the hub's SQLite (PUT /api/desktop), never in BioChain.",
+  "type": "object",
+  "required": ["version", "modules"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {"const": 1},
+    "theme": {"enum": ["auto", "dark", "light"], "default": "auto"},
+    "density": {"enum": ["comfortable", "compact"], "default": "comfortable"},
+    "modules": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "type": "object",
+        "required": ["instance", "id", "size"],
+        "additionalProperties": false,
+        "properties": {
+          "instance": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}-[0-9]{1,4}$"},
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
+          "size": {"enum": ["s", "m", "l", "xl"]},
+          "collapsed": {"type": "boolean"},
+          "settings": {"type": "object"}
+        }
+      }
+    }
+  }
+}

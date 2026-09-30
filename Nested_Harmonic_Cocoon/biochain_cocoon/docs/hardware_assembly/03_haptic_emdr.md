@@ -8,7 +8,7 @@ motors (3 V), soft TPE contact pads, and JST-SH pigtails.
 3. For a split pair (one motor per puck), build two pucks with
    `-DCOCOON_HAPTIC_SIDE=1` (left) and `=2` (right).
 4. Flash `firmware/nodes/haptic_emdr`.
-5. **Self-test:** nothing moves at power-on (by design). From the Control Suite,
+5. **Self-test:** nothing moves at power-on (by design). From the Cocoon Desktop's Manual override module,
    send a haptic command (fe 1.0 Hz, amp 0.4). You should feel alternating
    left/right taps, one per side per second, with soft onsets.
 6. With two split pucks, check they stay in strict antiphase over 5 minutes (pi6 haptic clock).

@@ -103,7 +103,7 @@ class SessionEngine:
 
     # -- sessions ---------------------------------------------------------
     def start(self, target_band, profile_id=None, audio_mode="isochronic", photosensitive_consent=False,
-              modalities=("audio", "photonic", "haptic", "coil"), preset_id=None):
+              modalities=("audio", "photonic", "haptic", "coil"), preset_id=None, owner_uid=None):
         if target_band not in BANDS:
             raise ValueError("unknown target band")
         with self.lock:
@@ -119,9 +119,9 @@ class SessionEngine:
             self.guide.reset(target_band, audio_mode=audio_mode, photosensitive_consent=photosensitive_consent,
                              modalities=modalities)
             self.estimator = BiostateEstimator()
-            sid = self.store.start_session(profile_id, target_band, preset_id, self.guide.name, config)
+            sid = self.store.start_session(profile_id, target_band, preset_id, self.guide.name, config, owner_uid)
             self.session = {"id": sid, "target": target_band, "started": self.wall(), "preset_id": preset_id,
-                            "profile_id": profile_id, **config}
+                            "profile_id": profile_id, "owner_uid": owner_uid, **config}
             if self.bridge_enabled:
                 from .biochain_bridge import SessionRecorder
                 self.recorder = SessionRecorder(sid, self.session["started"], preset_id,

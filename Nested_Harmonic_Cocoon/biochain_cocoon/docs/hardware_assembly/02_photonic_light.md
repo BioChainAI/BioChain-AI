@@ -14,6 +14,6 @@ trigger, and a lens.
 5. **Self-test:** with no consent, the default preset leaves the LEDs **dark**
    (it is audio-only, and anything pulsed at 3–60 Hz is gated). Hold BOOT for
    3 s: serial prints `consent GRANTED`. Send a manual photonic command from the
-   Control Suite (continuous mode) and confirm the light ramps smoothly.
+   Manual override module on the Cocoon Desktop (continuous mode) and confirm the light ramps smoothly.
 6. **Thermal test:** run continuous at full allowed intensity for 20 min. The
    heatsink should stay below 55 °C. If the 60 °C cutoff trips, add heatsink area.

@@ -11,10 +11,12 @@
 - [ ] Coil pucks: resonance/thermal sweep logged from `testbeds/bifilar_resonance_test`
 
 ## 2. Stand up the hub
-- [ ] `cp deploy/orchestrator_docker/cocoon.env.example cocoon.env` and set a long `COCOON_API_TOKEN`
+- [ ] `cp deploy/orchestrator_docker/cocoon.env.example cocoon.env`; set a long `COCOON_API_TOKEN`, your uid in `COCOON_OWNER_UIDS`, and optionally `COCOON_ALLOWED_EMAILS`
+- [ ] In the BioChain Firebase project, add the hub's hostname/IP under Authentication → Settings → **Authorized domains** (needed for Google sign-in)
 - [ ] `docker compose -f deploy/orchestrator_docker/docker-compose.yml up -d --build` (or the systemd unit)
 - [ ] ESP-NOW-only pucks: flash `firmware/nodes/mesh_gateway`, set `COCOON_TRANSPORT=serial`
-- [ ] Open `http://<hub>:8640/`: every puck is online; drag each to its physical position
+- [ ] Open `http://<hub>:8640/` and sign in with your BioChain account (you land on the Personal desktop)
+- [ ] As an owner, add *Spatial mapper* and *Mesh health*: every puck is online; drag each to its physical position
 
 ## 3. First session
 - [ ] Create a profile. Record photosensitive consent only after the user has read the warning

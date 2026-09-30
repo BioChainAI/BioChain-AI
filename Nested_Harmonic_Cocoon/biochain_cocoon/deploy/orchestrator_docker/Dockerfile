@@ -12,7 +12,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     COCOON_HTTP_HOST=0.0.0.0 \
     COCOON_HTTP_PORT=8640 \
     COCOON_DB=/data/cocoon.db \
-    COCOON_TRANSPORT=udp
+    COCOON_TRANSPORT=udp \
+    COCOON_DATA_DIR=/data
 
 RUN useradd --system --uid 10001 --home /app cocoon \
  && mkdir -p /data && chown cocoon /data
@@ -31,5 +32,5 @@ WORKDIR /app/orchestrator/backend
 EXPOSE 8640/tcp 47632/udp
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \
-  CMD python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8640/api/status', timeout=2)" || exit 1
+  CMD python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8640/api/health', timeout=2)" || exit 1
 ENTRYPOINT ["python3", "-m", "cocoon_backend"]

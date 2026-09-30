@@ -36,3 +36,29 @@ class Config:
     biochain_protocol_path: str = field(default_factory=lambda: _env(
         "BIOCHAIN_PROTOCOL_PATH", os.path.normpath(os.path.join(COCOON_ROOT, "..", "..", "protocol"))))
     api_token: str = field(default_factory=lambda: _env("COCOON_API_TOKEN", ""))
+    data_dir: str = field(default_factory=lambda: _env("COCOON_DATA_DIR", os.path.join(COCOON_ROOT, "orchestrator", ".data")))
+
+    # --- identity: the same Firebase Auth project as the BioChain console ------
+    # Only authentication is shared. The cocoon never reads BioChain's Firestore,
+    # roles or identity records. These are the *public* web-app identifiers
+    # (a Firebase web apiKey is not a secret), and env vars override them to
+    # point a hub at another tenant.
+    auth_mode: str = field(default_factory=lambda: _env("COCOON_AUTH", "firebase"))   # firebase | none
+    firebase_project_id: str = field(default_factory=lambda: _env("COCOON_FIREBASE_PROJECT_ID", "biochain-ai"))
+    firebase_api_key: str = field(default_factory=lambda: _env("COCOON_FIREBASE_API_KEY", "AIzaSyCIOlhkngpzqU15GiTPXiWUpWX5U0tYyIg"))
+    firebase_auth_domain: str = field(default_factory=lambda: _env("COCOON_FIREBASE_AUTH_DOMAIN", "biochain-ai.firebaseapp.com"))
+    firebase_app_id: str = field(default_factory=lambda: _env("COCOON_FIREBASE_APP_ID", "1:154632169740:web:689b3e1196c76a40350129"))
+    # Where to fetch the token-signing keys. Default: Google's securetoken JWKs.
+    # Override only for a private identity tenant or for tests (file:// is accepted).
+    jwks_url: str = field(default_factory=lambda: _env(
+        "COCOON_JWKS_URL", "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"))
+    # cocoon-local authorisation (never taken from BioChain)
+    owner_uids: str = field(default_factory=lambda: _env("COCOON_OWNER_UIDS", ""))
+    allowed_uids: str = field(default_factory=lambda: _env("COCOON_ALLOWED_UIDS", ""))
+    allowed_emails: str = field(default_factory=lambda: _env("COCOON_ALLOWED_EMAILS", ""))   # emails or @domain
+
+    def public_auth_config(self):
+        """What the browser needs to start Firebase Auth. No secrets."""
+        return {"mode": self.auth_mode, "firebase": {
+            "apiKey": self.firebase_api_key, "authDomain": self.firebase_auth_domain,
+            "projectId": self.firebase_project_id, "appId": self.firebase_app_id}}

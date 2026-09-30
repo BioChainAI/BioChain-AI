@@ -1,0 +1,3 @@
+{"id": "overview", "name": "Cocoon overview", "version": "1.0.0", "category": "overview", "icon": "◎",
+ "description": "Your starting point: room status, the live entrainment clock, pucks online, and one-tap start or stop.",
+ "entry": "module.js", "default_size": "xl", "sizes": ["l", "xl"], "uses": ["status"]}

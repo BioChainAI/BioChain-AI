@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/desktop_module.schema.json",
+  "title": "Cocoon Desktop module manifest",
+  "description": "orchestrator/frontend/modules/<id>/module.json. A module is an add-on the user can place on, or remove from, their Cocoon Desktop. The JS entry exports mount(root, ctx) and optionally unmount().",
+  "type": "object",
+  "required": ["id", "name", "version", "description", "category", "icon", "entry", "default_size"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{1,31}$"},
+    "name": {"type": "string", "maxLength": 40},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "description": {"type": "string", "maxLength": 240},
+    "category": {"enum": ["overview", "session", "mesh", "insight", "data", "system"]},
+    "icon": {"type": "string", "maxLength": 4, "description": "one glyph shown on the tile and in the add-on drawer"},
+    "entry": {"const": "module.js"},
+    "default_size": {"enum": ["s", "m", "l", "xl"]},
+    "sizes": {"type": "array", "uniqueItems": true, "items": {"enum": ["s", "m", "l", "xl"]}},
+    "requires_role": {"enum": ["member", "owner"], "default": "member"},
+    "singleton": {"type": "boolean", "default": true},
+    "uses": {
+      "type": "array", "uniqueItems": true,
+      "description": "Live feeds the module subscribes to (the desktop kernel runs one shared poller per feed)",
+      "items": {"enum": ["status", "nodes", "events"]}
+    }
+  }
+}

@@ -81,7 +81,9 @@ jobs:
       - run: docker build -f deploy/orchestrator_docker/Dockerfile -t cocoon-orchestrator:ci .
       - name: Smoke test (simulator)
         run: |
-          docker run -d --name cocoon -p 8641:8641 cocoon-orchestrator:ci --sim --host 0.0.0.0 --port 8641
-          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8641/api/status && break; sleep 1; done
-          curl -fs http://127.0.0.1:8641/api/presets | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 7"
+          docker run -d --name cocoon -p 8641:8641 -e COCOON_API_TOKEN=ci-smoke cocoon-orchestrator:ci --sim --host 0.0.0.0 --port 8641
+          for i in $(seq 1 20); do curl -fs http://127.0.0.1:8641/api/health && break; sleep 1; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8641/api/status)" = 401   # sign-in enforced
+          curl -fs -H 'Authorization: Bearer ci-smoke' http://127.0.0.1:8641/api/presets | python3 -c "import json,sys; assert len(json.load(sys.stdin)) >= 7"
+          curl -fs -H 'Authorization: Bearer ci-smoke' http://127.0.0.1:8641/api/modules | python3 -c "import json,sys; assert len(json.load(sys.stdin)['modules']) >= 11"
           docker rm -f cocoon
