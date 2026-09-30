@@ -1,0 +1,64 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 5,
+  "slug": "stress_downshift",
+  "name": "Stress Downshift (HRV Recovery)",
+  "description": "The integration-workflow sequence from the Biopuck architecture, pre-baked for offline use: start at 432 Hz / 10 Hz alpha, then take a 15 s glide to the 396 Hz root carrier and 4 Hz theta.",
+  "target_state": "theta",
+  "loop": false,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 20,
+  "steps": [
+    {
+      "hold_s": 120,
+      "ramp_s": 5,
+      "fc": 432,
+      "fe": 10,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ]
+    },
+    {
+      "hold_s": 900,
+      "ramp_s": 15,
+      "fc": 396,
+      "fe": 4,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "15 s ramp per spec"
+    },
+    {
+      "hold_s": 180,
+      "ramp_s": 60,
+      "fc": 396,
+      "fe": 6,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "gentle return"
+    },
+    {
+      "hold_s": 0,
+      "ramp_s": 30,
+      "fc": 396,
+      "fe": 6,
+      "amp": 0.0,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ]
+    }
+  ]
+}

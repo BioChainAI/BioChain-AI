@@ -1,0 +1,27 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 4,
+  "slug": "schumann_grounding",
+  "name": "Schumann Grounding",
+  "description": "7.83 Hz entrainment across audio and a gentle scalar-coil burst envelope, for a grounded, low-arousal state.",
+  "target_state": "theta",
+  "loop": true,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 15,
+  "steps": [
+    {
+      "hold_s": 900,
+      "ramp_s": 20,
+      "fc": 432,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio",
+        "coil"
+      ]
+    }
+  ]
+}

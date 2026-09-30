@@ -20,6 +20,7 @@ implementation and is never modified.
 | Verify the migration is fully accounted for | [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) — the authoritative plan + acceptance checklist |
 | Actually perform / repeat the deployment | [`Tutorials/Migration/`](Tutorials/Migration/README.md) — the step-by-step scaffold ([browsable page](Tutorials/Migration/index.html)) |
 | Understand the protocol core | `protocol/README.md` (added in Phase 2) |
+| Build or run the Harmonic Cocoon entrainment subsystem (standalone; optional BioChain bridge) | [`Nested_Harmonic_Cocoon/`](Nested_Harmonic_Cocoon/README.md) |
 
 ## Architecture (four layers)
 

@@ -1,0 +1,50 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 2,
+  "slug": "alpha_focus",
+  "name": "Alpha Calm Focus",
+  "description": "Steady 10 Hz alpha under a 432 Hz carrier for relaxed, alert focus. Binaural, so it needs headphones.",
+  "target_state": "alpha",
+  "loop": true,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 20,
+  "steps": [
+    {
+      "hold_s": 600,
+      "ramp_s": 10,
+      "fc": 432,
+      "fe": 10,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "binaural",
+      "modality": [
+        "audio"
+      ]
+    },
+    {
+      "hold_s": 600,
+      "ramp_s": 60,
+      "fc": 432,
+      "fe": 10.5,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "binaural",
+      "modality": [
+        "audio"
+      ]
+    },
+    {
+      "hold_s": 600,
+      "ramp_s": 60,
+      "fc": 432,
+      "fe": 9.5,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "binaural",
+      "modality": [
+        "audio"
+      ]
+    }
+  ]
+}

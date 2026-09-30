@@ -1,0 +1,9 @@
+part,url
+ESP32-S3,https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf
+ESP32-S3-WROOM-1,https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf
+MAX98357A,https://www.analog.com/media/en/technical-documentation/data-sheets/MAX98357A-MAX98357B.pdf
+PCM5102A,https://www.ti.com/lit/ds/symlink/pcm5102a.pdf
+DRV8833,https://www.ti.com/lit/ds/symlink/drv8833.pdf
+DRV8871,https://www.ti.com/lit/ds/symlink/drv8871.pdf
+INA219,https://www.ti.com/lit/ds/symlink/ina219.pdf
+TPS62162,https://www.ti.com/lit/ds/symlink/tps62162.pdf

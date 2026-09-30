@@ -1,0 +1,55 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 3,
+  "slug": "gamma_40hz",
+  "name": "Gamma 40 Hz Audio-Visual",
+  "description": "40 Hz isochronic audio paired with 650 nm light pulsed at the same macro phase. The light pulses sit in the photosensitive band, so photonic nodes stay dark unless the session carries explicit consent.",
+  "target_state": "gamma",
+  "loop": false,
+  "photosensitive_consent_required": true,
+  "duration_hint_min": 21,
+  "steps": [
+    {
+      "hold_s": 60,
+      "ramp_s": 10,
+      "fc": 432,
+      "fe": 40,
+      "amp": 0.25,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio",
+        "photonic"
+      ],
+      "note": "introduce"
+    },
+    {
+      "hold_s": 1080,
+      "ramp_s": 30,
+      "fc": 432,
+      "fe": 40,
+      "amp": 0.4,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio",
+        "photonic"
+      ]
+    },
+    {
+      "hold_s": 0,
+      "ramp_s": 60,
+      "fc": 432,
+      "fe": 40,
+      "amp": 0.0,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio",
+        "photonic"
+      ],
+      "note": "fade out"
+    }
+  ]
+}

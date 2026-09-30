@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/node_announce.schema.json",
+  "title": "Node announce / telemetry",
+  "description": "Decoded view of the Announce (5) and Telemetry (7) binary packets a puck emits, as the orchestrator's /api/nodes endpoint reports them.",
+  "type": "object",
+  "required": ["node", "type", "firmware"],
+  "additionalProperties": false,
+  "properties": {
+    "node": {"type": "integer", "minimum": 0, "maximum": 65534},
+    "type": {"enum": ["sonic_ambisonic", "photonic", "haptic_emdr", "scalar_coil"]},
+    "firmware": {"type": "string"},
+    "pos": {"type": "array", "items": {"type": "number"}, "minItems": 3, "maxItems": 3},
+    "phase_error_rad": {"type": "number"},
+    "temperature_c": {"type": "number"},
+    "standalone": {"type": "boolean"},
+    "last_seen": {"type": "number"}
+  }
+}

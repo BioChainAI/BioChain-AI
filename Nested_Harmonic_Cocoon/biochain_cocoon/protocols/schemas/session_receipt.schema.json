@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/session_receipt.schema.json",
+  "title": "Cocoon session receipt (BioChain bridge)",
+  "description": "Produced at session end only when the optional BioChain bridge is enabled. The session's command stream is folded into BioChain SHD-CCP 64-bit kernel words, and the biofeedback log into crystallized packets. The receipt carries a holonomy fingerprint and a hyperbolic coherence trajectory. Raw biometric data never leaves the cocoon; only digests do.",
+  "type": "object",
+  "required": ["session_id", "started", "ended", "kernel_words", "xor_holonomy", "chiral_holonomy", "coherence"],
+  "additionalProperties": false,
+  "properties": {
+    "session_id": {"type": "string"},
+    "started": {"type": "number"},
+    "ended": {"type": "number"},
+    "preset_id": {"type": ["integer", "null"]},
+    "kernel_words": {"type": "array", "items": {"type": "string", "pattern": "^[0-9A-F]{16}$"}},
+    "xor_holonomy": {"type": "string", "pattern": "^[0-9A-F]{16}$"},
+    "chiral_holonomy": {"type": "array", "items": {"type": "number"}, "minItems": 4, "maxItems": 4},
+    "biofeedback_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "coherence": {
+      "type": "object",
+      "required": ["start", "end", "min_distance"],
+      "properties": {
+        "start": {"type": "number"}, "end": {"type": "number"}, "min_distance": {"type": "number"}
+      }
+    },
+    "pump_ticks": {"type": "integer", "minimum": 0},
+    "kernel_verified": {"type": "boolean", "description": "true when the words were cross-checked against the BioChain protocol/shdccp_kernel.py reference"}
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biochain.ai/cocoon/schemas/biofeedback_frame.schema.json",
+  "title": "Biofeedback frame",
+  "description": "One sample batch from a wearable or a sensor-equipped puck, posted to the orchestrator (POST /api/biofeedback). Each channel is optional; the AI core uses whatever is present.",
+  "type": "object",
+  "required": ["t", "source"],
+  "additionalProperties": false,
+  "properties": {
+    "t": {"type": "number", "description": "Unix time, seconds"},
+    "source": {"type": "string", "maxLength": 64},
+    "rr_ms": {"type": "array", "items": {"type": "number", "minimum": 250, "maximum": 2500}, "description": "RR intervals since last frame (HRV)"},
+    "hr_bpm": {"type": "number", "minimum": 20, "maximum": 240},
+    "eeg_bands": {
+      "type": "object",
+      "description": "Relative band power, any scale; normalised by the AI core",
+      "additionalProperties": false,
+      "properties": {
+        "delta": {"type": "number", "minimum": 0}, "theta": {"type": "number", "minimum": 0},
+        "alpha": {"type": "number", "minimum": 0}, "beta": {"type": "number", "minimum": 0},
+        "gamma": {"type": "number", "minimum": 0}
+      }
+    },
+    "gsr_us": {"type": "number", "minimum": 0, "description": "Skin conductance, microsiemens"},
+    "zone_gsr_us": {
+      "type": "object",
+      "description": "Per-body-zone skin conductance for chakra/zone mapping",
+      "propertyNames": {"enum": ["root", "sacral", "solar_plexus", "heart", "throat", "third_eye", "crown"]},
+      "additionalProperties": {"type": "number", "minimum": 0}
+    }
+  }
+}

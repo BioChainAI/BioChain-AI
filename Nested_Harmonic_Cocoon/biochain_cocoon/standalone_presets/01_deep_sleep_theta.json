@@ -1,0 +1,91 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 1,
+  "slug": "deep_sleep_theta",
+  "name": "Deep Sleep Theta Protocol",
+  "description": "Evening wind-down: glides from relaxed alpha through theta into delta for sleep onset. Audio only, isochronic so it works on an omni speaker.",
+  "target_state": "delta",
+  "loop": false,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 36,
+  "steps": [
+    {
+      "hold_s": 240,
+      "ramp_s": 5,
+      "fc": 432,
+      "fe": 10,
+      "amp": 0.35,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "settle at alpha"
+    },
+    {
+      "hold_s": 300,
+      "ramp_s": 120,
+      "fc": 432,
+      "fe": 7.83,
+      "amp": 0.33,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "Schumann bridge"
+    },
+    {
+      "hold_s": 480,
+      "ramp_s": 180,
+      "fc": 396,
+      "fe": 6,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ]
+    },
+    {
+      "hold_s": 600,
+      "ramp_s": 240,
+      "fc": 396,
+      "fe": 4,
+      "amp": 0.26,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "deep theta"
+    },
+    {
+      "hold_s": 420,
+      "ramp_s": 240,
+      "fc": 396,
+      "fe": 2,
+      "amp": 0.2,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "delta, fading"
+    },
+    {
+      "hold_s": 0,
+      "ramp_s": 60,
+      "fc": 396,
+      "fe": 2,
+      "amp": 0.0,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "fade out"
+    }
+  ]
+}

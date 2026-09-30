@@ -1,0 +1,117 @@
+{
+  "$schema": "../protocols/schemas/standalone_preset.schema.json",
+  "version": 1,
+  "id": 7,
+  "slug": "chakra_ascent",
+  "name": "Chakra Ascent (Solfeggio)",
+  "description": "Walks the solfeggio carriers from root to crown (396 \u2192 963 Hz) with a 7.83 Hz isochronic pulse. The carrier/body-zone pairings follow the contemplative tradition and are not physiologically validated.",
+  "target_state": "alpha",
+  "loop": false,
+  "photosensitive_consent_required": false,
+  "duration_hint_min": 17,
+  "steps": [
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 396,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "root"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 417,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "sacral"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 528,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "solar plexus"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 639,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "heart"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 741,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "throat"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 852,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "third eye"
+    },
+    {
+      "hold_s": 120,
+      "ramp_s": 15,
+      "fc": 963,
+      "fe": 7.83,
+      "amp": 0.3,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ],
+      "note": "crown"
+    },
+    {
+      "hold_s": 0,
+      "ramp_s": 30,
+      "fc": 963,
+      "fe": 7.83,
+      "amp": 0.0,
+      "pan": 0.0,
+      "mode": "isochronic",
+      "modality": [
+        "audio"
+      ]
+    }
+  ]
+}

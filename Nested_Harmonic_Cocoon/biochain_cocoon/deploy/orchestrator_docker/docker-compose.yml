@@ -1,0 +1,31 @@
+# Hub deployment (Raspberry Pi or local PC).
+#   cd biochain_cocoon && docker compose -f deploy/orchestrator_docker/docker-compose.yml up -d
+#
+# network_mode: host is required: the mesh uses UDP *broadcast* on the LAN,
+# which Docker's bridge network does not forward.
+services:
+  orchestrator:
+    build:
+      context: ../..
+      dockerfile: deploy/orchestrator_docker/Dockerfile
+    image: cocoon-orchestrator:latest
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ./cocoon.env            # copy cocoon.env.example → cocoon.env
+    volumes:
+      - cocoon-data:/data
+    # For the USB ESP-NOW gateway (COCOON_TRANSPORT=serial), pass the device through:
+    # devices:
+    #   - /dev/ttyACM0:/dev/ttyACM0
+
+  # Optional: a local simulator instance for demos/training on port 8641.
+  simulator:
+    profiles: ["sim"]
+    image: cocoon-orchestrator:latest
+    command: ["--sim", "--port", "8641", "--host", "0.0.0.0"]
+    ports:
+      - "8641:8641"
+
+volumes:
+  cocoon-data:
