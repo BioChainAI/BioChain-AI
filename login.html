@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BioChain AI — Sign in</title>
+<script type="importmap">
+{
+  "integrity": {
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js": "sha384-aeHHd/L754G1ECgQuwU8DCG0mwYjleqJzbisHMzgX8seOBYhRpVy4tRjRAXqTas2",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js": "sha384-FSqJf3z2WiF4MGlWEHSmK0W1qSqfCc8D+mjzzRlJsMdpRBFVpTfBB5FMT3tvEqKC",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js": "sha384-mtrW3U1+D2g2ZkwC/aZ8CQWDZCSFTpgme0l2f1XqzuAGJx3BEC6raceeEesIZ8m1",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js": "sha384-RO0E4iCEiJw7affCvB9sSV4a9stsCPw47pK4iynSuQBEK4a8CUUV8flHQ9ghdFUw"
+  }
+}
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -32,14 +42,15 @@
   <div id="stage" class="mt-6"><p class="opacity-60 text-sm">Resolving session…</p></div>
 
   <p class="text-[11px] opacity-40 mt-6 leading-relaxed">
-    Client-side ECDSA credentials, verified against Firestore rules. Your signing keys never leave your account;
-    the public key registry is the only shared surface.
+    Client-side ECDSA P-256 signing keys; Firestore rules control who may write each record. A signing key is generated in your browser;
+    its private half is stored in an owner-only record in your account, and its public half in the key registry,
+    which signed-in users read to verify attestations.
   </p>
 </main>
 
 <script type="module">
 import { signInWithGoogle, onAuthChange } from "./src/firebase/auth.js";
-import { readIdentity, registerIdentity, computeIdentityId, renderIdentityIcon } from "./src/identity/identity-registry.js";
+import { readIdentity, registerIdentity, forgetSeed, forgetLocalSeed, computeIdentityId, renderIdentityIcon } from "./src/identity/identity-registry.js";
 import { resolveRole } from "./src/identity/access-control.js";
 
 const stage = document.getElementById("stage");
@@ -61,8 +72,9 @@ async function needsIdentity(uid) {
   const role = await resolveRole(uid).catch(() => "MEMBER");
   stage.innerHTML = `
     <p class="text-sm opacity-80 mb-2">One-time setup: commit your <strong class="text-white">Identity</strong>.
-      Your Identity ID is derived from a private seed and your account — immutable once committed.</p>
-    <input id="seed" type="text" placeholder="Identity seed (a private phrase only you know)" class="w-full rounded-lg px-3 py-2.5 text-sm mono"/>
+      Your Identity ID is derived from a seed phrase and your account, and is immutable once committed.
+      The seed is used once, in this browser, and is not stored; the ID is a public handle, not a secret.</p>
+    <input id="seed" type="text" placeholder="Identity seed (any phrase; used once, not stored)" autocomplete="off" class="w-full rounded-lg px-3 py-2.5 text-sm mono"/>
     <div id="preview" class="flex items-center gap-3 mt-3 min-h-[64px]"></div>
     <button id="commit" class="btn w-full py-3 rounded-lg font-medium text-black mt-3" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">
       Commit Identity · ${esc(role)}
@@ -89,8 +101,13 @@ async function needsIdentity(uid) {
 
 onAuthChange(async (user) => {
   if (!user) return signedOut();
+  forgetLocalSeed();
   const id = await readIdentity(user.uid);
-  if (id && id.identityId) location.replace(dest);
+  if (id && id.identityId) {
+    // a seed stored by an earlier version is removed; sign-in continues either way
+    if ("identitySeed" in id) await forgetSeed(user.uid).catch(() => {});
+    location.replace(dest);
+  }
   else needsIdentity(user.uid);
 });
 </script>

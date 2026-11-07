@@ -19,7 +19,7 @@ implementation and is never modified.
 | Understand what BioChain does, how to use it, and the roadmap | [`index.html`](index.html) — the landing page ([live site](https://biochainai.github.io/BioChain-AI/)) |
 | Verify the migration is fully accounted for | [`MIGRATION_PLAN.md`](MIGRATION_PLAN.md) — the authoritative plan + acceptance checklist |
 | Actually perform / repeat the deployment | [`Tutorials/Migration/`](Tutorials/Migration/README.md) — the step-by-step scaffold ([browsable page](Tutorials/Migration/index.html)) |
-| Understand the protocol core | `protocol/README.md` (added in Phase 2) |
+| Understand the protocol core | [`protocol/README.md`](protocol/README.md) |
 | Build or run the Harmonic Cocoon entrainment subsystem (standalone; optional BioChain bridge) | [`Nested_Harmonic_Cocoon/`](Nested_Harmonic_Cocoon/README.md) |
 
 ## Architecture (four layers)
@@ -31,18 +31,44 @@ Layer 2  Protocol core ........ protocol/  (SHD-CCP kernel, codex engine, mesh, 
 Layer 1  Data / rules ......... firestore.rules + src/firebase/
 ```
 
-## What's in this commit (Phase 0 — foundation)
+## Status
 
-Staged for review before the code port:
+All four layers are in the repository and served by GitHub Pages:
 
-- `firestore.rules` — standalone security rules (enterprise naming)
-- `firestore.indexes.json`, `firebase.json` — Firestore/emulator config
-- `src/firebase/{config,auth,firestore}.js` — bound to the `biochain-ai` project
-- `MIGRATION_PLAN.md` — complete plan, naming standard, file manifest, checklist
-- `Tutorials/Migration/` — the reusable deployment scaffold
+- **Layer 1** — `firestore.rules`, `firestore.indexes.json`, `firebase.json` and
+  `src/firebase/{config,auth,firestore}.js`, bound to the `biochain-ai` project.
+- **Layer 2** — the Python protocol reference in `protocol/` (kernel, codex
+  engine, mesh, engram shards, pump clock), each with a deterministic self-test.
+- **Layer 3** — `src/biomesh/` (grow, verify, publish, transfer, rate) and
+  `src/identity/` (identity, signing keys, roles, epochs). `crypto-core.js` holds
+  the Firebase-free signing-key and identity primitives, so they run in Node as
+  well as the browser.
+- **Layer 4** — `console/` (Operations Console, Language Studio, Lattice Forge)
+  and `login.html`.
 
-The Layer 2–4 port (protocol core, services, console) executes in Phases 2–4 per
-the plan.
+`verifyIntegrity` checks a record's self-consistency (parity, each chunk against
+its leaf, the Merkle root, the chiral weave and the engram stream) and fails at
+the first mismatch.
+
+### Tests and CI
+
+`.github/workflows/biochain-ci.yml` runs on every pull request and push to main
+that touches `src/`, `console/`, `protocol/`, `tests/`, `firestore.rules`,
+`firebase.json`, `login.html` or `index.html`. Actions are pinned to commits;
+jobs run with a read-only token (`contents: read`), checkouts do not persist it,
+and nothing deploys.
+
+| Job | What it checks | Run it locally |
+|---|---|---|
+| rules | the trust scenarios in `tests/rules/scenarios/` against the Firestore emulator | `cd tests/rules && npm ci && npm test` (Java 21) |
+| unit | `crypto-core.js` signatures and goldens, identity and signing-key writes, the scenario files | `node --test "tests/unit/*.test.mjs"` |
+| protocol | every `protocol/*.py` self-test | `python3 -B -I tests/protocol/run_selftests.py` |
+| static | storage policy, CDN version and integrity pins, audit-log kinds against the rules | `node tests/static/run-all.mjs` |
+| cdn | each pinned CDN file still matches its integrity value (network) | `node tests/static/cdn-live.mjs` |
+
+Rules changes are deployed by a maintainer
+(`firebase deploy --only firestore:rules --project biochain-ai`); CI never
+deploys. The live end-to-end checklist in `MIGRATION_PLAN.md` is run by hand.
 
 ## Trust model
 
@@ -50,10 +76,16 @@ Client-side ECDSA crypto with Firestore rules as the backstop. Rules pin
 grower/owner identity on create, free-only transfers, recipient-only resolution,
 ownership-moves-only-via-accepted-transfer (joined server-side, sequenced per
 chain so each transfer is single-use and cannot be replayed), and no deletes
-where history must survive. Attestations are real, publicly verifiable, and
-revocable — revoking a signing key invalidates every attestation it signed,
-everywhere, at once, and revocation is one-way (a revoked key cannot be
-reactivated).
+where history must survive. Attestations are ECDSA P-256 signatures that any
+signed-in user can verify against the key registry, and they are revocable —
+revoking a signing key invalidates every attestation it signed, everywhere, at
+once, and revocation is one-way (a revoked key cannot be reactivated).
+
+A signing key is generated in the browser. Its private half is stored in the
+owner-only `users/{uid}/signingKeys/{keyId}` record and its public half in
+`keyRegistry/{keyId}`. The identity seed is used once, in the browser, to derive
+the Identity ID and is not stored; the audit log accepts only entries that name
+their author's own uid and a known event kind.
 
 Roles come only from records users cannot write for themselves:
 `config/rootAdmins` (console-managed) and `roleGrants/{uid}` (ADMIN-written).

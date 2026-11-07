@@ -8,8 +8,8 @@
  *              kernel-packet crystallization, 7 weave segments with chiral +
  *              mirror holonomies).
  *  • CERTIFY — the grower signs a GROWN/1 commitment with their signing key.
- *              Certification is therefore revocable, publicly verifiable, and
- *              traces to an Identity via keyRegistry/{keyId}.
+ *              Certification is therefore revocable, verifiable by any
+ *              signed-in user, and traces to an Identity via keyRegistry/{keyId}.
  *  • SEND    — transfers are ALWAYS FREE. A transfer is a signed TRANSFER/1
  *              record; ownership only moves when the recipient accepts. The
  *              transfer docs are the lineage — never deleted.

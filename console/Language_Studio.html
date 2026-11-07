@@ -4,6 +4,17 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>BioChain AI — Language Studio</title>
+<script type="importmap">
+{
+  "integrity": {
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js": "sha384-aeHHd/L754G1ECgQuwU8DCG0mwYjleqJzbisHMzgX8seOBYhRpVy4tRjRAXqTas2",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js": "sha384-FSqJf3z2WiF4MGlWEHSmK0W1qSqfCc8D+mjzzRlJsMdpRBFVpTfBB5FMT3tvEqKC",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js": "sha384-mtrW3U1+D2g2ZkwC/aZ8CQWDZCSFTpgme0l2f1XqzuAGJx3BEC6raceeEesIZ8m1",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js": "sha384-RO0E4iCEiJw7affCvB9sSV4a9stsCPw47pK4iynSuQBEK4a8CUUV8flHQ9ghdFUw",
+    "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js": "sha384-SdFUvs6NCUwfWzNs2Zq8gDU7MDoVvb5/Bo6XoVoS9g/3H0raitP7IwnEXOKCOHeD"
+  }
+}
+</script>
 <script type="module" src="../src/ui/auth-guard.js"></script>
 <script type="module" src="../src/ui/node-network-bg.js" data-accent="#00ff88"></script>
 <style>
@@ -198,7 +209,7 @@
       <li>Optionally adjust the lattice (E8/R8/R24), manifold, coherency, and torsion parameters —
         defaults are fine for a first signing key.</li>
       <li>Click <code>Create signing key</code>. This samples the live epoch and mints a
-        fresh ECDSA P-256 keypair — the private key never leaves your browser's Firestore doc.</li>
+        fresh ECDSA P-256 keypair — the private key is kept in your owner-only signing-key record.</li>
       <li>Return to this tab. Your new signing key appears in the <b>Operator signing key</b> selector at
         the top-left automatically (reload the page if it doesn't).</li>
       <li>Pick it from the dropdown — its unique identicon renders immediately, and every turn you
@@ -331,7 +342,7 @@ async function initBART() {
   if (bartReady || bartLoading) return;
   bartLoading = true; $("bartStat").textContent = "BART loading…"; $("bartStat").className = "pill warn";
   try {
-    const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0");
+    const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.6.0/dist/transformers.min.js");
     env.allowLocalModels = false;
     bartPipe = await pipeline("fill-mask", "Xenova/bert-base-uncased", { quantized: true });
     bartReady = true; $("bartStat").textContent = "BART ready"; $("bartStat").className = "pill ok";

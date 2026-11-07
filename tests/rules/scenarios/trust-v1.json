@@ -1,0 +1,175 @@
+{
+  "format": "trust-scenarios/1",
+  "version": 1,
+  "description": "Abstract trust scenarios for the BioMesh Firestore rules. Each step names an actor (as; null = signed out), an abstract operation and the expected verdict. Steps run in file order against one emulator database, after the setup writes (made with rules disabled). An app's names file maps each operation to its own collections and fields. See README.md.",
+  "actors": ["A", "B", "C", "G", "M", "N", "O", "Q", "S", "X", "Y", "root"],
+  "setup": [
+    {"op": "config.write", "as": null, "params": {"uids": ["root"]}},
+    {"op": "chain.seed", "as": null, "params": {"chain": "C1", "grower": "A", "owner": "A"}},
+    {"op": "key.register", "as": "A", "params": {"key": "KA", "status": "active", "role": "MEMBER"}}
+  ],
+  "groups": [
+    {
+      "id": "ownership-replay",
+      "title": "Item 1 — ownership replay",
+      "steps": [
+        {"id": "xfer-send-seq0", "name": "A→B send at seq 0", "as": "A", "op": "transfer.send", "params": {"id": "T1", "chain": "C1", "to": "B", "seq": 0}, "expect": "allow"},
+        {"id": "xfer-send-wrong-seq", "name": "send with wrong chainSeq denied", "as": "A", "op": "transfer.send", "params": {"id": "Tx", "chain": "C1", "to": "B", "seq": 7}, "expect": "deny"},
+        {"id": "xfer-send-no-seq", "name": "send without chainSeq denied", "as": "A", "op": "transfer.send", "params": {"id": "Ty", "chain": "C1", "to": "B"}, "expect": "deny"},
+        {"id": "xfer-accept-t1", "name": "B accepts T1", "as": "B", "op": "transfer.accept", "params": {"id": "T1"}, "expect": "allow"},
+        {"id": "claim-no-seq", "name": "B takes ownership without advancing seq denied", "as": "B", "op": "chain.claim", "params": {"chain": "C1", "via": "T1"}, "expect": "deny"},
+        {"id": "claim-t1", "name": "B takes ownership (seq 0→1)", "as": "B", "op": "chain.claim", "params": {"chain": "C1", "via": "T1", "seq": 1}, "expect": "allow"},
+        {"id": "xfer-send-b-c", "name": "B→C send at seq 1", "as": "B", "op": "transfer.send", "params": {"id": "T2", "chain": "C1", "to": "C", "seq": 1}, "expect": "allow"},
+        {"id": "xfer-accept-t2", "name": "C accepts T2", "as": "C", "op": "transfer.accept", "params": {"id": "T2"}, "expect": "allow"},
+        {"id": "claim-t2", "name": "C takes ownership (seq 1→2)", "as": "C", "op": "chain.claim", "params": {"chain": "C1", "via": "T2", "seq": 2}, "expect": "allow"},
+        {"id": "replay-t1-seq3", "name": "ATTACK: B replays old T1 to reclaim", "as": "B", "op": "chain.claim", "params": {"chain": "C1", "via": "T1", "seq": 3}, "expect": "deny"},
+        {"id": "replay-t1-seq1", "name": "ATTACK: B replays T1 with seq 1", "as": "B", "op": "chain.claim", "params": {"chain": "C1", "via": "T1", "seq": 1}, "expect": "deny"},
+        {"id": "xfer-send-c-a", "name": "C→A send at seq 2", "as": "C", "op": "transfer.send", "params": {"id": "T3", "chain": "C1", "to": "A", "seq": 2}, "expect": "allow"},
+        {"id": "xfer-accept-t3", "name": "A accepts T3", "as": "A", "op": "transfer.accept", "params": {"id": "T3"}, "expect": "allow"},
+        {"id": "claim-t3", "name": "A takes ownership (seq 2→3)", "as": "A", "op": "chain.claim", "params": {"chain": "C1", "via": "T3", "seq": 3}, "expect": "allow"},
+        {"id": "replay-t1-round-trip", "name": "ATTACK: B replays T1 (sender A is owner again)", "as": "B", "op": "chain.claim", "params": {"chain": "C1", "via": "T1", "seq": 4}, "expect": "deny"},
+        {"id": "owner-bumps-seq", "name": "owner cannot bump transferSeq directly", "as": "A", "op": "chain.setSeq", "params": {"chain": "C1", "seq": 9}, "expect": "deny"},
+        {"id": "create-nonzero-seq", "name": "create chain with nonzero transferSeq denied", "as": "A", "op": "chain.create", "params": {"chain": "C2", "seq": 5}, "expect": "deny"},
+        {"id": "create-chain", "name": "create chain normally", "as": "A", "op": "chain.create", "params": {"chain": "C2", "seq": 0}, "expect": "allow"}
+      ]
+    },
+    {
+      "id": "self-granted-roles",
+      "title": "Item 2 — self-granted roles",
+      "steps": [
+        {"id": "identity-with-role", "name": "ATTACK: identity created with role ADMIN", "as": "M", "op": "identity.create", "params": {"owner": "M", "identityId": "0x1", "seed": "s", "geo": "g", "role": "ADMIN"}, "expect": "deny"},
+        {"id": "identity-with-certificate", "name": "ATTACK: identity created with certificate", "as": "M", "op": "identity.create", "params": {"owner": "M", "identityId": "0x1", "seed": "s", "geo": "g", "certificate": {"role": "ADMIN"}}, "expect": "deny"},
+        {"id": "identity-without-role", "name": "identity created without role", "as": "M", "op": "identity.create", "params": {"owner": "M", "identityId": "0x1", "seed": "s", "geo": "g"}, "expect": "allow"},
+        {"id": "identity-role-later", "name": "ATTACK: role added to identity later", "as": "M", "op": "identity.update", "params": {"owner": "M", "role": "ADMIN"}, "expect": "deny"},
+        {"id": "grant-self", "name": "ATTACK: member writes own roleGrant", "as": "M", "op": "roleGrant.write", "params": {"subject": "M", "role": "ADMIN", "grantor": "M"}, "expect": "deny"},
+        {"id": "config-write", "name": "ATTACK: member writes config/rootAdmins", "as": "M", "op": "config.write", "params": {"uids": ["M"]}, "expect": "deny"},
+        {"id": "identity-read-other", "name": "ATTACK: member reads another identity", "as": "B", "op": "identity.read", "params": {"owner": "M"}, "expect": "deny"},
+        {"id": "root-grants-operator", "name": "root admin grants OPERATOR", "as": "root", "op": "roleGrant.write", "params": {"subject": "O", "role": "OPERATOR", "grantor": "root"}, "expect": "allow"},
+        {"id": "root-grants-admin", "name": "root admin grants ADMIN to G", "as": "root", "op": "roleGrant.write", "params": {"subject": "G", "role": "ADMIN", "grantor": "root"}, "expect": "allow"},
+        {"id": "granted-admin-grants", "name": "granted admin G can grant", "as": "G", "op": "roleGrant.write", "params": {"subject": "X", "role": "OPERATOR", "grantor": "G"}, "expect": "allow"},
+        {"id": "operator-self-promotes", "name": "ATTACK: OPERATOR promotes self to ADMIN", "as": "O", "op": "roleGrant.write", "params": {"subject": "O", "role": "ADMIN", "grantor": "O"}, "expect": "deny"},
+        {"id": "forged-grantor", "name": "ATTACK: admin forges grantedByUid", "as": "root", "op": "roleGrant.write", "params": {"subject": "Y", "role": "OPERATOR", "grantor": "G"}, "expect": "deny"},
+        {"id": "bogus-role", "name": "grant with bogus role denied", "as": "root", "op": "roleGrant.write", "params": {"subject": "Y", "role": "GOD", "grantor": "root"}, "expect": "deny"},
+        {"id": "admin-reads-identity", "name": "admin reads another identity", "as": "root", "op": "identity.read", "params": {"owner": "M"}, "expect": "allow"}
+      ]
+    },
+    {
+      "id": "key-revocation",
+      "title": "Item 3 — revocation is one-way",
+      "steps": [
+        {"id": "key-revoke", "name": "owner revokes active key", "as": "A", "op": "key.setStatus", "params": {"key": "KA", "status": "revoked", "epoch": "EPOCH.1"}, "expect": "allow"},
+        {"id": "key-reactivate", "name": "ATTACK: owner reactivates revoked key", "as": "A", "op": "key.setStatus", "params": {"key": "KA", "status": "active"}, "expect": "deny"},
+        {"id": "key-revoked-to-retired", "name": "ATTACK: revoked → retired", "as": "A", "op": "key.setStatus", "params": {"key": "KA", "status": "retired"}, "expect": "deny"},
+        {"id": "key-born-revoked", "name": "create key born revoked denied", "as": "A", "op": "key.register", "params": {"key": "KB", "status": "revoked", "role": "MEMBER"}, "expect": "deny"},
+        {"id": "key-stamped-admin", "name": "ATTACK: member mints key stamped ADMIN", "as": "A", "op": "key.register", "params": {"key": "KC", "status": "active", "role": "ADMIN"}, "expect": "deny"},
+        {"id": "key-member", "name": "member mints MEMBER key", "as": "A", "op": "key.register", "params": {"key": "KD", "status": "active", "role": "MEMBER"}, "expect": "allow"},
+        {"id": "key-operator", "name": "operator mints OPERATOR key", "as": "O", "op": "key.register", "params": {"key": "KO", "status": "active", "role": "OPERATOR"}, "expect": "allow"},
+        {"id": "key-bogus-status", "name": "ATTACK: set bogus status on active key", "as": "A", "op": "key.setStatus", "params": {"key": "KD", "status": "active-ish"}, "expect": "deny"}
+      ]
+    },
+    {
+      "id": "rater-role",
+      "title": "Item 4 — rater role must be real",
+      "steps": [
+        {"id": "rate-claims-admin", "name": "ATTACK: member rates claiming ADMIN", "as": "M", "op": "rating.create", "params": {"chain": "C1", "role": "ADMIN", "stars": 5}, "expect": "deny"},
+        {"id": "rate-member", "name": "member rates as MEMBER", "as": "M", "op": "rating.create", "params": {"chain": "C1", "role": "MEMBER", "stars": 5}, "expect": "allow"},
+        {"id": "rate-upgrade-role", "name": "ATTACK: member upgrades role on update", "as": "M", "op": "rating.update", "params": {"chain": "C1", "role": "ADMIN"}, "expect": "deny"},
+        {"id": "rate-move-chain", "name": "ATTACK: rating moved to another chain", "as": "M", "op": "rating.update", "params": {"chain": "C1", "newChain": "C2"}, "expect": "deny"},
+        {"id": "rate-edit-stars", "name": "member edits stars", "as": "M", "op": "rating.update", "params": {"chain": "C1", "stars": 3}, "expect": "allow"},
+        {"id": "rate-operator", "name": "operator rates as OPERATOR", "as": "O", "op": "rating.create", "params": {"chain": "C1", "role": "OPERATOR", "stars": 4}, "expect": "allow"},
+        {"id": "rate-root", "name": "root rates as ADMIN", "as": "root", "op": "rating.create", "params": {"chain": "C1", "role": "ADMIN", "stars": 4}, "expect": "allow"}
+      ]
+    },
+    {
+      "id": "transfer-resolution",
+      "title": "Item 5 — transfers: free, sent by the owner, resolved once by the recipient",
+      "steps": [
+        {"id": "xfer-priced", "name": "send with a nonzero price denied", "as": "A", "op": "transfer.send", "params": {"id": "T4", "chain": "C2", "to": "B", "seq": 0, "price": 5}, "expect": "deny"},
+        {"id": "xfer-not-owner", "name": "send of a chain the sender does not own denied", "as": "B", "op": "transfer.send", "params": {"id": "T4", "chain": "C2", "to": "C", "seq": 0}, "expect": "deny"},
+        {"id": "xfer-send-t4", "name": "A→B send of C2 at seq 0", "as": "A", "op": "transfer.send", "params": {"id": "T4", "chain": "C2", "to": "B", "seq": 0}, "expect": "allow"},
+        {"id": "xfer-send-t5", "name": "A→C send of C2 at seq 0", "as": "A", "op": "transfer.send", "params": {"id": "T5", "chain": "C2", "to": "C", "seq": 0}, "expect": "allow"},
+        {"id": "xfer-accept-non-recipient", "name": "transfer accepted by a non-recipient denied", "as": "C", "op": "transfer.accept", "params": {"id": "T4"}, "expect": "deny"},
+        {"id": "claim-pending", "name": "ownership taken with a pending transfer denied", "as": "B", "op": "chain.claim", "params": {"chain": "C2", "via": "T4", "seq": 1}, "expect": "deny"},
+        {"id": "xfer-accept-t4", "name": "B accepts T4", "as": "B", "op": "transfer.accept", "params": {"id": "T4"}, "expect": "allow"},
+        {"id": "xfer-accept-twice", "name": "accepted transfer accepted again denied", "as": "B", "op": "transfer.accept", "params": {"id": "T4"}, "expect": "deny"},
+        {"id": "xfer-decline-accepted", "name": "accepted transfer declined afterwards denied", "as": "B", "op": "transfer.decline", "params": {"id": "T4"}, "expect": "deny"},
+        {"id": "xfer-accept-t5", "name": "C accepts T5", "as": "C", "op": "transfer.accept", "params": {"id": "T5"}, "expect": "allow"},
+        {"id": "claim-t4", "name": "B takes ownership of C2 (seq 0→1)", "as": "B", "op": "chain.claim", "params": {"chain": "C2", "via": "T4", "seq": 1}, "expect": "allow"},
+        {"id": "claim-second-accept", "name": "second accepted transfer at the same seq cannot take ownership", "as": "C", "op": "chain.claim", "params": {"chain": "C2", "via": "T5", "seq": 1}, "expect": "deny"},
+        {"id": "claim-second-accept-next-seq", "name": "second accepted transfer cannot take ownership at the next seq", "as": "C", "op": "chain.claim", "params": {"chain": "C2", "via": "T5", "seq": 2}, "expect": "deny"},
+        {"id": "chain-delete", "name": "biochain delete denied", "as": "B", "op": "chain.delete", "params": {"chain": "C2"}, "expect": "deny"},
+        {"id": "xfer-delete", "name": "transfer delete denied", "as": "A", "op": "transfer.delete", "params": {"id": "T4"}, "expect": "deny"},
+        {"id": "rating-delete", "name": "rating delete denied", "as": "M", "op": "rating.delete", "params": {"chain": "C1"}, "expect": "deny"},
+        {"id": "rate-second-doc-id", "name": "second rating on the same chain under another doc id denied", "as": "M", "op": "rating.createAt", "params": {"rid": "C1_M2", "chain": "C1", "role": "MEMBER", "stars": 4}, "expect": "deny"}
+      ]
+    },
+    {
+      "id": "signing-keys",
+      "title": "Item 6 — signing keys: owner-only, born active, one-way status, never deleted",
+      "steps": [
+        {"id": "sk-create", "name": "owner creates an active signing key", "as": "A", "op": "privateKey.create", "params": {"owner": "A", "key": "K1", "keyId": "K1", "ownerUid": "A", "status": "active"}, "expect": "allow"},
+        {"id": "sk-create-other-account", "name": "signing key created in another account denied", "as": "B", "op": "privateKey.create", "params": {"owner": "A", "key": "K2", "keyId": "K2", "ownerUid": "A", "status": "active"}, "expect": "deny"},
+        {"id": "sk-create-other-owner", "name": "signing key naming another owner denied", "as": "A", "op": "privateKey.create", "params": {"owner": "A", "key": "K3", "keyId": "K3", "ownerUid": "B", "status": "active"}, "expect": "deny"},
+        {"id": "sk-create-id-mismatch", "name": "signing key whose keyId differs from its doc id denied", "as": "A", "op": "privateKey.create", "params": {"owner": "A", "key": "K3", "keyId": "K9", "ownerUid": "A", "status": "active"}, "expect": "deny"},
+        {"id": "sk-create-revoked", "name": "signing key born revoked denied", "as": "A", "op": "privateKey.create", "params": {"owner": "A", "key": "K4", "keyId": "K4", "ownerUid": "A", "status": "revoked"}, "expect": "deny"},
+        {"id": "sk-read-own", "name": "owner reads own signing key", "as": "A", "op": "privateKey.read", "params": {"owner": "A", "key": "K1"}, "expect": "allow"},
+        {"id": "sk-list-own", "name": "owner lists own signing keys", "as": "A", "op": "privateKey.list", "params": {"owner": "A"}, "expect": "allow"},
+        {"id": "sk-read-other", "name": "signing key read by another user denied", "as": "B", "op": "privateKey.read", "params": {"owner": "A", "key": "K1"}, "expect": "deny"},
+        {"id": "sk-list-other", "name": "another user's signing keys listed denied", "as": "B", "op": "privateKey.list", "params": {"owner": "A"}, "expect": "deny"},
+        {"id": "sk-edit", "name": "signing key content edit denied", "as": "A", "op": "privateKey.edit", "params": {"owner": "A", "key": "K1", "label": "renamed"}, "expect": "deny"},
+        {"id": "sk-revoke-other", "name": "signing key revoked by another user denied", "as": "B", "op": "privateKey.setStatus", "params": {"owner": "A", "key": "K1", "status": "revoked"}, "expect": "deny"},
+        {"id": "sk-bogus-status", "name": "signing key set to an unknown status denied", "as": "A", "op": "privateKey.setStatus", "params": {"owner": "A", "key": "K1", "status": "paused"}, "expect": "deny"},
+        {"id": "sk-revoke", "name": "owner revokes own signing key", "as": "A", "op": "privateKey.setStatus", "params": {"owner": "A", "key": "K1", "status": "revoked"}, "expect": "allow"},
+        {"id": "sk-reactivate", "name": "revoked signing key reactivated denied", "as": "A", "op": "privateKey.setStatus", "params": {"owner": "A", "key": "K1", "status": "active"}, "expect": "deny"},
+        {"id": "sk-retire-after-revoke", "name": "revoked signing key retired denied", "as": "A", "op": "privateKey.setStatus", "params": {"owner": "A", "key": "K1", "status": "retired"}, "expect": "deny"},
+        {"id": "sk-delete", "name": "signing key delete denied", "as": "A", "op": "privateKey.delete", "params": {"owner": "A", "key": "K1"}, "expect": "deny"}
+      ]
+    },
+    {
+      "id": "identity-record",
+      "title": "Item 7 — identity: frozen record; a stored seed can only be removed",
+      "steps": [
+        {"id": "id-create-with-seed", "name": "identity created with a seed field (earlier client shape)", "as": "S", "op": "identity.create", "params": {"owner": "S", "identityId": "0x5", "seed": "phrase", "geo": "g5"}, "expect": "allow"},
+        {"id": "id-create-without-seed", "name": "identity created without a seed field", "as": "N", "op": "identity.create", "params": {"owner": "N", "identityId": "0x6", "geo": "g6"}, "expect": "allow"},
+        {"id": "id-create-other-account", "name": "identity created in another account denied", "as": "B", "op": "identity.create", "params": {"owner": "Q", "identityId": "0x7", "geo": "g7"}, "expect": "deny"},
+        {"id": "id-change-seed", "name": "stored seed changed denied", "as": "S", "op": "identity.update", "params": {"owner": "S", "seed": "other"}, "expect": "deny"},
+        {"id": "id-change-identity-id", "name": "identityId changed denied", "as": "S", "op": "identity.update", "params": {"owner": "S", "identityId": "0x9"}, "expect": "deny"},
+        {"id": "id-change-geo", "name": "geoVector changed denied", "as": "S", "op": "identity.update", "params": {"owner": "S", "geo": "g9"}, "expect": "deny"},
+        {"id": "id-change-other-field", "name": "other identity field changed denied", "as": "N", "op": "identity.update", "params": {"owner": "N", "coords": {"x": 1}}, "expect": "deny"},
+        {"id": "id-forget-other", "name": "seed removed by another user denied", "as": "B", "op": "identity.forgetSeed", "params": {"owner": "S"}, "expect": "deny"},
+        {"id": "id-forget", "name": "owner removes the stored seed", "as": "S", "op": "identity.forgetSeed", "params": {"owner": "S"}, "expect": "allow"},
+        {"id": "id-seed-added-back", "name": "seed added back denied", "as": "S", "op": "identity.update", "params": {"owner": "S", "seed": "phrase"}, "expect": "deny"},
+        {"id": "id-seed-added-new", "name": "seed added to an identity created without one denied", "as": "N", "op": "identity.update", "params": {"owner": "N", "seed": "phrase"}, "expect": "deny"},
+        {"id": "id-delete", "name": "identity delete denied", "as": "S", "op": "identity.delete", "params": {"owner": "S"}, "expect": "deny"}
+      ]
+    },
+    {
+      "id": "audit-log",
+      "title": "Item 8 — audit log: own uid, known kinds, no client reads",
+      "steps": [
+        {"id": "audit-own", "name": "entry with own uid and a known kind", "as": "A", "op": "audit.append", "params": {"id": "E1", "uid": "A", "kind": "signing-key.create"}, "expect": "allow"},
+        {"id": "audit-other-uid", "name": "entry naming another uid denied", "as": "A", "op": "audit.append", "params": {"id": "E2", "uid": "B", "kind": "signing-key.create"}, "expect": "deny"},
+        {"id": "audit-no-uid", "name": "entry without a uid denied", "as": "A", "op": "audit.append", "params": {"id": "E3", "kind": "signing-key.create"}, "expect": "deny"},
+        {"id": "audit-unknown-kind", "name": "entry with an unknown kind denied", "as": "A", "op": "audit.append", "params": {"id": "E4", "uid": "A", "kind": "custom.event"}, "expect": "deny"},
+        {"id": "audit-no-kind", "name": "entry without a kind denied", "as": "A", "op": "audit.append", "params": {"id": "E5", "uid": "A"}, "expect": "deny"},
+        {"id": "audit-signed-out", "name": "entry from a signed-out client denied", "as": null, "op": "audit.append", "params": {"id": "E6", "uid": "A", "kind": "signing-key.create"}, "expect": "deny"},
+        {"id": "audit-rewrite", "name": "existing entry rewritten denied", "as": "A", "op": "audit.append", "params": {"id": "E1", "uid": "A", "kind": "biomesh.rated"}, "expect": "deny"},
+        {"id": "audit-read", "name": "entry read denied", "as": "A", "op": "audit.read", "params": {"id": "E1"}, "expect": "deny"},
+        {"id": "audit-kind-signing-key-create", "name": "entry of kind signing-key.create", "as": "B", "op": "audit.append", "params": {"id": "K-signing-key.create", "uid": "B", "kind": "signing-key.create"}, "expect": "allow"},
+        {"id": "audit-kind-signing-key-revoked", "name": "entry of kind signing-key.revoked", "as": "B", "op": "audit.append", "params": {"id": "K-signing-key.revoked", "uid": "B", "kind": "signing-key.revoked"}, "expect": "allow"},
+        {"id": "audit-kind-signing-key-retired", "name": "entry of kind signing-key.retired", "as": "B", "op": "audit.append", "params": {"id": "K-signing-key.retired", "uid": "B", "kind": "signing-key.retired"}, "expect": "allow"},
+        {"id": "audit-kind-role-granted", "name": "entry of kind role.granted", "as": "B", "op": "audit.append", "params": {"id": "K-role.granted", "uid": "B", "kind": "role.granted"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-grown", "name": "entry of kind biomesh.grown", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.grown", "uid": "B", "kind": "biomesh.grown"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-extended", "name": "entry of kind biomesh.extended", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.extended", "uid": "B", "kind": "biomesh.extended"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-listing", "name": "entry of kind biomesh.listing", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.listing", "uid": "B", "kind": "biomesh.listing"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-codex", "name": "entry of kind biomesh.codex", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.codex", "uid": "B", "kind": "biomesh.codex"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-paired", "name": "entry of kind biomesh.paired", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.paired", "uid": "B", "kind": "biomesh.paired"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-sent", "name": "entry of kind biomesh.sent", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.sent", "uid": "B", "kind": "biomesh.sent"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-accepted", "name": "entry of kind biomesh.accepted", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.accepted", "uid": "B", "kind": "biomesh.accepted"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-declined", "name": "entry of kind biomesh.declined", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.declined", "uid": "B", "kind": "biomesh.declined"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-rated", "name": "entry of kind biomesh.rated", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.rated", "uid": "B", "kind": "biomesh.rated"}, "expect": "allow"},
+        {"id": "audit-kind-biomesh-session-burned", "name": "entry of kind biomesh.session_burned", "as": "B", "op": "audit.append", "params": {"id": "K-biomesh.session_burned", "uid": "B", "kind": "biomesh.session_burned"}, "expect": "allow"}
+      ]
+    }
+  ]
+}

@@ -6,14 +6,14 @@
  *   2. Manifold selection (manifold + coherency + torsion)
  *   3. Epoch timing (the creation window token)
  *
- * A signing key carries an ECDSA keypair: the PRIVATE key lives only in the
+ * A signing key carries an ECDSA keypair: the PRIVATE key is stored in the
  * owner-only users/{uid}/signingKeys/{keyId} doc; the PUBLIC key is mirrored to
- * the signed-in-readable keyRegistry/{keyId} so anyone can verify an attestation
- * and trace it back to the owner. Revoking/retiring flips status → every
- * attestation it signed stops verifying ("issue, then revoke validity").
+ * the signed-in-readable keyRegistry/{keyId} so any signed-in user can verify an
+ * attestation and trace it back to the owner. Revoking/retiring flips status →
+ * every attestation it signed stops verifying ("issue, then revoke validity").
  */
 
-import { getDocument, setDocument, updateDocument, addToCollection, queryCollection } from "../firebase/firestore.js";
+import { getDocument, setDocument, updateBatch, addToCollection, queryCollection } from "../firebase/firestore.js";
 import { readIdentity } from "./identity-registry.js";
 import { resolveRole, contentPriority } from "./access-control.js";
 import { getEpoch } from "./epoch-service.js";
@@ -61,11 +61,28 @@ export async function listSigningKeys(uid) {
              .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 }
 
+const STATUS_KINDS = { revoked: "signing-key.revoked", retired: "signing-key.retired" };   // audit-log kinds
+
+/**
+ * Move an ACTIVE key to `revoked` or `retired`. The transition is one-way: a key
+ * whose registry entry is not active is refused here (and by the rules).
+ * The registry entry is written first, in one atomic batch with the owner's
+ * copy, so the public status and the owner's record change together or not at
+ * all. An owner copy that is already non-active is left as it is and only the
+ * registry is updated.
+ */
 async function setStatus(uid, keyId, status) {
+  if (!Object.hasOwn(STATUS_KINDS, status)) throw new Error(`Unknown key status: ${status}`);
+  const reg = await getDocument(`keyRegistry/${keyId}`);
+  if (!reg || reg.ownerUid !== uid) throw new Error("Signing key not found.");
+  if (reg.status !== "active")
+    throw new Error(`This signing key is ${reg.status}; only an active key can be ${status}.`);
+  const own = await getDocument(`users/${uid}/signingKeys/${keyId}`);
   const epoch = await getEpoch();
-  await updateDocument(`users/${uid}/signingKeys/${keyId}`, { status });
-  await updateDocument(`keyRegistry/${keyId}`, { status, revokedEpoch: epoch.token });
-  await addToCollection("auditLog", { kind: `signing-key.${status}`, uid, keyId, epochToken: epoch.token });
+  const writes = [{ path: `keyRegistry/${keyId}`, data: { status, revokedEpoch: epoch.token } }];
+  if (own && own.status === "active") writes.push({ path: `users/${uid}/signingKeys/${keyId}`, data: { status } });
+  await updateBatch(writes);
+  await addToCollection("auditLog", { kind: STATUS_KINDS[status], uid, keyId, epochToken: epoch.token });
   return { keyId, status };
 }
 /** Revoke a signing key — instantly invalidates every attestation it signed. */

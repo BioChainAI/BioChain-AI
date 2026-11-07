@@ -290,7 +290,7 @@
       <div class="stat"><b>1.47</b><span>value on structured text (bytes recreated per byte shipped)</span></div>
       <div class="stat"><b>+56.5%</b><span>residual cut by a pretrained codex on held-out text</span></div>
       <div class="stat"><b>52/52</b><span>protocol self-checks passing</span></div>
-      <div class="stat"><b>47/47</b><span>security-rule attack &amp; flow checks passing</span></div>
+      <div class="stat"><b>114/114</b><span>security-rule attack &amp; flow checks passing</span></div>
     </div>
   </div>
 </header>
@@ -389,8 +389,8 @@
       </div>
       <div class="hstep">
         <h3>Commit your Identity</h3>
-        <p>On first sign-in, enter a private <strong>identity seed</strong> phrase. BioChain folds its SHA-256 into a 64-bit geometric vector and XORs it with a hash of your account ID to produce your permanent <strong>Identity ID</strong>. A live preview shows the ID and its identicon before you commit.</p>
-        <div class="callout"><b>This is one-way.</b> Once committed, the rules freeze your Identity ID, seed and geometric vector forever. The ID is a stable public handle, not a secret.</div>
+        <p>On first sign-in, enter an <strong>identity seed</strong> phrase. BioChain folds its SHA-256 into a 64-bit geometric vector and XORs it with a hash of your account ID to produce your permanent <strong>Identity ID</strong>. A live preview shows the ID and its identicon before you commit. The seed is used once, in your browser, and is not stored.</p>
+        <div class="callout"><b>This is one-way.</b> Once committed, the rules freeze your Identity ID and geometric vector forever. The ID is a stable public handle, not a secret.</div>
         <p class="where">Where: login.html · one-time setup</p>
       </div>
       <div class="hstep">
@@ -529,7 +529,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
       <div class="card"><h3>Chiral weave</h3><p>The ordered product of each chunk's unit quaternion, <code>W = q̂ₙ ⋯ q̂₁</code>. Multiplication doesn't commute, so swapping two chunks changes the result.</p></div>
       <div class="card"><h3>Parity</h3><p>Every packet's parity bit is checked before its frame is decoded.</p></div>
     </div>
-    <div class="callout info"><b>Chain ID</b> binds the first two commitments: <code>chainId = "BC-" + SHA256(R | W)[0:24]</code>. <b>verifyIntegrity</b> rebuilds everything and fails at the first mismatch: parity → each chunk vs its leaf → Merkle root → chiral weave → token-engram stream. <b>extendBiochain</b> grows a child chain by epochs and never changes the parent.</div>
+    <div class="callout info"><b>Chain ID</b> binds the first two commitments: <code>chainId = "BC-" + SHA256(R | W)[0:24]</code>. <b>verifyIntegrity</b> checks the record's self-consistency and fails at the first mismatch: parity → each chunk vs its leaf → Merkle root → chiral weave → token-engram stream. <b>extendBiochain</b> grows a child chain by epochs and never changes the parent.</div>
 
     <!-- Codex -->
     <div class="sub" id="codex"><span class="num">4.3</span><h3>Codexes and the value law</h3></div>
@@ -609,8 +609,8 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
       <table>
         <thead><tr><th>Collection</th><th>Who may write</th><th>Invariant enforced server-side</th></tr></thead>
         <tbody>
-          <tr><td class="mono">users/{uid}/identity</td><td>Owner</td><td>ID, seed and geometric vector frozen; no role fields ever</td></tr>
-          <tr><td class="mono">users/{uid}/signingKeys</td><td>Owner</td><td>Owner-only; never deleted</td></tr>
+          <tr><td class="mono">users/{uid}/identity</td><td>Owner</td><td>ID and geometric vector frozen; the only update removes a stored seed; no role fields ever</td></tr>
+          <tr><td class="mono">users/{uid}/signingKeys</td><td>Owner</td><td>Owner-only; born active; status moves one way, to revoked or retired; never deleted</td></tr>
           <tr><td class="mono">keyRegistry/{keyId}</td><td>Key owner</td><td>Born active with the owner's real role; status moves one way, to revoked or retired</td></tr>
           <tr><td class="mono">config/rootAdmins</td><td>Nobody (console only)</td><td>Root ADMIN list cannot be changed by any client</td></tr>
           <tr><td class="mono">roleGrants/{uid}</td><td>ADMIN</td><td>Only an ADMIN grants roles, under their own UID</td></tr>
@@ -618,7 +618,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
           <tr><td class="mono">transfers/{id}</td><td>Owner creates; recipient resolves</td><td>Free (<code>price == 0</code>); sender owns the chain; stamped with the current sequence; only the recipient accepts or declines</td></tr>
           <tr><td class="mono">codices/{hash}</td><td>Creator</td><td>Immutable once created</td></tr>
           <tr><td class="mono">ratings/{chain}_{uid}</td><td>Rater</td><td>One per user per chain; rater role must equal the real role</td></tr>
-          <tr><td class="mono">auditLog</td><td>Any signed-in user</td><td>Append-only; clients can never read it</td></tr>
+          <tr><td class="mono">auditLog</td><td>Any signed-in user</td><td>Append-only; each entry names its author's own UID and a known event kind; clients can never read it</td></tr>
         </tbody>
       </table>
     </div>
@@ -630,7 +630,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
       <div class="card"><h3>Reversible revocation</h3><p class="muted">An owner flips a revoked key back to active, reviving every attestation it signed.</p><p><strong>Fix:</strong> registry status is one-way, and keys are born active.</p></div>
       <div class="card"><h3>Self-declared rater role</h3><p class="muted">A rater claims ADMIN to triple their rating's weight.</p><p><strong>Fix:</strong> the rules check <code>raterRole</code> against the rater's real role.</p></div>
     </div>
-    <div class="callout">A <b>47-case emulator suite</b> (<code>tests/rules/</code>) checks every attack and every legitimate flow, and all 47 pass. Run against the original rules, 25 fail. Run it with <code>cd tests/rules &amp;&amp; npm install &amp;&amp; npm test</code> (needs Java for the Firestore emulator).</div>
+    <div class="callout">An <b>emulator suite</b> (<code>tests/rules/</code>, cases in <code>tests/rules/scenarios/trust-v1.json</code>) checks the four attacks above, the transfer, signing-key, identity and audit-log rules, and the legitimate flows they allow; CI runs it on pull requests that change the platform code, the rules or the tests. Its first 47 cases cover the four attacks above; run against the rules before this hardening, 25 of them fail. Run it with <code>cd tests/rules &amp;&amp; npm ci &amp;&amp; npm test</code> (needs Java 21 for the Firestore emulator).</div>
 
     <details>
       <summary>Residual risks we're open about</summary>
@@ -726,7 +726,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
           <tr><td class="mono">biochain_mesh.py</td><td>11/11</td><td>Claim verified on 9/9 nodes in 2 gossip rounds; inflated value and illegal opcode rejected; 36 CRYST issued; replay and overdraft rejected; ~2 s</td></tr>
           <tr><td class="mono">pump_clock.py</td><td>13/13</td><td>All 12 ticks exact; crystallization windows at ticks 6 and 12; reorder caught by the chiral weave (1.771 rad) but not by XOR</td></tr>
           <tr><td class="mono">engram_shard.py</td><td>9/9</td><td>Woven weave exact (0.0 rad); rebuild with one node dead; tampered shard refused; identical outcome with identity links present, absent or swapped</td></tr>
-          <tr><td class="mono">tests/rules (emulator)</td><td>47/47</td><td>Every hardening attack denied; legitimate grow, transfer, grant, revoke and rate flows allowed</td></tr>
+          <tr><td class="mono">tests/rules (emulator)</td><td>114/114</td><td>Every hardening attack denied; legitimate grow, transfer, grant, revoke and rate flows allowed; signing-key, identity and audit-log rules checked</td></tr>
         </tbody>
       </table>
     </div>

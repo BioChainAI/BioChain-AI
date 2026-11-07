@@ -1,0 +1,177 @@
+{
+  "format": "trust-names/1",
+  "app": "biochain-ai",
+  "scenarios": "trust-v1.json",
+  "description": "BioChain-AI's collection and field names for the abstract operations of trust-v1.json (firestore.rules at the repository root).",
+  "todo": [],
+  "unsupported": [],
+  "ops": {
+    "config.write": {
+      "method": "set",
+      "path": "config/rootAdmins",
+      "data": { "uids": "{uids}" }
+    },
+    "roleGrant.write": {
+      "method": "set",
+      "path": "roleGrants/{subject}",
+      "data": { "subjectUid": "{subject}", "role": "{role}", "grantedByUid": "{grantor}" }
+    },
+    "identity.create": {
+      "method": "set",
+      "path": "users/{owner}/identity/main",
+      "data": {
+        "identityId": "{identityId}",
+        "identitySeed": "{seed}",
+        "geoVector": "{geo}",
+        "role": "{role}",
+        "certificate": "{certificate}"
+      }
+    },
+    "identity.update": {
+      "method": "update",
+      "path": "users/{owner}/identity/main",
+      "data": {
+        "identityId": "{identityId}",
+        "identitySeed": "{seed}",
+        "geoVector": "{geo}",
+        "coords": "{coords}",
+        "role": "{role}"
+      }
+    },
+    "identity.forgetSeed": {
+      "method": "update",
+      "path": "users/{owner}/identity/main",
+      "data": { "identitySeed": { "$delete": true } }
+    },
+    "identity.read": {
+      "method": "get",
+      "path": "users/{owner}/identity/main"
+    },
+    "identity.delete": {
+      "method": "delete",
+      "path": "users/{owner}/identity/main"
+    },
+    "privateKey.create": {
+      "method": "set",
+      "path": "users/{owner}/signingKeys/{key}",
+      "data": {
+        "keyId": "{keyId}",
+        "ownerUid": "{ownerUid}",
+        "status": "{status}",
+        "label": "Signing Key",
+        "publicJwk": { "kty": "EC", "crv": "P-256", "x": "test-x", "y": "test-y" },
+        "privateJwk": { "kty": "EC", "crv": "P-256", "x": "test-x", "y": "test-y", "d": "test-d" }
+      }
+    },
+    "privateKey.read": {
+      "method": "get",
+      "path": "users/{owner}/signingKeys/{key}"
+    },
+    "privateKey.list": {
+      "method": "list",
+      "path": "users/{owner}/signingKeys"
+    },
+    "privateKey.edit": {
+      "method": "update",
+      "path": "users/{owner}/signingKeys/{key}",
+      "data": { "label": "{label}" }
+    },
+    "privateKey.setStatus": {
+      "method": "update",
+      "path": "users/{owner}/signingKeys/{key}",
+      "data": { "status": "{status}", "updatedAt": "2026-01-01T00:00:00Z" }
+    },
+    "privateKey.delete": {
+      "method": "delete",
+      "path": "users/{owner}/signingKeys/{key}"
+    },
+    "key.register": {
+      "method": "set",
+      "path": "keyRegistry/{key}",
+      "data": { "keyId": "{key}", "ownerUid": "{as}", "status": "{status}", "role": "{role}" }
+    },
+    "key.setStatus": {
+      "method": "update",
+      "path": "keyRegistry/{key}",
+      "data": { "status": "{status}", "revokedEpoch": "{epoch}" }
+    },
+    "chain.seed": {
+      "method": "set",
+      "path": "biochains/{chain}",
+      "data": { "growerUid": "{grower}", "ownerUid": "{owner}", "lineage": [], "lastTransferId": null, "status": "grown" }
+    },
+    "chain.create": {
+      "method": "set",
+      "path": "biochains/{chain}",
+      "data": { "growerUid": "{as}", "ownerUid": "{as}", "transferSeq": "{seq}" }
+    },
+    "chain.claim": {
+      "method": "update",
+      "path": "biochains/{chain}",
+      "data": { "ownerUid": "{as}", "lastTransferId": "{via}", "transferSeq": "{seq}" }
+    },
+    "chain.setSeq": {
+      "method": "update",
+      "path": "biochains/{chain}",
+      "data": { "transferSeq": "{seq}" }
+    },
+    "chain.delete": {
+      "method": "delete",
+      "path": "biochains/{chain}"
+    },
+    "transfer.send": {
+      "method": "set",
+      "path": "transfers/{id}",
+      "data": {
+        "chainId": "{chain}",
+        "fromUid": "{as}",
+        "toUid": "{to}",
+        "status": "pending",
+        "price": "{price=0}",
+        "chainSeq": "{seq}"
+      }
+    },
+    "transfer.accept": {
+      "method": "update",
+      "path": "transfers/{id}",
+      "data": { "status": "accepted" }
+    },
+    "transfer.decline": {
+      "method": "update",
+      "path": "transfers/{id}",
+      "data": { "status": "declined" }
+    },
+    "transfer.delete": {
+      "method": "delete",
+      "path": "transfers/{id}"
+    },
+    "rating.create": {
+      "method": "set",
+      "path": "ratings/{chain}_{as}",
+      "data": { "chainId": "{chain}", "raterUid": "{as}", "raterRole": "{role}", "stars": "{stars}" }
+    },
+    "rating.createAt": {
+      "method": "set",
+      "path": "ratings/{rid}",
+      "data": { "chainId": "{chain}", "raterUid": "{as}", "raterRole": "{role}", "stars": "{stars}" }
+    },
+    "rating.update": {
+      "method": "update",
+      "path": "ratings/{chain}_{as}",
+      "data": { "raterRole": "{role}", "chainId": "{newChain}", "stars": "{stars}" }
+    },
+    "rating.delete": {
+      "method": "delete",
+      "path": "ratings/{chain}_{as}"
+    },
+    "audit.append": {
+      "method": "set",
+      "path": "auditLog/{id}",
+      "data": { "uid": "{uid}", "kind": "{kind}" }
+    },
+    "audit.read": {
+      "method": "get",
+      "path": "auditLog/{id}"
+    }
+  }
+}

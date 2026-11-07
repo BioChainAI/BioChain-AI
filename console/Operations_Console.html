@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BioChain AI — Operations Console</title>
+<script type="importmap">
+{
+  "integrity": {
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js": "sha384-aeHHd/L754G1ECgQuwU8DCG0mwYjleqJzbisHMzgX8seOBYhRpVy4tRjRAXqTas2",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js": "sha384-FSqJf3z2WiF4MGlWEHSmK0W1qSqfCc8D+mjzzRlJsMdpRBFVpTfBB5FMT3tvEqKC",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js": "sha384-mtrW3U1+D2g2ZkwC/aZ8CQWDZCSFTpgme0l2f1XqzuAGJx3BEC6raceeEesIZ8m1",
+    "https://www.gstatic.com/firebasejs/12.15.0/firebase-storage.js": "sha384-RO0E4iCEiJw7affCvB9sSV4a9stsCPw47pK4iynSuQBEK4a8CUUV8flHQ9ghdFUw"
+  }
+}
+</script>
 <script type="module" src="../src/ui/auth-guard.js"></script>
 <script type="module" src="../src/ui/node-network-bg.js" data-accent="#00d4ff"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -151,7 +161,7 @@
 <script type="module">
 import { auth } from "../src/firebase/config.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
-import { readIdentity } from "../src/identity/identity-registry.js";
+import { readIdentity, forgetSeed, forgetLocalSeed } from "../src/identity/identity-registry.js";
 import { resolveRole, grantRole, readRoleGrant, isRootAdmin } from "../src/identity/access-control.js";
 import { createSigningKey, listSigningKeys, revokeSigningKey } from "../src/identity/signing-key.js";
 import { renderKeyIdenticon } from "../src/biomesh/identicon.js";
@@ -332,8 +342,10 @@ $("#grantBtn").onclick = guard(async () => {
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;                       // auth-guard handles redirect
   UID = user.uid;
+  forgetLocalSeed();
   const id = await readIdentity(UID);
   if (!id || !id.identityId) { location.replace("../login.html?redirect=console/Operations_Console.html"); return; }
+  if ("identitySeed" in id) forgetSeed(UID).catch(() => {});   // remove a seed stored by an earlier version
   ROLE = await resolveRole(UID).catch(() => "MEMBER");
   $("#whoami").textContent = "uid " + UID + " · " + id.identityId;
   $("#roleBadge").textContent = ROLE;

@@ -9,10 +9,12 @@ accounted for" becomes evidence, not assertion.
 `firestore.rules` (repo root) is already the standalone enterprise version. It
 pins exactly what Owl Academy pinned, minus the curriculum:
 
-- **Identity** (`users/{uid}/identity/main`): write-once; `identityId`,
-  `identitySeed`, `geoVector` frozen forever; role appendable.
-- **Signing keys** (`users/{uid}/signingKeys/{keyId}`): owner-only; no delete.
-- **Key registry** (`keyRegistry/{keyId}`): public read; owner create; status-only
+- **Identity** (`users/{uid}/identity/main`): write-once; `identityId` and
+  `geoVector` frozen forever; no role fields; the only update removes a stored
+  `identitySeed` (the client no longer writes one).
+- **Signing keys** (`users/{uid}/signingKeys/{keyId}`): owner-only; born active;
+  status moves one way (active → revoked/retired); no delete.
+- **Key registry** (`keyRegistry/{keyId}`): signed-in read; owner create; status-only
   update (revoke/retire); no delete.
 - **biochains**: grower==owner on create; owner may edit only listing/pairing;
   ownership moves **only** to the caller and **only** with an accepted `transfers`
@@ -21,7 +23,8 @@ pins exactly what Owl Academy pinned, minus the curriculum:
   only by the addressed recipient; append-only.
 - **codices**: creator-create, immutable.
 - **ratings**: one per user per chain (doc-id enforced).
-- **auditLog**: append-only; no client reads.
+- **auditLog**: append-only; each entry carries the caller's own `uid` and a
+  known `kind`; no client reads.
 
 ## 5.2 Prove the rules in the emulator
 
@@ -30,7 +33,8 @@ firebase emulators:start --only firestore,auth
 ```
 
 Exercise these cases (via the console UI once it's up, or a small script). Each
-**must** behave as marked:
+**must** behave as marked. The emulator suite in `tests/rules/` runs them, and
+more, from `tests/rules/scenarios/trust-v1.json` (see `tests/rules/scenarios/README.md`):
 
 | Attempt | Expected |
 |---|---|

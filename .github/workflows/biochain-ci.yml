@@ -1,0 +1,141 @@
+# BioChain-AI checks for the platform (src/, console/, protocol/, firestore.rules, login.html) and its tests.
+# Jobs:
+#   rules    — the trust scenarios (tests/rules/scenarios/) against the Firestore emulator
+#   unit     — tests/unit/*.test.mjs (crypto-core, identity and signing-key writes, scenario files)
+#   protocol — every protocol/*.py self-test, run with python3 -B -I
+#   static   — storage policy, audit-log kinds against the rules, CDN version and integrity pins (offline)
+#   cdn      — each pinned CDN file still matches its integrity value (network)
+# Actions are pinned to commits (the tag in the comment). Jobs run with a read-only token (permissions: contents: read);
+# checkouts do not persist it, and nothing here deploys (rules deploys are run by a maintainer).
+name: BioChain CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "console/**"
+      - "protocol/**"
+      - "tests/**"
+      - "firestore.rules"
+      - "firebase.json"
+      - "login.html"
+      - "index.html"
+      - ".github/workflows/biochain-ci.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "console/**"
+      - "protocol/**"
+      - "tests/**"
+      - "firestore.rules"
+      - "firebase.json"
+      - "login.html"
+      - "index.html"
+      - ".github/workflows/biochain-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: biochain-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rules:
+    name: Rules (Firestore emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tests/rules
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/rules/package-lock.json
+      - name: Java (Firestore emulator)
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Emulator download cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('tests/rules/package-lock.json') }}
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Trust scenarios
+        run: npm test
+
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Unit tests
+        run: node --test "tests/unit/*.test.mjs"
+
+  protocol:
+    name: Protocol self-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Self-tests
+        run: python3 -B -I tests/protocol/run_selftests.py
+
+  static:
+    name: Static guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Storage policy, audit-log kinds, CDN pins
+        run: node tests/static/run-all.mjs
+
+  cdn:
+    name: CDN integrity (network)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Pinned files match the CDNs
+        run: node tests/static/cdn-live.mjs

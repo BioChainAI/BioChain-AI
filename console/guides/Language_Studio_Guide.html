@@ -227,8 +227,8 @@
                     (see <code class="mono text-green-300">src/identity/signing-key.js</code>) that you select at the top
                     of the Language Studio page. Once selected, every turn you generate is signed with a
                     <code class="mono text-green-300">COT/1|index|contentHash|parity</code> payload — Chain-Of-Thought,
-                    version 1 — so the log isn't just internally consistent, it's attributable to a specific,
-                    publicly verifiable identity.
+                    version 1 — so the log isn't just internally consistent, it's attributable to a specific
+                    identity that any signed-in user can verify.
                 </p>
 
                 <p class="text-slate-300 leading-relaxed mb-6">
@@ -270,7 +270,7 @@
                         <div class="step-num step-green">3</div>
                         <div>
                             <p class="text-sm text-slate-200 font-semibold">Click <span class="mono text-green-300">Create signing key</span></p>
-                            <p class="text-xs text-slate-500">This samples the current epoch as entropy and mints an ECDSA P-256 keypair. The private key never leaves your browser — only the public key record is written to your Firestore <code class="mono">keyRegistry/</code> document.</p>
+                            <p class="text-xs text-slate-500">This samples the current epoch as entropy and mints an ECDSA P-256 keypair. The private key is stored in your owner-only <code class="mono">users/{uid}/signingKeys/</code> record; the public key is written to the shared <code class="mono">keyRegistry/</code>, where signed-in users verify your signatures.</p>
                         </div>
                     </div>
                     <div class="flex items-start gap-3">
