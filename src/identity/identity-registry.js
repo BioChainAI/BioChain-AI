@@ -1,98 +1,33 @@
 /**
- * Identity Registry — derives a user's immutable Identity ID from an identity seed.
+ * Identity Registry — commits a user's immutable Identity ID.
  * ----------------------------------------------------------------------------
- * Pipeline:
+ * Pipeline (implemented in crypto-core.js, re-exported here):
  *   identitySeed → SHD-CCP 4×4×4 compression → geoVector[64]
  *   uid          → SHA-256 hash              → uidVector[64]
  *   IdentityID   = geoVector ⊕ uidVector     (bitwise XOR blend)
  *
  * The Identity ID is the geometric fingerprint that anchors a user's signing
  * keys and attestations. Once committed, it is immutable (enforced by rules:
- * identityId / identitySeed / geoVector are frozen on update).
+ * identityId / geoVector are frozen; the only permitted update removes a stored
+ * identitySeed).
+ *
+ * The seed is an input only. It is used in the browser to derive the ID and is
+ * written neither to Firestore nor to localStorage. forgetSeed(uid) removes a
+ * seed that earlier versions stored.
  */
 
-import { getDocument, setDocument } from "../firebase/firestore.js";
+import { getDocument, setDocument, removeFields } from "../firebase/firestore.js";
+import { computeGeoVector, computeIdentityId, LATTICE_SPACES } from "./crypto-core.js";
 
-const LATTICE_SPACES = {
-  E8:  { name: "E8 Lie Algebra",   modulus: 240,    phi: 1.618033988749 },
-  R8:  { name: "ℝ⁸ Octonionic",    modulus: 128,    phi: 2.618033988749 },
-  R24: { name: "ℝ²⁴ Leech Grid",   modulus: 196560, phi: 4.236067977499 },
-};
+export { computeGeoVector, computeIdentityId, LATTICE_SPACES };
 
 const LOCAL_KEY = "biochain_identity";
 
-// ─── Hashing ──────────────────────────────────────────────────────────
-async function sha256Bytes(input) {
-  const data = new TextEncoder().encode(input);
-  const buf = await crypto.subtle.digest("SHA-256", data);
-  return new Uint8Array(buf); // 32 bytes
-}
-
-// Expand 32 → 64 bytes: every byte paired with its bitwise complement.
-function expandToHolographicInverse(bytes32) {
-  const out = new Uint8Array(64);
-  for (let i = 0; i < 32; i++) { out[i] = bytes32[i]; out[i + 32] = 0xff ^ bytes32[i]; }
-  return out;
-}
-
-// ─── SHD-CCP 4×4×4 Compression ────────────────────────────────────────
-function shdccpCompress(bytes64, latticeKey) {
-  const lattice = LATTICE_SPACES[latticeKey] || LATTICE_SPACES.E8;
-  const phi = lattice.phi;
-  let acc = 0n, cx = 0, cy = 0, cz = 0;
-  for (let x = 0; x < 4; x++) for (let y = 0; y < 4; y++) for (let z = 0; z < 4; z++) {
-    const v = bytes64[x * 16 + y * 4 + z];
-    const weight = (x + 1) * (y + 1) * (z + 1);
-    acc = (acc * 31n + BigInt(v * weight)) & 0xffffffffffffffffn;
-    cx += v * Math.cos((x * phi) % (2 * Math.PI));
-    cy += v * Math.sin((y * phi) % (2 * Math.PI));
-    cz += v * Math.cos((z * phi * phi) % (2 * Math.PI));
-  }
-  const norm = Math.sqrt(cx * cx + cy * cy + cz * cz) || 1;
-  return {
-    vector64: acc.toString(16).toUpperCase().padStart(16, "0"),
-    coords: {
-      x: +(cx / norm * phi).toFixed(6),
-      y: +(cy / norm * phi).toFixed(6),
-      z: +(cz / norm * phi).toFixed(6),
-    },
-    entropy: +(Math.log2(Number(acc & 0xffffffn) + 1) * phi / 24).toFixed(4),
-    lattice: latticeKey,
-  };
-}
-
-function xorBlendHex(hexA, hexB) {
-  const a = BigInt("0x" + hexA);
-  const b = BigInt("0x" + hexB);
-  return (a ^ b).toString(16).toUpperCase().padStart(16, "0");
-}
-
-// ─── Public API ───────────────────────────────────────────────────────
-
-/** Compute a geometric vector from an identity seed alone (live preview). */
-export async function computeGeoVector(identitySeed, latticeKey = "E8") {
-  const trimmed = (identitySeed || "").trim();
-  if (!trimmed) throw new Error("Identity seed is empty");
-  const hash32 = await sha256Bytes(trimmed);
-  const bytes64 = expandToHolographicInverse(hash32);
-  return shdccpCompress(bytes64, latticeKey);
-}
-
-/** Compute the final Identity ID: seed's geo vector XOR-blended with the uid hash. */
-export async function computeIdentityId(identitySeed, uid, latticeKey = "E8") {
-  const geo = await computeGeoVector(identitySeed, latticeKey);
-  const uidHash = await sha256Bytes(uid);
-  let uidHex = "";
-  for (let i = 0; i < 8; i++) uidHex += uidHash[i].toString(16).padStart(2, "0");
-  const identityId = "0x" + xorBlendHex(geo.vector64, uidHex.toUpperCase());
-  return { identityId, geoVector: geo };
-}
-
 /**
  * Commit the identity to Firestore. Refuses to overwrite once committed — the
- * identity seed and derived ID are immutable. The identity carries no role:
- * roles come only from config/rootAdmins + roleGrants (see access-control.js),
- * and firestore.rules reject any role field written here.
+ * derived ID is immutable. The identity carries no role: roles come only from
+ * config/rootAdmins + roleGrants (see access-control.js), and firestore.rules
+ * reject any role field written here. The seed is not part of the record.
  */
 export async function registerIdentity(uid, identitySeed, { latticeKey = "E8" } = {}) {
   const existing = await getDocument(`users/${uid}/identity/main`);
@@ -101,7 +36,6 @@ export async function registerIdentity(uid, identitySeed, { latticeKey = "E8" } 
   }
   const result = await computeIdentityId(identitySeed, uid, latticeKey);
   const payload = {
-    identitySeed,
     identityId: result.identityId,
     geoVector: result.geoVector.vector64,
     coords: result.geoVector.coords,
@@ -120,13 +54,27 @@ export async function readIdentity(uid) {
   return getDocument(`users/${uid}/identity/main`);
 }
 
+/**
+ * Remove a stored identity seed: the `identitySeed` field of
+ * users/{uid}/identity/main (the one identity update the rules allow) and the
+ * seed in this browser's local backup. Returns true when a Firestore field was
+ * removed, false when there was none.
+ */
+export async function forgetSeed(uid) {
+  forgetLocalSeed();
+  const doc = await getDocument(`users/${uid}/identity/main`);
+  if (!doc || !Object.prototype.hasOwnProperty.call(doc, "identitySeed")) return false;
+  await removeFields(`users/${uid}/identity/main`, ["identitySeed"]);
+  return true;
+}
+
 // ─── Local Backup ─────────────────────────────────────────────────────
+// Public identity fields only; the seed is never part of the backup.
 export function saveLocalBackup(uid, identity) {
   if (!identity) return;
   const payload = {
-    version: 1, uid,
+    version: 2, uid,
     identityId: identity.identityId,
-    identitySeed: identity.identitySeed,
     coords: identity.coords,
     latticeSpace: identity.latticeSpace,
     committedAt: identity.committedAt,
@@ -140,6 +88,22 @@ export function saveLocalBackup(uid, identity) {
 export function readLocalBackup() {
   try { const raw = localStorage.getItem(LOCAL_KEY); return raw ? JSON.parse(raw) : null; }
   catch { return null; }
+}
+
+/**
+ * Remove a seed from this browser's local backup (written by an earlier
+ * version). Nothing reads the backup's seed, so it is removed whichever account
+ * wrote it. Local only; no Firestore access.
+ */
+export function forgetLocalSeed() {
+  try {
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return;
+    const backup = JSON.parse(raw);
+    if (!backup || typeof backup !== "object" || !("identitySeed" in backup)) return;
+    delete backup.identitySeed;
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(backup));
+  } catch (err) { console.warn("[Identity] local backup cleanup failed:", err); }
 }
 
 // ─── Identity glyph (procedural SVG, deterministic from the Identity ID) ──────
@@ -166,5 +130,3 @@ export function renderIdentityIcon(identityId, size = 200) {
       <circle cx="${cx}" cy="${cy}" r="3" fill="#D4AF37"/>
     </svg>`;
 }
-
-export { LATTICE_SPACES };

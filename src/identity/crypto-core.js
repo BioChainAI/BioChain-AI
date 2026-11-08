@@ -1,15 +1,20 @@
 /**
- * Crypto Core — pure, Firebase-free cryptographic primitives for signing keys.
+ * Crypto Core — pure, Firebase-free cryptographic primitives for identities and signing keys.
  * ----------------------------------------------------------------------------
  * Runs in the browser (global `crypto`) and in Node 20+ (`globalThis.crypto`).
- * Contains NO Firebase imports so it can be unit-tested headlessly.
+ * Contains NO Firebase imports so it can be unit-tested headlessly
+ * (tests/unit/crypto-core.test.mjs).
  *
+ *  • Identity ID: the account fingerprint, derived from (identity seed, uid) via
+ *    SHD-CCP 4×4×4 compression (computeGeoVector / computeIdentityId; re-exported
+ *    by identity-registry.js).
  *  • Key vector: the geometric fingerprint of a signing key, derived from
- *    (identityId ‖ Hilbert/manifold params ‖ epoch token) via SHD-CCP 4×4×4
+ *    (identityId ‖ Hilbert/manifold params ‖ epoch token) via the same
  *    compression.
- *  • ECDSA P-256: real, publicly-verifiable, unforgeable signatures. The signing
- *    key holds the private key (owner-only); the public key is mirrored to the
- *    key registry so anyone can verify an attestation and trace it to the owner.
+ *  • ECDSA P-256: signatures over canonical payloads. The signing key's private
+ *    half is kept in the owner-only key record; the public key is mirrored to
+ *    the key registry so signed-in users can verify an attestation and trace it
+ *    to the owner.
  */
 
 const subtle = () => {
@@ -26,23 +31,37 @@ function bufToHex(buf) {
   for (let i = 0; i < b.length; i++) s += b[i].toString(16).padStart(2, "0");
   return s;
 }
-function hexToBuf(hex) {
-  const clean = hex.replace(/[^0-9a-f]/gi, "");
-  const out = new Uint8Array(clean.length / 2);
-  for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
-  return out.buffer;
+
+/** A P-256 signature as produced by signPayload: r ‖ s, 64 bytes, as 128 lowercase hex digits. */
+export const SIGNATURE_HEX = /^[0-9a-f]{128}$/;
+
+/** Parse a signature string. Anything but exactly 128 lowercase hex digits returns null. */
+function sigHexToBytes(hex) {
+  if (typeof hex !== "string" || !SIGNATURE_HEX.test(hex)) return null;
+  const out = new Uint8Array(64);
+  for (let i = 0; i < 64; i++) out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  return out;
 }
 
 export async function sha256Hex(str) {
   return bufToHex(await subtle().digest("SHA-256", enc.encode(String(str))));
 }
 
+// SHA-256 of the UTF-8 encoding of `input`, as 32 bytes (no String() coercion,
+// so identity derivation hashes exactly what it always has).
+async function sha256Bytes(input) {
+  return new Uint8Array(await subtle().digest("SHA-256", enc.encode(input)));
+}
+
 // ─── Lattice / Hilbert-space profiles ──────────────────────────────────────────
+// One table for signing keys and identities (identity-registry.js re-exports it
+// as LATTICE_SPACES).
 export const KEY_LATTICES = {
   E8:  { name: "E8 Lie Algebra",  modulus: 240,    phi: 1.618033988749 },
   R8:  { name: "ℝ⁸ Octonionic",   modulus: 128,    phi: 2.618033988749 },
   R24: { name: "ℝ²⁴ Leech Grid",  modulus: 196560, phi: 4.236067977499 },
 };
+export const LATTICE_SPACES = KEY_LATTICES;
 export const MANIFOLDS = {
   clifford: { name: "Clifford Torus", base: "T²⊂S³" },
   s3:       { name: "3-Sphere S³",    base: "S³"     },
@@ -56,7 +75,10 @@ function expandHolographic(b32) {
   return out;
 }
 
-// φ-folded SHD-CCP 4×4×4 compression → {vector64 hex, coords, entropy}
+// φ-folded SHD-CCP 4×4×4 compression → {vector64 hex, coords, entropy}.
+// With coherency 1 and torsion 0 every factor is exactly 1 or 0, so the result
+// is the identity derivation's compression (tests/unit/crypto-core.test.mjs
+// pins its goldens).
 function shdccpCompress(bytes64, latticeKey, coherency, torsion) {
   const lat = KEY_LATTICES[latticeKey] || KEY_LATTICES.E8;
   const phi = lat.phi;
@@ -81,6 +103,39 @@ function shdccpCompress(bytes64, latticeKey, coherency, torsion) {
     entropy: +(Math.log2(Number(acc & 0xffffffn) + 1) * phi / 24).toFixed(4),
   };
 }
+
+// ─── Identity derivation ───────────────────────────────────────────────────────
+//   identitySeed → SHA-256 → holographic 64 bytes → SHD-CCP 4×4×4 → geoVector[64]
+//   uid          → SHA-256 → first 8 bytes                       → uidVector[64]
+//   IdentityID   = "0x" + (geoVector ⊕ uidVector)
+// The seed is an input only: callers keep it in memory and never store it.
+
+function xorBlendHex(hexA, hexB) {
+  const a = BigInt("0x" + hexA);
+  const b = BigInt("0x" + hexB);
+  return (a ^ b).toString(16).toUpperCase().padStart(16, "0");
+}
+
+/** Compute a geometric vector from an identity seed alone (live preview). */
+export async function computeGeoVector(identitySeed, latticeKey = "E8") {
+  const trimmed = (identitySeed || "").trim();
+  if (!trimmed) throw new Error("Identity seed is empty");
+  const hash32 = await sha256Bytes(trimmed);
+  const bytes64 = expandHolographic(hash32);
+  return { ...shdccpCompress(bytes64, latticeKey, 1, 0), lattice: latticeKey };
+}
+
+/** Compute the final Identity ID: the seed's geo vector XOR-blended with the uid hash. */
+export async function computeIdentityId(identitySeed, uid, latticeKey = "E8") {
+  const geo = await computeGeoVector(identitySeed, latticeKey);
+  const uidHash = await sha256Bytes(uid);
+  let uidHex = "";
+  for (let i = 0; i < 8; i++) uidHex += uidHash[i].toString(16).padStart(2, "0");
+  const identityId = "0x" + xorBlendHex(geo.vector64, uidHex.toUpperCase());
+  return { identityId, geoVector: geo };
+}
+
+// ─── Signing-key vector ────────────────────────────────────────────────────────
 
 /** Canonical, stable serialization of a signing key's three controllable aspects. */
 export function canonicalParams(p = {}) {
@@ -109,6 +164,10 @@ export async function deriveKeyVector(identityId, params, epochToken) {
 const ALGO = { name: "ECDSA", namedCurve: "P-256" };
 const SIGN = { name: "ECDSA", hash: "SHA-256" };
 
+/** Order n of the P-256 group, and n/2 (the low-S bound). */
+export const P256_N = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551n;
+const P256_HALF_N = P256_N >> 1n;
+
 export async function generateKeypair() {
   const kp = await subtle().generateKey(ALGO, true, ["sign", "verify"]);
   return {
@@ -119,11 +178,48 @@ export async function generateKeypair() {
 async function importPriv(jwk) { return subtle().importKey("jwk", jwk, ALGO, false, ["sign"]); }
 async function importPub(jwk)  { return subtle().importKey("jwk", jwk, ALGO, false, ["verify"]); }
 
+function bytesToBigInt(bytes) {
+  let v = 0n;
+  for (const b of bytes) v = (v << 8n) | BigInt(b);
+  return v;
+}
+function bigIntTo32Bytes(v) {
+  const out = new Uint8Array(32);
+  for (let i = 31; i >= 0; i--) { out[i] = Number(v & 0xffn); v >>= 8n; }
+  return out;
+}
+
+/** Map a 64-byte r ‖ s signature to its low-S form (s ≤ n/2); a low-S input is returned unchanged. */
+export function toLowS(sig64) {
+  const sig = new Uint8Array(sig64);
+  if (sig.length !== 64) throw new Error("expected a 64-byte P-256 signature");
+  const s = bytesToBigInt(sig.subarray(32));
+  if (s <= P256_HALF_N) return sig;
+  const out = new Uint8Array(64);
+  out.set(sig.subarray(0, 32), 0);
+  out.set(bigIntTo32Bytes(P256_N - s), 32);
+  return out;
+}
+
+/**
+ * Signing and verification rules:
+ *  • signPayload returns r ‖ s as 128 lowercase hex digits, with s normalised to
+ *    the low half of the group order (s ≤ n/2).
+ *  • verifyPayload accepts only that 128-digit lowercase hex form, and accepts
+ *    both s and n − s (signatures made before low-S normalisation, or by other
+ *    signers, keep verifying).
+ *  • Never key, index or deduplicate anything by a signature, or by a hash of a
+ *    block that contains one: (r, s) and (r, n − s) both verify for the same
+ *    payload. Key by the signed payload, the content hash or the key id instead.
+ */
 export async function signPayload(privateJwk, payloadStr) {
-  return bufToHex(await subtle().sign(SIGN, await importPriv(privateJwk), enc.encode(payloadStr)));
+  const raw = await subtle().sign(SIGN, await importPriv(privateJwk), enc.encode(payloadStr));
+  return bufToHex(toLowS(raw));
 }
 export async function verifyPayload(publicJwk, payloadStr, sigHex) {
-  try { return await subtle().verify(SIGN, await importPub(publicJwk), hexToBuf(sigHex), enc.encode(payloadStr)); }
+  const sig = sigHexToBytes(sigHex);
+  if (!sig) return false;
+  try { return await subtle().verify(SIGN, await importPub(publicJwk), sig, enc.encode(payloadStr)); }
   catch { return false; }
 }
 

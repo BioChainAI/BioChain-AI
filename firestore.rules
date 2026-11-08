@@ -69,26 +69,35 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Identity: the immutable account fingerprint. identityId / identitySeed /
-    // geoVector are frozen forever, and it can never carry a role — roles come
-    // only from roleGrants / config/rootAdmins (a self-written role would be
-    // a self-granted one).
+    // Identity: the immutable account fingerprint. It can never carry a role —
+    // roles come only from roleGrants / config/rootAdmins (a self-written role
+    // would be a self-granted one). Once created, the record is frozen: the one
+    // permitted update removes a stored `identitySeed` field (forgetSeed() in
+    // src/identity/identity-registry.js). The current client writes no seed.
     match /users/{uid}/identity/{doc} {
       allow read:   if isSignedIn() && (request.auth.uid == uid || isAdmin());
       allow create: if isSignedIn() && request.auth.uid == uid
         && !request.resource.data.keys().hasAny(roleFields());
       allow update: if isSignedIn() && request.auth.uid == uid
-        && request.resource.data.identityId   == resource.data.identityId
-        && request.resource.data.identitySeed == resource.data.identitySeed
-        && request.resource.data.geoVector    == resource.data.geoVector
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(roleFields());
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['identitySeed'])
+        && !request.resource.data.keys().hasAny(['identitySeed']);
       allow delete: if false;
     }
 
     // Signing keys: hold the ECDSA PRIVATE key — owner-only, never deletable.
-    // (Retire/revoke via a status flag; the record itself must survive.)
+    // Born active; the only change is the owner moving an ACTIVE key to
+    // revoked/retired (mirroring keyRegistry). The record itself must survive.
     match /users/{uid}/signingKeys/{keyId} {
-      allow read, write: if isSignedIn() && request.auth.uid == uid;
+      allow read:   if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid
+        && request.resource.data.ownerUid == uid
+        && request.resource.data.keyId    == keyId
+        && request.resource.data.status   == "active";
+      allow update: if isSignedIn() && request.auth.uid == uid
+        && resource.data.status == "active"
+        && request.resource.data.status in ['revoked', 'retired']
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status','updatedAt','revokedEpoch']);
       allow delete: if false;
     }
 
@@ -204,8 +213,22 @@ service cloud.firestore {
     }
 
     // ── Audit log (append-only; no client reads) ──────────────────────
+    // Each entry names its author (uid == the caller) and one of the event
+    // kinds the client writes (tests/static/audit-kinds.mjs keeps this list
+    // and the client in step).
+    function auditKinds() {
+      return [
+        'signing-key.create', 'signing-key.revoked', 'signing-key.retired',
+        'role.granted',
+        'biomesh.grown', 'biomesh.extended', 'biomesh.listing', 'biomesh.codex',
+        'biomesh.paired', 'biomesh.sent', 'biomesh.accepted', 'biomesh.declined',
+        'biomesh.rated', 'biomesh.session_burned'
+      ];
+    }
     match /auditLog/{entry} {
-      allow create: if isSignedIn();
+      allow create: if isSignedIn()
+        && request.resource.data.get('uid', null) == request.auth.uid
+        && request.resource.data.get('kind', null) in auditKinds();
       allow read:   if false;
     }
   }

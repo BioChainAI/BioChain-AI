@@ -8,6 +8,7 @@ import {
   doc, getDoc, setDoc, updateDoc,
   collection, addDoc, query, where, orderBy, limit,
   getDocs, onSnapshot, serverTimestamp, increment,
+  deleteField, writeBatch,
 } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
 // Splits "users/uid/identity/main" into path segments for doc()
@@ -23,6 +24,21 @@ export const setDocument = (path, data) =>
 
 export const updateDocument = (path, data) =>
   updateDoc(toRef(path), { ...data, updatedAt: serverTimestamp() });
+
+/** Remove the named fields from a document, changing nothing else (no updatedAt). */
+export const removeFields = (path, fields) =>
+  updateDoc(toRef(path), Object.fromEntries(fields.map((f) => [f, deleteField()])));
+
+/**
+ * Apply several document updates atomically, in the order given: either every
+ * write lands or none does. Each op is { path, data }; like updateDocument,
+ * each write also sets updatedAt.
+ */
+export const updateBatch = (ops) => {
+  const batch = writeBatch(db);
+  for (const { path, data } of ops) batch.update(toRef(path), { ...data, updatedAt: serverTimestamp() });
+  return batch.commit();
+};
 
 export const addToCollection = (collectionPath, data) =>
   addDoc(collection(db, collectionPath), { ...data, createdAt: serverTimestamp() });
