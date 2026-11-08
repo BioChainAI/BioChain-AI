@@ -1,0 +1,3 @@
+{"id": "biostate", "name": "Biostate", "version": "1.0.0", "category": "insight", "icon": "♡",
+ "description": "Live calm, arousal and depth plus EEG band balance, fused from your wearables during your session.",
+ "entry": "module.js", "default_size": "m", "sizes": ["s", "m", "l"], "uses": ["status"]}

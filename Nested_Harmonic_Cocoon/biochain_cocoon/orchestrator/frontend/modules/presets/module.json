@@ -1,0 +1,3 @@
+{"id": "presets", "name": "Preset library", "version": "1.0.0", "category": "session", "icon": "♫",
+ "description": "The offline sequences built into every puck. Play one on the whole cocoon.",
+ "entry": "module.js", "default_size": "m", "sizes": ["m", "l"], "uses": ["status"]}

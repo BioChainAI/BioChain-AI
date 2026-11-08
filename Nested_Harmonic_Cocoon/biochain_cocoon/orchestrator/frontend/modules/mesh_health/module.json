@@ -1,0 +1,3 @@
+{"id": "mesh_health", "name": "Mesh health", "version": "1.0.0", "category": "mesh", "icon": "⌁",
+ "description": "Every puck at a glance: link state, pi6 phase correction, temperature and last contact.",
+ "entry": "module.js", "default_size": "l", "sizes": ["m", "l", "xl"], "uses": ["nodes", "status"]}

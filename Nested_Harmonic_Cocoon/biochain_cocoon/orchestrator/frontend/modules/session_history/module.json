@@ -1,0 +1,3 @@
+{"id": "session_history", "name": "Session history", "version": "1.0.0", "category": "data", "icon": "☰",
+ "description": "Your past sessions and, when BioChain receipts are on, the engram text you can publish from the BioChain console.",
+ "entry": "module.js", "default_size": "l", "sizes": ["m", "l", "xl"], "uses": []}

@@ -15,7 +15,8 @@ class Migrations(unittest.TestCase):
             Store(path)                     # second open applies nothing, raises nothing
             conn = sqlite3.connect(path)
             names = [r[0] for r in conn.execute("SELECT name FROM schema_migrations ORDER BY name")]
-            self.assertEqual(names, ["0001_initial.sql", "0002_consent_and_receipts.sql", "0003_retention.sql"])
+            self.assertEqual(names, ["0001_initial.sql", "0002_consent_and_receipts.sql", "0003_retention.sql",
+                                     "0004_accounts_and_desktops.sql"])
             cols = [r[1] for r in conn.execute("PRAGMA table_info(profiles)")]
             self.assertIn("photosensitive_consent", cols)
             self.assertIn("biofeedback_retention_days", cols)

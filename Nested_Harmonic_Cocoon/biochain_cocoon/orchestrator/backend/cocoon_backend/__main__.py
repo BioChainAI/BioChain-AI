@@ -11,8 +11,12 @@ import argparse
 import threading
 import time
 
+import os
+
 from .api import App, serve
+from .auth import Authenticator
 from .config import Config
+from .desktop import ModuleCatalog
 from .mesh import LoopbackBus, make_transport
 from .registry import NodeRegistry
 from .session import SessionEngine
@@ -25,6 +29,8 @@ def main():
     ap.add_argument("--host")
     ap.add_argument("--port", type=int)
     ap.add_argument("--db")
+    ap.add_argument("--no-auth", action="store_true",
+                    help="dev/demo only: no login, every caller is the local operator (forces 127.0.0.1)")
     a = ap.parse_args()
 
     cfg = Config()
@@ -37,6 +43,11 @@ def main():
     if a.sim:
         cfg.transport = "loopback"
         cfg.db_path = a.db or ":memory:"
+    if a.no_auth:
+        cfg.auth_mode = "none"
+    if cfg.auth_mode == "none" and cfg.http_host not in ("127.0.0.1", "localhost", "::1"):
+        print("[cocoon] COCOON_AUTH=none refuses to listen beyond loopback; binding 127.0.0.1")
+        cfg.http_host = "127.0.0.1"
 
     store = Store(cfg.db_path)
     registry = NodeRegistry(store)
@@ -54,12 +65,17 @@ def main():
         tx = make_transport(cfg)
 
     engine = SessionEngine(cfg, tx, store, registry, bridge_enabled=cfg.biochain_bridge)
-    app = App(cfg, engine, store, registry)
+    authenticator = Authenticator(cfg, store)
+    catalog = ModuleCatalog(os.path.join(cfg.frontend_dir, "modules"))
+    for mid, errs in catalog.errors.items():
+        print("[cocoon] module %s NOT loaded: %s" % (mid, "; ".join(errs)))
+    app = App(cfg, engine, store, registry, authenticator, catalog)
     httpd = serve(app, cfg.http_host, cfg.http_port)
     threading.Thread(target=engine.run_forever, args=(stop,), daemon=True).start()
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
-    print("[cocoon] orchestrator on http://%s:%d/ (transport=%s, bridge=%s)" %
-          (cfg.http_host, cfg.http_port, cfg.transport, "on" if cfg.biochain_bridge else "off"))
+    print("[cocoon] Cocoon Desktop on http://%s:%d/ (auth=%s, transport=%s, bridge=%s, modules=%d)" %
+          (cfg.http_host, cfg.http_port, cfg.auth_mode, cfg.transport, "on" if cfg.biochain_bridge else "off",
+           len(catalog.modules)))
 
     try:
         if a.sim:

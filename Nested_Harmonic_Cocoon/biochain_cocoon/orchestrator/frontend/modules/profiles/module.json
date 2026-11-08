@@ -1,0 +1,3 @@
+{"id": "profiles", "name": "Profiles & consent", "version": "1.0.0", "category": "data", "icon": "☺",
+ "description": "People you run sessions for, with their photosensitive-light consent recorded and timestamped.",
+ "entry": "module.js", "default_size": "m", "sizes": ["m", "l"], "uses": []}
