@@ -4,15 +4,15 @@
  "generator": "tools/sync-from-owl.mjs",
  "source": {
   "repository": "BioChainAI/Owl-Academy",
-  "commit": "26a05eae0320e1287b40accff60d06086171cc24",
+  "commit": "fdc5809bfd9a50a8d17d2238823ad1295504db6b",
   "licence": "MIT. Copyright (c) 2026 Ebayednoob (BioChainAI/Owl-Academy, LICENSE). The generated files carry SPDX-License-Identifier: MIT and the copyright line; NOTICE at the root of this repository records the copy."
  },
  "files": [
   {
    "path": "src/biomesh/biomesh-core.js",
    "upstream": "scripts/biomesh-core.js",
-   "upstreamSha256": "0c7e9b3e7f67e821047537a1be76ec18e96af65bf73864a589597fd458578a69",
-   "sha256": "eafd130dbc55bb4825733f95cec5f700304400b43154c12a1a97c9a43896d788",
+   "upstreamSha256": "4475fe7a361df616315b1e7b6369501e39c341d477c322c247aa8da946272263",
+   "sha256": "445886182c4a8c8e6288589dec4749cacc4e84bee24b6cbea6fd5fb67d53e938",
    "rewrites": [
     {
      "from": "import { sha256Hex } from \"./seal-crypto.js\";",
@@ -24,7 +24,7 @@
    "path": "src/biomesh/biomesh-engine-check.js",
    "upstream": "scripts/biomesh-engine-check.js",
    "upstreamSha256": "2f66e541be8cfbbf38ffef5041eb53b704e29cbba3720e833d72d4a5bf54c452",
-   "sha256": "670909b5be3c3acd6d60fde7459e6f60dbc886641524bf001ceb6cf11c362d7a",
+   "sha256": "a42108d472da83263a8ff336f80f0ac3725e29d11693e6307fc67e95a516239a",
    "rewrites": []
   }
  ]

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Ebayednoob (BioChainAI/Owl-Academy); copied under the MIT licence, see NOTICE.
 // GENERATED FILE, do not edit. tools/sync-from-owl.mjs wrote it from
-// BioChainAI/Owl-Academy scripts/biomesh-engine-check.js at commit 26a05eae0320e1287b40accff60d06086171cc24
+// BioChainAI/Owl-Academy scripts/biomesh-engine-check.js at commit fdc5809bfd9a50a8d17d2238823ad1295504db6b
 // (SHA-256 of that file: 2f66e541be8cfbbf38ffef5041eb53b704e29cbba3720e833d72d4a5bf54c452). Changes to Owl's text:
 //   none: the file is copied unchanged
 // To change it, change Owl's file, repin OWL_COMMIT in tools/sync-from-owl.mjs and run

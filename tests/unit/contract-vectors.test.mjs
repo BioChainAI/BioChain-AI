@@ -5,8 +5,8 @@
 // The RFC 07 contract vectors (BioChainAI/SHD-CCP-core contract_vectors/, CC0-1.0, vendored in
 // tests/vendor/shdccp2-contract/ and pinned in tests/vendor/VENDOR.json) against BioChain-AI's code:
 // src/biomesh/biomesh-core.js (generated from Owl-Academy) for the codec and the strict verifier, and
-// src/identity/crypto-core.js for the ATTEST/1 profile. Normative suites must reproduce bit for bit; the two draft
-// suites are checked against the verdict RFC 07 names today. Run from the repository root:
+// src/identity/crypto-core.js for the ATTEST/1 profile. Normative suites must reproduce bit for bit; the draft suite
+// is checked against the value RFC 07 names today. Run from the repository root:
 //   node --test tests/unit/contract-vectors.test.mjs
 //
 //   shdccp2_packet   crystallize(chunk): packet, crystal32, signed crystal codes, fields; never the kernel-normalised
@@ -25,7 +25,8 @@
 //   rng_mulberry32   mulberry32 draws; for the letter seeds, the draws above 2^31 are the letter's engram grid
 //   shdccp2_tamper   verifyIntegrityStrict: ok and the first failing check for each value, with either hash; Owl's
 //                    legacy flag, fields and label (informative); verifyIntegrity returns on every value
-//   shdccp2_tamper_open (draft)   every value is rejected, at the check RFC 07 names today (section 12.5)
+//   shdccp2_tamper_open   the same for hex digits in the wrong case and ill-formed UTF-8: every value is rejected at
+//                    its expected check, the first failing check of RFC 07 section 17's option (a) (section 12.5)
 //   attest1_profile  the ATTEST/1 cases through crypto-core.js: identity, keyId, keyVector, content hash, payload,
 //                    signature and high-S twin verification, low-S form; the SEAL/1 and snapshot cases are
 //                    Owl-Academy's and B4's, not checked here
@@ -45,8 +46,9 @@ const CC = await import(pathToFileURL(join(ROOT, "src/identity/crypto-core.js"))
 const DIR = join(ROOT, "tests/vendor/shdccp2-contract/suites");
 const suite = (name) => JSON.parse(readFileSync(join(DIR, `${name}.json`), "utf8"));
 const NORMATIVE = ["attest1_profile", "engram1", "engram1_keys", "merkle_rules_same_bytes", "rng_mulberry32", "shdccp2_arith",
-  "shdccp2_chunk", "shdccp2_limits", "shdccp2_merkle", "shdccp2_packet", "shdccp2_record", "shdccp2_tamper", "shdccp2_weave"];
-const DRAFT = ["attest1_profile_open", "shdccp2_tamper_open"];
+  "shdccp2_chunk", "shdccp2_limits", "shdccp2_merkle", "shdccp2_packet", "shdccp2_record", "shdccp2_tamper", "shdccp2_tamper_open",
+  "shdccp2_weave"];
+const DRAFT = ["attest1_profile_open"];
 const SUITES = [...NORMATIVE, ...DRAFT].sort();
 
 const sha256 = (s) => createHash("sha256").update(Buffer.from(String(s), "utf8")).digest("hex");
@@ -57,7 +59,7 @@ const hex64 = (x) => { const v = new DataView(new ArrayBuffer(8)); v.setFloat64(
 const vectorText = (input) => ("text" in input ? input.text
   : input.text_parts.map((p) => (typeof p === "string" ? p : p.repeat.repeat(Math.ceil(p.length / p.repeat.length)).slice(0, p.length))).join(""));
 
-test("the fifteen suites are vendored: thirteen normative, two draft, RFC 07 shdccp/2, CC0", () => {
+test("the fifteen suites are vendored: fourteen normative, one draft, RFC 07 shdccp/2, CC0", () => {
   assert.deepEqual(readdirSync(DIR).filter((f) => f.endsWith(".json")).map((f) => f.replace(/\.json$/, "")).sort(), SUITES);
   for (const name of SUITES) {
     const s = suite(name);
@@ -359,13 +361,28 @@ test("shdccp2_tamper: the honest records pass and every altered value fails at i
     "cut_719_middle", "over_60000_bytes", "merkleroot_bioseed1"]) assert.ok(ids.includes(id), id);
 });
 
-test("shdccp2_tamper_open (draft): every value is rejected, at the check RFC 07 names today", () => {
+// RFC 07 section 17, option (a): hex digits of either case pass parity, and well-formed UTF-8 is checked at the start of
+// derived (section 12.5's table): a packet not in upper case fails at crystal, a residual or length not in lower case
+// at canonical, and ill-formed UTF-8 at the first check its change leaves wrong, at derived when every other field
+// comes from the same bytes. These are the suite's expected values; listing them here makes a refreshed copy that
+// moves one of them fail this test.
+const OPTION_A = { packet_lower_case: "crystal", packet_mixed_case: "crystal", residual_upper_case: "canonical",
+  residual_mixed_case: "canonical", length_upper_case: "canonical", utf8_lead_byte_at_end: "derived", utf8_overlong: "derived",
+  utf8_encoded_surrogate: "derived", utf8_lone_continuation: "derived", utf8_invalid_across_cut: "derived",
+  utf8_residual_changed: "crystal", utf8_packet_and_residual_changed: "leaves", utf8_leaves_and_root_changed: "weaves" };
+
+test("shdccp2_tamper_open: every value fails at its expected check, RFC 07 section 17's option (a), with either hash", () => {
   const s = suite("shdccp2_tamper_open");
-  assert.equal(s.status, "draft");
+  for (const [id, failed] of Object.entries(OPTION_A)) {
+    const c = s.cases.find((x) => x.id === id);
+    assert.ok(c, id);
+    assert.deepEqual(c.expect, { ok: false, failed }, `${id}: the expected verdict`);
+  }
   for (const c of s.cases) {
     assert.equal(c.expect.ok, false, `${c.id}: a value to reject`);
     checkTamperCase(c);
   }
+  assert.ok(s.cases.length >= 13, `${s.cases.length} values`);
 });
 
 /** verifyIntegrity on each value, in a worker with a memory limit and a time limit, so that a value on which it does

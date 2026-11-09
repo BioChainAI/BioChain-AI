@@ -72,8 +72,8 @@
    "id": "shdccp2-contract-s2",
    "repository": "BioChainAI/SHD-CCP-core",
    "ref": "(local, not yet pushed)",
-   "commit": "f51b53f5d10d05a788bbd219089ec5661c8759e6",
-   "licence": "CC0-1.0. The RFC 07 contract vectors (contract_vectors/ in BioChainAI/SHD-CCP-core) are dedicated to the public domain by their holder, Ebayednoob (contract_vectors/LICENSE, copied here as shdccp2-contract/LICENSE; decision D5c). Only vector files and that LICENSE are copied; the rest of SHD-CCP-core is GPL-3.0 and none of it is copied here. Suites added by SHD-CCP-core's S2 commit, not yet merged: attest1_profile_open and shdccp2_tamper_open are draft, the others normative there.",
+   "commit": "eaea3baa77924aa5f1965ae73b5d1dcf3cff8103",
+   "licence": "CC0-1.0. The RFC 07 contract vectors (contract_vectors/ in BioChainAI/SHD-CCP-core) are dedicated to the public domain by their holder, Ebayednoob (contract_vectors/LICENSE, copied here as shdccp2-contract/LICENSE; decision D5c). Only vector files and that LICENSE are copied; the rest of SHD-CCP-core is GPL-3.0 and none of it is copied here. Suites added after 150a50f, copied from SHD-CCP-core's commit eaea3ba (on top of main at 32d87f0, which merged f51b53f), not yet merged: attest1_profile_open is draft, the others normative there (shdccp2_tamper_open since eaea3ba, at the first failing checks of RFC 07 section 17's option (a)).",
    "usedBy": [
     "tests/unit/contract-vectors.test.mjs",
     "tests/unit/vendor.test.mjs",
@@ -113,12 +113,12 @@
     {
      "path": "shdccp2-contract/suites/shdccp2_tamper.json",
      "upstream": "contract_vectors/suites/shdccp2_tamper.json",
-     "sha256": "8e4646c1bbd896185a36ea3bd9ab3a462549c1e58cf20fbe429dc9e4f6d88a4b"
+     "sha256": "3c052c207fe66c92e0f76bbad6d900d88e47a33e6baef2d14ffe55d5cecb6023"
     },
     {
      "path": "shdccp2-contract/suites/shdccp2_tamper_open.json",
      "upstream": "contract_vectors/suites/shdccp2_tamper_open.json",
-     "sha256": "360dc3cc17d0891ddeb7a35c1d5b86951097d29fc0ad4fde3d0cd9243c014fda"
+     "sha256": "a2fcc00b9b98169e701bfbdb2a7e3e54929e8779e1bef658ca320263152feb05"
     }
    ]
   }
