@@ -28,9 +28,14 @@ export const onAuthStateChanged = () => () => {};
 const join = (segments) => segments.flatMap((s) => String(s).split("/")).join("/");
 export const doc = (_db, ...segments) => ({ type: "doc", path: join(segments), id: join(segments).split("/").pop() });
 export const collection = (_db, ...segments) => ({ type: "collection", path: join(segments) });
-export const query = (ref) => ref;
+// Queries apply where ("==", "in"), orderBy (a field or documentId()), startAfter
+// (a value of the ordered field, or a document id) and limit, in that order.
+const DOC_ID = Symbol("documentId");
+export const documentId = () => DOC_ID;
+export const query = (ref, ...constraints) => ({ ...ref, constraints: [...(ref.constraints || []), ...constraints] });
 export const where = (...a) => ({ where: a });
 export const orderBy = (...a) => ({ orderBy: a });
+export const startAfter = (...a) => ({ startAfter: a });
 export const limit = (n) => ({ limit: n });
 export const onSnapshot = () => () => {};
 
@@ -41,7 +46,24 @@ function snapshot(path) {
 export const getDoc = async (ref) => snapshot(ref.path);
 export const getDocs = async (ref) => {
   const prefix = ref.path + "/";
-  const docs = [...store.keys()].filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes("/")).map(snapshot);
+  let docs = [...store.keys()].filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes("/")).map(snapshot);
+  const cs = ref.constraints || [];
+  const value = (d, f) => (f === DOC_ID ? d.id : d.data()[f]);
+  for (const c of cs.filter((c) => c.where)) {
+    const [f, op, v] = c.where;
+    if (op === "==") docs = docs.filter((d) => value(d, f) === v);
+    else if (op === "in") docs = docs.filter((d) => v.includes(value(d, f)));
+    else throw new Error(`stub: where op ${op} not supported`);
+  }
+  const order = cs.find((c) => c.orderBy);
+  if (order) {
+    const [f, dir = "asc"] = order.orderBy, sign = dir === "desc" ? -1 : 1;
+    docs.sort((a, b) => { const x = value(a, f), y = value(b, f); return x < y ? -sign : x > y ? sign : 0; });
+    const after = cs.find((c) => c.startAfter);
+    if (after) docs = docs.filter((d) => (sign > 0 ? value(d, f) > after.startAfter[0] : value(d, f) < after.startAfter[0]));
+  }
+  const lim = cs.find((c) => c.limit);
+  if (lim) docs = docs.slice(0, lim.limit);
   return { docs };
 };
 

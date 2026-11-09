@@ -85,9 +85,10 @@ carries any Owl Academy coupling, and that coupling is entirely *identity*, not
 **The reassurance:** the SHD-CCP wire format, engram crystallization, Merkle /
 chiral commitments, GROWN certification, transfer lineage, and codex ABI are all
 **mathematically pinned** and carry over bit-for-bit. The browser grow cell is
-already verified byte-identical to the Python kernel (`crystallize(0..59) =
-9841D88D8B003CEA` on both). Decoupling changes *names and hosting*, never the
-protocol.
+identical to the Python kernel except that shdccp/2 keeps a 0x80 crystal byte raw;
+see RFC 07 (BioChainAI/SHD-CCP-core). `crystallize(0..59) = 9841D88D8B003CEA` on
+both; the kernel's `stream_packet` gives the shdccp/2 packet for every chunk.
+Decoupling changes *names and hosting*, never the protocol.
 
 ---
 
@@ -300,7 +301,7 @@ standalone build needs and is authored fresh in Phase 4, since Academy's
 | `users/{uid}` | `users/{uid}` | owner-only |
 | `users/{uid}/registrar/main` | `users/{uid}/identity/main` | write-once fingerprint; role appendable; immutable fields frozen |
 | `users/{uid}/minorTomes/{sealId}` | `users/{uid}/signingKeys/{keyId}` | owner-only; no delete |
-| `seals/{sealId}` | `keyRegistry/{keyId}` | public read; owner create; status-only update; no delete |
+| `seals/{sealId}` | `keyRegistry/{keyId}` | signed-in read; owner create; status-only update; no delete |
 | `biochains/{chainId}` | `biochains/{chainId}` | grower==owner create; listing/pairing OR accepted-transfer update; no delete |
 | `biochainTransfers/{id}` | `transfers/{id}` | owner create @ price 0; recipient resolve; no delete |
 | `biomeshCodices/{hash}` | `codices/{hash}` | creator create; immutable |

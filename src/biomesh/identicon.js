@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 /**
  * Identicon — deterministic visual fingerprint for signing keys.
  * All output is seeded from the keyId, so the same key always produces the same

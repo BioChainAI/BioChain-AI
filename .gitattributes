@@ -1,0 +1,5 @@
+# Byte-exact files: pinned by SHA-256 (tests/vendor/VENDOR.json, src/biomesh/VENDOR.json), so no line-ending conversion.
+tests/vendor/** -text
+src/biomesh/biomesh-core.js -text
+src/biomesh/biomesh-engine-check.js -text
+src/biomesh/VENDOR.json -text

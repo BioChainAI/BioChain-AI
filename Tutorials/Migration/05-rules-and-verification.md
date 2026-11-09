@@ -58,7 +58,7 @@ compare to the pinned constants.
 
 ```bash
 cd protocol
-python3 shdccp_kernel.py   # 8/8  + golden ABI hash == source
+python3 shdccp_kernel.py   # 11/11, including golden ABI hash == the pinned 882a8413…
 python3 codex_engine.py    # 11/11
 python3 biochain_mesh.py   # 11/11
 python3 pump_clock.py      # 13/13
@@ -66,14 +66,20 @@ cd ..
 ```
 
 **Browser ↔ kernel bit-identity** — the claim that a node and a browser read the
-same wire format. In a page that imports the ported `biomesh.js`:
+same wire format. The browser's packets equal the kernel's `stream_packet`; they equal
+its `crystallize` except that shdccp/2 keeps a 0x80 crystal byte raw (RFC 07). In a
+page that imports `biomesh.js`:
 
 ```js
 // crystallize(0..59) must equal the kernel's golden word
 console.assert(BM.crystallizeGolden() === "9841D88D8B003CEA");
-// engram token bit-identity with the reference
-console.assert(BM.engramHex("GEODESIC") === "5c896a4801c9c24c");
+// engram token: RFC 07's engram1_keys vector (browser side only; the Python kernel has no engram keys;
+// upper-case hex is canonical)
+console.assert(BM.engramHex("GEODESIC") === "5C896A4801C9C24C");
 ```
+
+`tests/unit/contract-vectors.test.mjs` and `tests/protocol/test_contract_vectors.py`
+run the RFC 07 contract vectors (BioChainAI/SHD-CCP-core) against both sides in CI.
 
 **Lossless roundtrip** — grow then recreate must be byte-exact, and the integrity
 verifier must pass every layer:
@@ -82,7 +88,9 @@ verifier must pass every layer:
 const chain = await BM.growBiochain(sampleText);
 console.assert(BM.recreateText(chain) === sampleText);           // lossless
 const v = await BM.verifyIntegrity(chain);
-console.assert(v.ok);   // parity → leaf → Merkle root → chiral weave
+console.assert(v.ok);   // self-consistency: parity → leaf → Merkle root → chiral weave
+const s = BM.verifyIntegrityStrict(chain);
+console.assert(s.ok);   // RFC 07: parity → canonical → crystal → leaves → weaves → derived
 ```
 
 **Certification & lineage** — end to end on the live project (Chapter 06 stands

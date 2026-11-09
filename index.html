@@ -289,7 +289,7 @@
       <div class="stat"><b>64/64</b><span>bits used by the SHD-CCP packet</span></div>
       <div class="stat"><b>1.47</b><span>value on structured text (bytes recreated per byte shipped)</span></div>
       <div class="stat"><b>+56.5%</b><span>residual cut by a pretrained codex on held-out text</span></div>
-      <div class="stat"><b>52/52</b><span>protocol self-checks passing</span></div>
+      <div class="stat"><b>55/55</b><span>protocol self-checks passing</span></div>
       <div class="stat"><b>114/114</b><span>security-rule attack &amp; flow checks passing</span></div>
     </div>
   </div>
@@ -459,12 +459,12 @@
         <p class="muted" style="font-size:.9rem">Want the architecture in depth? Start with <a href="https://github.com/BioChainAI/BioChain-AI/blob/main/protocol/README.md">protocol/README.md</a> and <a href="https://github.com/BioChainAI/BioChain-AI/blob/main/MIGRATION_PLAN.md">MIGRATION_PLAN.md</a>.</p>
       </div>
 <pre><span class="c"># clone, then from the repo root:</span>
-python3 protocol/shdccp_kernel.py   <span class="ok">#  8/8  packet ABI</span>
+python3 protocol/shdccp_kernel.py   <span class="ok"># 11/11 packet ABI</span>
 python3 protocol/codex_engine.py    <span class="ok"># 11/11 codex VM + growth</span>
 python3 protocol/biochain_mesh.py   <span class="ok"># 11/11 3-tier economy</span>
 python3 protocol/pump_clock.py      <span class="ok"># 13/13 pump + chiral layer</span>
 python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</span>
-<span class="c"># → 52/52 self-checks</span></pre>
+<span class="c"># → 55/55 self-checks</span></pre>
     </div>
   </div>
 </section>
@@ -475,7 +475,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
     <div class="sec-head">
       <span class="eyebrow">04 · How it works</span>
       <h2>Four layers over one 64-bit core</h2>
-      <p class="lead">Each layer calls only the one below it. The browser copy of the protocol core is byte-identical to the Python kernel. A golden ABI hash (<code>882a8413…</code>) pins the format, and fixed test vectors such as <code>crystallize(0..59) = 9841D88D8B003CEA</code> check that both implementations agree.</p>
+      <p class="lead">Each layer calls only the one below it. The browser copy of the protocol core is identical to the Python kernel except that shdccp/2 keeps a 0x80 crystal byte raw; see RFC 07 (the kernel's <code>stream_packet</code> writes that packet). A golden ABI hash (<code>882a8413…</code>) pins the format, and the RFC 07 contract vectors, such as <code>crystallize(0..59) = 9841D88D8B003CEA</code>, check that both implementations agree.</p>
     </div>
 
     <div class="arch" aria-label="Architecture diagram">
@@ -509,7 +509,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
     <div class="field-info" id="pkt-info" aria-live="polite"></div>
 
     <div class="grid g3" style="margin-top:20px">
-      <div class="card"><h3>No free floats on the wire</h3><p>Quaternion components are signed 8-bit codes. Code −128 normalizes to −127, so the range is symmetric. Worst measured error: 0.003937, within the 1/254 bound.</p></div>
+      <div class="card"><h3>No free floats on the wire</h3><p>Quaternion components are signed 8-bit codes. In kernel ABI and codex words, code −128 normalizes to −127, so the range is symmetric; worst measured error: 0.003937, within the 1/254 bound. A shdccp/2 crystal packet is not normalized: it keeps a 0x80 crystal byte raw, read as −128 (RFC 07 section 5.4).</p></div>
       <div class="card"><h3>Parity catches any flipped bit</h3><p>The self-test flips each of the 64 bits in turn and catches all 64.</p></div>
       <div class="card"><h3>The layout is pinned</h3><p>A golden ABI hash is computed over the field map, and any change to the layout changes it. <code>crystallize(chunk)</code> folds any byte string into one packet.</p></div>
     </div>
@@ -525,11 +525,11 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
     </div>
 
     <div class="grid g3" style="margin-top:16px">
-      <div class="card"><h3>Merkle root</h3><p>Each leaf binds a chunk to its position: <code>ℓᵢ = SHA256(i ‖ SHA256(cᵢ))</code>. Leaves are hashed in pairs up to one root <code>R</code>.</p></div>
+      <div class="card"><h3>Merkle root</h3><p>Each leaf binds a chunk to its position: <code>ℓᵢ = H(decimal(i) + "|" + H(latin1(cᵢ)))</code>, where <code>H</code> is the SHA-256 hex of a string's UTF-8 and <code>latin1(cᵢ)</code> reads each chunk byte as one Latin-1 character, so a byte of 0x80 or more is hashed as two UTF-8 bytes, not as itself (RFC 07 section 7.1). Leaves are hashed in pairs up to one root <code>R</code>. The Python codex engine's records use another rule (BIOSEED/1) and say so in their <code>merkleRule</code> tag.</p></div>
       <div class="card"><h3>Chiral weave</h3><p>The ordered product of each chunk's unit quaternion, <code>W = q̂ₙ ⋯ q̂₁</code>. Multiplication doesn't commute, so swapping two chunks changes the result.</p></div>
       <div class="card"><h3>Parity</h3><p>Every packet's parity bit is checked before its frame is decoded.</p></div>
     </div>
-    <div class="callout info"><b>Chain ID</b> binds the first two commitments: <code>chainId = "BC-" + SHA256(R | W)[0:24]</code>. <b>verifyIntegrity</b> checks the record's self-consistency and fails at the first mismatch: parity → each chunk vs its leaf → Merkle root → chiral weave → token-engram stream. <b>extendBiochain</b> grows a child chain by epochs and never changes the parent.</div>
+    <div class="callout info"><b>Chain ID</b> binds the first two commitments: <code>chainId = "BC-" + SHA256(R | W)[0:24]</code>. <b>verifyIntegrity</b> checks the record's self-consistency and fails at the first mismatch: parity → each chunk vs its leaf → Merkle root → chiral weave → token-engram stream. <b>verifyIntegrityStrict</b> checks the full RFC 07 contract: parity → canonical stream → each packet is its chunk's crystal → leaves and root → both weaves and the chain ID → derived fields. It runs in shadow mode for now: the console shows its verdict, publishing refuses a record that fails it, and records that fail are labelled, never deleted. <b>extendBiochain</b> grows a child chain by epochs and never changes the parent.</div>
 
     <!-- Codex -->
     <div class="sub" id="codex"><span class="num">4.3</span><h3>Codexes and the value law</h3></div>
@@ -721,7 +721,7 @@ python3 protocol/engram_shard.py    <span class="ok">#  9/9  sharded storage</sp
       <table>
         <thead><tr><th>Suite</th><th>Checks</th><th>Key results</th></tr></thead>
         <tbody>
-          <tr><td class="mono">shdccp_kernel.py</td><td>8/8</td><td>10,000 random packets round-trip; parity catches 64/64 single-bit flips; worst quaternion error 0.003937</td></tr>
+          <tr><td class="mono">shdccp_kernel.py</td><td>11/11</td><td>10,000 random packets round-trip; parity catches 64/64 single-bit flips; worst quaternion error 0.003937; golden ABI hash equals the pinned value; <code>stream_packet</code> keeps a 0x80 crystal byte raw</td></tr>
           <tr><td class="mono">codex_engine.py</td><td>11/11</td><td>Lossless on all corpora; ε = +56.5% held-out, −0.001 on noise; three malformed codexes rejected; bit-identical replay</td></tr>
           <tr><td class="mono">biochain_mesh.py</td><td>11/11</td><td>Claim verified on 9/9 nodes in 2 gossip rounds; inflated value and illegal opcode rejected; 36 CRYST issued; replay and overdraft rejected; ~2 s</td></tr>
           <tr><td class="mono">pump_clock.py</td><td>13/13</td><td>All 12 ticks exact; crystallization windows at ticks 6 and 12; reorder caught by the chiral weave (1.771 rad) but not by XOR</td></tr>

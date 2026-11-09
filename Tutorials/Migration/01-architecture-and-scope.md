@@ -60,9 +60,15 @@ the dress. That is the entire migration.
 
 ## The reassurance you carry into every later chapter
 
-The browser grow cell is already **byte-identical** to the Python kernel:
-`crystallize(0..59) = 9841D88D8B003CEA` on both, and engram token `"GEODESIC"`
-→ `5c896a4801c9c24c` on both. So "port the traceability + engram system" does not
+The browser grow cell is **identical** to the Python kernel except that shdccp/2
+keeps a 0x80 crystal byte raw; see RFC 07 (BioChainAI/SHD-CCP-core). The kernel's
+`stream_packet` writes the shdccp/2 packet; its `crystallize` rewrites a 0x80
+crystal byte as 0x81 for ABI and codex words. `crystallize(0..59) =
+9841D88D8B003CEA` on both. The engram token `"GEODESIC"` → `5C896A4801C9C24C`
+(upper-case hex is the canonical form) is a browser-side value: the Python kernel
+computes no engram keys, so `tests/unit/contract-vectors.test.mjs` checks it
+against RFC 07's `engram1_keys` vectors, whose independent implementation is
+Engram's `ttmpt.py`. So "port the traceability + engram system" does not
 mean "reimplement" — it means "relocate and rename, then re-run the existing
 proofs." Chapter 05 re-runs them.
 

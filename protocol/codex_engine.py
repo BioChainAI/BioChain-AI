@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 """
 Codex Engine — user-authored unfolding logic as a closed, deterministic,
 metered instruction set over SHD-CCP kernel packets.
@@ -35,6 +37,15 @@ cheap sampled verification possible on the mesh.
 
 Pure standard library. `python3 codex_engine.py` (captured in
 codex_engine_output.txt).
+
+Claims are BIOSEED/1 records. Their leafHashes and merkleRoot follow the
+BIOSEED/1 rule (_chunk_hash, merkle_root: raw SHA-256 digests over a 4-byte
+big-endian index), which is not the shdccp/2 rule of the JS biochains (RFC 07
+sections 7.1-7.4, BioChainAI/SHD-CCP-core) although the field names are the
+same; grow() therefore tags each claim with format "BIOSEED/1" and merkleRule
+"bioseed1". Copied from Owl-Academy's BioChain-AI/BioChain_Enterprise/ (MIT,
+Copyright (c) 2026 Ebayednoob); this repository's copy is the maintained one.
+See NOTICE.
 """
 
 import hashlib
@@ -228,6 +239,7 @@ def grow(data, codex_packets):
         holonomy ^= crystal
     return {
         "format": "BIOSEED/1",
+        "merkleRule": "bioseed1",                          # RFC 07 section 7.4, not shdccp/2
         "seed": chain[0] if chain else "0" * 16,          # chain origin
         "codex": [packet_hex(w) for w in codex_packets],
         "codexHash": codex_hash(codex_packets),

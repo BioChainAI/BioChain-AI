@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 """
 SHD-CCP Kernel Protocol — the 64-bit packet ABI ("pseudo-FPGA" standard).
 
@@ -25,7 +27,11 @@ grid is a *presentation* of this word, never a second source of truth):
 
 Determinism rules (the Form-3 discipline, protocol-mandated):
   • quaternion components are exact fixed-point: value = code/127, code ∈ [-127,127]
-    (code -128 is forbidden and normalizes to -127) — no free floats on the wire;
+    (code -128 is forbidden and normalizes to -127) — no free floats on the wire.
+    This clamp governs the kernel's ABI and codex words only (pack, crystallize,
+    codex_engine): a shdccp/2 biochain stream (RFC 07 in BioChainAI/SHD-CCP-core,
+    the JS grow cell in src/biomesh/) keeps a 0x80 crystal byte raw, and
+    stream_packet() writes that packet;
   • payload is a raw uint16; an IEEE-754 binary16 view is provided for display,
     but consensus logic reads the integer;
   • parity is even parity over the other 63 bits — one flipped bit anywhere
@@ -33,6 +39,9 @@ Determinism rules (the Form-3 discipline, protocol-mandated):
 
 Pure standard library. `python3 shdccp_kernel.py` runs the ABI self-test
 (captured in shdccp_kernel_output.txt).
+
+Copied from Owl-Academy's BioChain-AI/BioChain_Enterprise/ (MIT, Copyright (c)
+2026 Ebayednoob); this repository's copy is the maintained one. See NOTICE.
 """
 
 import hashlib
@@ -40,6 +49,10 @@ import random
 import struct
 
 MASK64 = 0xFFFFFFFFFFFFFFFF
+
+# SHA-256 of the 256-packet determinism stream in the self-test (check 6). Any
+# change to the field layout, packing or parity changes it.
+GOLDEN_ABI_HASH = "882a841362ae14e793d361c782f884148f71b2e930fcc81d24134e6bfa199ef6"
 
 FIELDS = {  # name: (msb_shift, width)
     "form":    (60, 4),
@@ -150,6 +163,33 @@ def crystallize(chunk, form=9, spin=0):
     return pack(form, spin, tuple(codes), len(chunk) & 0xFFFF, csum >> 3, csum & 7)
 
 
+def crystal32(chunk):
+    """The 32-bit crystal of a chunk: the fold crystallize() uses (RFC 07 section 5.1)."""
+    acc = 0x9E3779B97F4A7C15
+    for b in chunk:
+        acc = (((acc << 7) | (acc >> 57)) & MASK64) ^ (b * 0x100000001B3 & MASK64)
+    return (acc ^ (acc >> 32)) & 0xFFFFFFFF
+
+
+def stream_packet(chunk):
+    """The shdccp/2 crystal packet of one chunk (RFC 07 section 5), as a 64-bit word.
+
+    Form 9, spin 0, the four crystal bytes written RAW into bits 55..24,
+    payload16 = len(chunk) (mod 2^16), freq/amp = the byte sum mod 256 split 5/3,
+    and even parity over the other 63 bits. This is the packet the JS grow cell
+    (src/biomesh/biomesh-core.js crystallize) writes into a biochain stream, so
+    every shdccp/2 chainId commits to it.
+
+    It differs from crystallize(chunk) only when a crystal byte is 0x80: pack()
+    rewrites the int8 code -128 as -127 (0x81). That clamp governs the kernel's
+    ABI and codex words only (decision D6); shdccp/2 packets keep 0x80 raw. About
+    1.5 % of real 720-byte chunks have a 0x80 crystal byte. Use stream_packet,
+    not crystallize, to reproduce a shdccp/2 stream."""
+    csum = sum(chunk) & 0xFF
+    w = (9 << 60) | (crystal32(chunk) << 24) | ((len(chunk) & 0xFFFF) << 8) | ((csum >> 3) << 3) | (csum & 7)
+    return w | (_parity_of(w) << 59)
+
+
 # ─── ABI self-test ───────────────────────────────────────────────────────────
 
 def main():
@@ -212,7 +252,27 @@ def main():
                       for i in range(256))
     golden = hashlib.sha256(stream).hexdigest()
     print("\n  golden ABI hash: %s" % golden)
-    check("golden ABI hash stable", True, "pin this value in the protocol spec")
+    check("golden ABI hash equals the pinned value", golden == GOLDEN_ABI_HASH,
+          "pinned %s…" % GOLDEN_ABI_HASH[:16])
+
+    # 7. stream_packet: the shdccp/2 packet (raw crystal bytes, RFC 07 section 5)
+    golden_chunk = bytes(range(60))
+    check("stream_packet(bytes 0..59) = 9841D88D8B003CEA (the cross-language golden)",
+          packet_hex(stream_packet(golden_chunk)) == "9841D88D8B003CEA")
+    has_x80 = lambda c: any(((crystal32(c) >> i) & 0xFF) == 0x80 for i in (24, 16, 8, 0))
+    plain, x80 = [], []
+    while len(plain) < 1000 or len(x80) < 4:
+        c = bytes(rng.randrange(256) for _ in range(rng.randrange(1, 64)))
+        (x80 if has_x80(c) else plain).append(c)
+    check("stream_packet equals crystallize on chunks without a 0x80 crystal byte",
+          all(stream_packet(c) == crystallize(c) for c in plain[:1000]), "1,000 random chunks")
+    raw_ok = all(stream_packet(c) != crystallize(c)
+                 and _get(stream_packet(c), "quat") == crystal32(c)
+                 and _get(crystallize(c), "quat") != crystal32(c)
+                 and _get(stream_packet(c), "parity") == _parity_of(stream_packet(c))
+                 for c in x80[:4])
+    check("stream_packet keeps a 0x80 crystal byte raw; crystallize writes 0x81", raw_ok,
+          "%s ≠ %s" % (packet_hex(stream_packet(x80[0])), packet_hex(crystallize(x80[0]))))
 
     passed = sum(1 for _, r in results if r)
     print("\n%d/%d ABI checks passed — Total Allocation: 64 / 64 bits" % (passed, len(results)))

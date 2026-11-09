@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 /**
  * Epoch Service — the timing anchor for signing keys and attestations.
  * ----------------------------------------------------------------------------

@@ -40,20 +40,34 @@ All four layers are in the repository and served by GitHub Pages:
 - **Layer 2** — the Python protocol reference in `protocol/` (kernel, codex
   engine, mesh, engram shards, pump clock), each with a deterministic self-test.
 - **Layer 3** — `src/biomesh/` (grow, verify, publish, transfer, rate) and
-  `src/identity/` (identity, signing keys, roles, epochs). `crypto-core.js` holds
-  the Firebase-free signing-key and identity primitives, so they run in Node as
-  well as the browser.
+  `src/identity/` (identity, signing keys, roles, epochs). The biochain codec and
+  its verifiers are `src/biomesh/biomesh-core.js`, generated from Owl Academy's
+  reference implementation (`scripts/biomesh-core.js`, MIT) by
+  `tools/sync-from-owl.mjs` at the commit pinned by `OWL_COMMIT` in that script
+  and recorded, with each file's SHA-256, in `src/biomesh/VENDOR.json`; it is
+  never edited here. `src/biomesh/biomesh.js` re-exports it and adds the
+  Firestore services. `crypto-core.js` holds the Firebase-free signing-key and
+  identity primitives, so they run in Node as well as the browser.
 - **Layer 4** — `console/` (Operations Console, Language Studio, Lattice Forge)
   and `login.html`.
 
 `verifyIntegrity` checks a record's self-consistency (parity, each chunk against
 its leaf, the Merkle root, the chiral weave and the engram stream) and fails at
-the first mismatch.
+the first mismatch. `verifyIntegrityStrict` checks the whole shdccp/2 contract of
+RFC 07 (BioChainAI/SHD-CCP-core) in order — parity, canonical stream, crystal
+packets, leaves and root, weaves and chainId, derived fields — and names the first
+check that fails. It runs in shadow mode (`STRICT_ENFORCE = false` in
+`src/biomesh/biomesh.js`): the console pages show its verdict ("strict ok",
+"legacy", "failed at …", "self-consistent only, failed at …"), publishing refuses
+a record that fails it, and accept, extend and trace refuse on it only once the
+flag is turned on. Records that fail are labelled, never deleted. The Operations
+Console's Audit tab (ADMIN) runs it over every record, read-only, and offers a
+JSON report.
 
 ### Tests and CI
 
 `.github/workflows/biochain-ci.yml` runs on every pull request and push to main
-that touches `src/`, `console/`, `protocol/`, `tests/`, `firestore.rules`,
+that touches `src/`, `console/`, `protocol/`, `tests/`, `tools/`, `firestore.rules`,
 `firebase.json`, `login.html` or `index.html`. Actions are pinned to commits;
 jobs run with a read-only token (`contents: read`), checkouts do not persist it,
 and nothing deploys.
@@ -61,9 +75,10 @@ and nothing deploys.
 | Job | What it checks | Run it locally |
 |---|---|---|
 | rules | the trust scenarios in `tests/rules/scenarios/` against the Firestore emulator | `cd tests/rules && npm ci && npm test` (Java 21) |
-| unit | `crypto-core.js` signatures and goldens, identity and signing-key writes, the scenario files | `node --test "tests/unit/*.test.mjs"` |
-| protocol | every `protocol/*.py` self-test | `python3 -B -I tests/protocol/run_selftests.py` |
-| static | storage policy, CDN version and integrity pins, audit-log kinds against the rules | `node tests/static/run-all.mjs` |
+| unit | `crypto-core.js` signatures and goldens, identity and signing-key writes, the scenario files; the generated core against `src/biomesh/VENDOR.json` and against the code it replaced; the RFC 07 contract vectors (`tests/vendor/`); the app layer's strict verdicts, kinds and audit | `BC_REQUIRE_HISTORY=1 node --test "tests/unit/*.test.mjs"` (needs git history) |
+| protocol | every `protocol/*.py` self-test, and the contract vectors against `stream_packet` and the BIOSEED/1 rule | `python3 -B -I tests/protocol/run_selftests.py` |
+| owl-sync | regenerates the generated files in `src/biomesh/` (`biomesh-core.js`, `biomesh-engine-check.js`, `VENDOR.json`) from a checkout of Owl Academy at the pinned commit and compares (network) | `node tools/sync-from-owl.mjs --owl <Owl-Academy checkout> --check` |
+| static | storage policy, CDN version and integrity pins, audit-log kinds against the rules; the generated files against `src/biomesh/VENDOR.json` and `OWL_COMMIT` (hashes, headers, rewrites; offline) | `node tests/static/run-all.mjs` and `node tools/sync-from-owl.mjs --verify` |
 | cdn | each pinned CDN file still matches its integrity value (network) | `node tests/static/cdn-live.mjs` |
 
 Rules changes are deployed by a maintainer
@@ -91,3 +106,9 @@ Roles come only from records users cannot write for themselves:
 `config/rootAdmins` (console-managed) and `roleGrants/{uid}` (ADMIN-written).
 The rules check the role stamped on signing keys and ratings against those
 records, so a role — and the rating weight it carries — cannot be self-claimed.
+
+## Licence
+
+MIT, Copyright (c) 2026 Schism-Labs-AI (`LICENSE`). Parts come from Owl Academy
+(MIT, Copyright (c) 2026 Ebayednoob) and SHD-CCP-core's contract vectors
+(CC0-1.0); `NOTICE` lists them.

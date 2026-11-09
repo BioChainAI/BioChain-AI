@@ -1,9 +1,14 @@
 # BioChain-AI checks for the platform (src/, console/, protocol/, firestore.rules, login.html) and its tests.
 # Jobs:
 #   rules    — the trust scenarios (tests/rules/scenarios/) against the Firestore emulator
-#   unit     — tests/unit/*.test.mjs (crypto-core, identity and signing-key writes, scenario files)
-#   protocol — every protocol/*.py self-test, run with python3 -B -I
-#   static   — storage policy, audit-log kinds against the rules, CDN version and integrity pins (offline)
+#   unit     — tests/unit/*.test.mjs (crypto-core, identity and signing-key writes, scenario files; the generated
+#              Biomesh core against src/biomesh/VENDOR.json and against the code it replaced, which needs the
+#              git history; the RFC 07 contract vectors in tests/vendor/; the app layer's strict verdicts)
+#   protocol — every protocol/*.py self-test and tests/protocol/test_*.py, run with python3 -B -I
+#   static   — storage policy, audit-log kinds against the rules, CDN version and integrity pins, and the
+#              generated core's hashes (tools/sync-from-owl.mjs --verify), offline
+#   owl-sync — regenerates src/biomesh/biomesh-core.js from a public checkout of BioChainAI/Owl-Academy at the
+#              commit pinned in tools/sync-from-owl.mjs, and fails if the committed files differ (network)
 #   cdn      — each pinned CDN file still matches its integrity value (network)
 # Actions are pinned to commits (the tag in the comment). Jobs run with a read-only token (permissions: contents: read);
 # checkouts do not persist it, and nothing here deploys (rules deploys are run by a maintainer).
@@ -16,6 +21,8 @@ on:
       - "console/**"
       - "protocol/**"
       - "tests/**"
+      - "tools/**"
+      - ".gitattributes"
       - "firestore.rules"
       - "firebase.json"
       - "login.html"
@@ -28,6 +35,8 @@ on:
       - "console/**"
       - "protocol/**"
       - "tests/**"
+      - "tools/**"
+      - ".gitattributes"
       - "firestore.rules"
       - "firebase.json"
       - "login.html"
@@ -81,15 +90,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout
+      - name: "Checkout (full history: the generated core is compared with the code it replaced)"
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
       - name: Unit tests
+        env:
+          BC_REQUIRE_HISTORY: "1"
         run: node --test "tests/unit/*.test.mjs"
 
   protocol:
@@ -123,6 +135,37 @@ jobs:
           node-version: 22
       - name: Storage policy, audit-log kinds, CDN pins
         run: node tests/static/run-all.mjs
+      - name: Generated Biomesh core (hashes, headers, rewrites)
+        run: node tools/sync-from-owl.mjs --verify
+
+  owl-sync:
+    name: Generated core matches Owl Academy (network)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Pinned Owl Academy commit
+        id: pin
+        run: |
+          commit="$(node tools/sync-from-owl.mjs --print-commit)"
+          if ! printf '%s' "$commit" | grep -Eq '^[0-9a-f]{40}$'; then echo "not a commit: $commit"; exit 1; fi
+          echo "commit=$commit" >> "$GITHUB_OUTPUT"
+      - name: Checkout BioChainAI/Owl-Academy at the pinned commit
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: BioChainAI/Owl-Academy
+          ref: ${{ steps.pin.outputs.commit }}
+          path: owl-academy
+          persist-credentials: false
+      - name: Regenerate and compare
+        run: node tools/sync-from-owl.mjs --owl owl-academy --check
 
   cdn:
     name: CDN integrity (network)

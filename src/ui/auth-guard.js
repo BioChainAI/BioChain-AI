@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 /**
  * Auth Guard — include as <script type="module"> on any protected page.
  * Hides the body until Firebase resolves auth state, then either reveals the

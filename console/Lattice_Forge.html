@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE. -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -187,10 +189,10 @@
         import GUI from 'lil-gui';
 
         // ══════════════════════════════════════════════════════════════════════
-        //  SHD-CCP 64-bit packet codec — byte-identical to src/biomesh/biomesh.js
-        //  (and BioChain_Enterprise/shdccp_kernel.py). Inlined so this page is a
-        //  fully standalone node of the mesh; the canonical definition lives in
-        //  biomesh.js. Field map (MSB..LSB of the 64-bit word):
+        //  SHD-CCP 64-bit packet codec — the same as src/biomesh/biomesh-core.js; the
+        //  Python kernel (protocol/shdccp_kernel.py) is identical except that shdccp/2
+        //  keeps a 0x80 crystal byte raw (see RFC 07). Inlined so this page is a fully
+        //  standalone node of the mesh. Field map (MSB..LSB of the 64-bit word):
         //    63..60 form · 59 parity · 58..56 spin · 55..24 quat32
         //    · 23..8 payload16 · 7..3 freq · 2..0 amp
         // ══════════════════════════════════════════════════════════════════════

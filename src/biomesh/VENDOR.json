@@ -1,0 +1,31 @@
+{
+ "format": "biochain-vendor/1",
+ "description": "Files generated from another repository by tools/sync-from-owl.mjs, each pinned by SHA-256. The commit is set by OWL_COMMIT in tools/sync-from-owl.mjs and recorded here; this file is generator output, so edit OWL_COMMIT and run --write rather than editing it. Offline checks (tests/unit/vendor.test.mjs and `node tools/sync-from-owl.mjs --verify`): each file's SHA-256, its header, and that removing the header and undoing the rewrites gives the upstream SHA-256. CI also regenerates the files from a checkout of the source at the commit and compares them (`node tools/sync-from-owl.mjs --owl <checkout> --check`).",
+ "generator": "tools/sync-from-owl.mjs",
+ "source": {
+  "repository": "BioChainAI/Owl-Academy",
+  "commit": "26a05eae0320e1287b40accff60d06086171cc24",
+  "licence": "MIT. Copyright (c) 2026 Ebayednoob (BioChainAI/Owl-Academy, LICENSE). The generated files carry SPDX-License-Identifier: MIT and the copyright line; NOTICE at the root of this repository records the copy."
+ },
+ "files": [
+  {
+   "path": "src/biomesh/biomesh-core.js",
+   "upstream": "scripts/biomesh-core.js",
+   "upstreamSha256": "0c7e9b3e7f67e821047537a1be76ec18e96af65bf73864a589597fd458578a69",
+   "sha256": "eafd130dbc55bb4825733f95cec5f700304400b43154c12a1a97c9a43896d788",
+   "rewrites": [
+    {
+     "from": "import { sha256Hex } from \"./seal-crypto.js\";",
+     "to": "import { sha256Hex } from \"../identity/crypto-core.js\";"
+    }
+   ]
+  },
+  {
+   "path": "src/biomesh/biomesh-engine-check.js",
+   "upstream": "scripts/biomesh-engine-check.js",
+   "upstreamSha256": "2f66e541be8cfbbf38ffef5041eb53b704e29cbba3720e833d72d4a5bf54c452",
+   "sha256": "670909b5be3c3acd6d60fde7459e6f60dbc886641524bf001ceb6cf11c362d7a",
+   "rewrites": []
+  }
+ ]
+}
