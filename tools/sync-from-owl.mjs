@@ -39,7 +39,7 @@ import { fileURLToPath } from "node:url";
 
 export const OWL_REPOSITORY = "BioChainAI/Owl-Academy";
 /** The Owl-Academy commit the generated files come from. */
-export const OWL_COMMIT = "26a05eae0320e1287b40accff60d06086171cc24";
+export const OWL_COMMIT = "fdc5809bfd9a50a8d17d2238823ad1295504db6b";
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const VENDOR_PATH = "src/biomesh/VENDOR.json";
