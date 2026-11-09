@@ -1,0 +1,295 @@
+{
+ "format": "biochain-pre-b2/1",
+ "commit": "dfbe3f2e94c2ff8101f39054bedf29ec67f75704",
+ "description": "growBiochain records of src/biomesh/biomesh.js at commit (before the generated core) on the inputs of tests/unit/support/pre-b2.mjs: chainId and the SHA-256 of JSON.stringify(record). tests/unit/biomesh-core.test.mjs checks that today's code gives the same records, and rebuilds this file from git history when the commit is present.",
+ "records": [
+  {
+   "id": "ascii_1",
+   "engrams": true,
+   "chainId": "BC-54a1d74a2ef62e0ccac1d193",
+   "digest": "0374f04d874af723e4dcf7cc601b1ee7e0a5e8893eeec2b57f27234c1ba82d79"
+  },
+  {
+   "id": "ascii_1",
+   "engrams": false,
+   "chainId": "BC-54a1d74a2ef62e0ccac1d193",
+   "digest": "290241ef281ed15a715571b88937044ff3f697923fe1de505e1b2a508fe4741d"
+  },
+  {
+   "id": "ascii_2",
+   "engrams": true,
+   "chainId": "BC-f42d27f97220d2d7c0e06627",
+   "digest": "d3121fc2f7e2bf768f3bf8fcf01827357c0b3f3d564860350403174914b71795"
+  },
+  {
+   "id": "ascii_2",
+   "engrams": false,
+   "chainId": "BC-f42d27f97220d2d7c0e06627",
+   "digest": "9b3a695bf9dd092e00aeb3d0ffbe7e72b40423bb539a545ad1e280784090a247"
+  },
+  {
+   "id": "ascii_59",
+   "engrams": true,
+   "chainId": "BC-7cc9d234a17c85f28dbd0f36",
+   "digest": "5e7e366e02edb1b94a7b57ca7735e23b54ade197fa799251c1f32047506759d9"
+  },
+  {
+   "id": "ascii_59",
+   "engrams": false,
+   "chainId": "BC-7cc9d234a17c85f28dbd0f36",
+   "digest": "8dd28eeb83f06d899ae7c666f78307123dc999fd31a29feeb632aab9c733013b"
+  },
+  {
+   "id": "ascii_60",
+   "engrams": true,
+   "chainId": "BC-ad0353ebf3b6f489f7bb6223",
+   "digest": "dbee0af292638871301de85f2b80b9a1a3022c82efb9038b6f9073bec31a4ff1"
+  },
+  {
+   "id": "ascii_60",
+   "engrams": false,
+   "chainId": "BC-ad0353ebf3b6f489f7bb6223",
+   "digest": "f97815fdeaf4c5ab27de2a9723f913406834f048720bb4ef1c13b7cb79bad429"
+  },
+  {
+   "id": "ascii_719",
+   "engrams": true,
+   "chainId": "BC-8d4f0f6e5f54310c54adfedf",
+   "digest": "d3e763a178e62ef7683b6da4b16af48bc338607cec578b4fb37dabbda2d3413b"
+  },
+  {
+   "id": "ascii_719",
+   "engrams": false,
+   "chainId": "BC-8d4f0f6e5f54310c54adfedf",
+   "digest": "7a758b846cf7087093ec1151ce248283b51eb375c0ceba975752aa6001cca16a"
+  },
+  {
+   "id": "ascii_720",
+   "engrams": true,
+   "chainId": "BC-851d822eee5692c9a19b73b1",
+   "digest": "93a9ed2f1b1392db9d0fc5ef22a44de33b7a58787e64b58a8ce0ee759e9f6d3f"
+  },
+  {
+   "id": "ascii_720",
+   "engrams": false,
+   "chainId": "BC-851d822eee5692c9a19b73b1",
+   "digest": "751e3b0e12376f647a7e089802c4f8b6799be08c036d9cfa60bef58ddd865072"
+  },
+  {
+   "id": "ascii_721",
+   "engrams": true,
+   "chainId": "BC-276285852ee8163558fd9605",
+   "digest": "1473d21e9d98ff4a208a74e273b31f604138f52e600100c74b2dde81a5294908"
+  },
+  {
+   "id": "ascii_721",
+   "engrams": false,
+   "chainId": "BC-276285852ee8163558fd9605",
+   "digest": "00b2bb8a8c7df9f40e3d07bf24fbd11f17864f4d48fc10e29837d81fc583b9cf"
+  },
+  {
+   "id": "ascii_1439",
+   "engrams": true,
+   "chainId": "BC-f854818cbeed461c01242700",
+   "digest": "c19d48a6e3e61d6660d456804574b2693e3b7c2a8934450362a7c753752245af"
+  },
+  {
+   "id": "ascii_1439",
+   "engrams": false,
+   "chainId": "BC-f854818cbeed461c01242700",
+   "digest": "9b2df1f0c14a7833f50f7bb7326e53d47af2a167f9e970864260654052350bed"
+  },
+  {
+   "id": "ascii_1440",
+   "engrams": true,
+   "chainId": "BC-1681ec469e9567fcc273ec2d",
+   "digest": "b497140d20b8100bd971481a76004d0a74f4f9ef670e354b01413218cceeb7b3"
+  },
+  {
+   "id": "ascii_1440",
+   "engrams": false,
+   "chainId": "BC-1681ec469e9567fcc273ec2d",
+   "digest": "64489248a9c8970a7f9067e5d775c2ab363704ce9bf8ca35112839191f15ce61"
+  },
+  {
+   "id": "ascii_1441",
+   "engrams": true,
+   "chainId": "BC-493a5b2d0f1a58cea2761596",
+   "digest": "f98a91a24f0b3b78c667c7ffedd9778e60f8093d4796be320859e45efb5148d0"
+  },
+  {
+   "id": "ascii_1441",
+   "engrams": false,
+   "chainId": "BC-493a5b2d0f1a58cea2761596",
+   "digest": "21c24ba0bc1b993dca419ffe968be9b0f5964c8bb74778351aef7b98b22e3cdf"
+  },
+  {
+   "id": "ascii_5000",
+   "engrams": true,
+   "chainId": "BC-bae2b4e3d80f9cb61d3ef108",
+   "digest": "1103210f47497fa6a3bd199432e703e20c60505aec85b543077ccb2d21cf91be"
+  },
+  {
+   "id": "ascii_5000",
+   "engrams": false,
+   "chainId": "BC-bae2b4e3d80f9cb61d3ef108",
+   "digest": "bbdb789ff3784be29ce4137db36e98a0894304890c4e02b11356139f89cae828"
+  },
+  {
+   "id": "ascii_12345",
+   "engrams": true,
+   "chainId": "BC-6e57eeca404ba9b43d7559dc",
+   "digest": "deb2cf88d8bacc225b299c52a80158e782240426fb91c7869e3d452cc4625d89"
+  },
+  {
+   "id": "ascii_12345",
+   "engrams": false,
+   "chainId": "BC-6e57eeca404ba9b43d7559dc",
+   "digest": "37368505047ef3adcc77fdc47f4e9175ac83fb07dd625de9d291ad4dadbecbf3"
+  },
+  {
+   "id": "utf8_1",
+   "engrams": true,
+   "chainId": "BC-820120c0ffb5ffe3a05f0477",
+   "digest": "f2fdf920ae9d148a51e3d208f36843c1afba50d3b5cbf76f89e6141d079f2a01"
+  },
+  {
+   "id": "utf8_1",
+   "engrams": false,
+   "chainId": "BC-820120c0ffb5ffe3a05f0477",
+   "digest": "caaf52e29ae64c4684f49d731dd1e14d5a3bad78dd3b731b221aa32353e64ee1"
+  },
+  {
+   "id": "utf8_240",
+   "engrams": true,
+   "chainId": "BC-e4d92a0a3ad3958a34d67855",
+   "digest": "292a95deab2503b9c3d29a0273dd02d00849579ca3d841affbae9a53400fb32a"
+  },
+  {
+   "id": "utf8_240",
+   "engrams": false,
+   "chainId": "BC-e4d92a0a3ad3958a34d67855",
+   "digest": "8d13eaf9758dacdc8a6ee2617bbfd9a78ea1047dc01786e1545a5d0a83f862f2"
+  },
+  {
+   "id": "utf8_241",
+   "engrams": true,
+   "chainId": "BC-5fb31f174ba7dfecd6754f45",
+   "digest": "3e47e0eb005c99ef00fc58c9eac8ad1ae21f5efd4634b4b906cd8701ca2a05ec"
+  },
+  {
+   "id": "utf8_241",
+   "engrams": false,
+   "chainId": "BC-5fb31f174ba7dfecd6754f45",
+   "digest": "1dab35137acae31f9dbd09a600fa50ed4de89619625947852c29d1c8d664811c"
+  },
+  {
+   "id": "utf8_1000",
+   "engrams": true,
+   "chainId": "BC-ae891684f2b9fa623cb02c0e",
+   "digest": "af67f82018a939edea92f2b79faa2ae1b3308b45b5b91cea0fbaee044a96b83d"
+  },
+  {
+   "id": "utf8_1000",
+   "engrams": false,
+   "chainId": "BC-ae891684f2b9fa623cb02c0e",
+   "digest": "364ad6c421ba09ec4bd880f5b8c607be83c15208dd6643b841aa73606fc8e5c0"
+  },
+  {
+   "id": "utf8_3000",
+   "engrams": true,
+   "chainId": "BC-f69ab1b1486c9401462cc82a",
+   "digest": "999546c54cf77779864a4bcd67ec6863a17f0220d0247c285e3f557153a3b2e3"
+  },
+  {
+   "id": "utf8_3000",
+   "engrams": false,
+   "chainId": "BC-f69ab1b1486c9401462cc82a",
+   "digest": "34504686fb264d9250e0f2298cdde411c4a4edccdeb3de57b91790b9b91e046b"
+  },
+  {
+   "id": "words_5",
+   "engrams": true,
+   "chainId": "BC-5d6c62efb024bd55e5d1ac11",
+   "digest": "34f9ef87b4dd03ae366120a90951b216f35823ff1066ecc61329c8e17f74ca0f"
+  },
+  {
+   "id": "words_5",
+   "engrams": false,
+   "chainId": "BC-5d6c62efb024bd55e5d1ac11",
+   "digest": "a92268aff8d24084863db0b4b16984366b9b30ccfc7b54656b5b608b4340f79d"
+  },
+  {
+   "id": "words_200",
+   "engrams": true,
+   "chainId": "BC-6df26aaa3dd71057bfddce8c",
+   "digest": "4f8588a66981fc769905505bd2ba8cb8fc1914f3178f205ce2287ee50e323040"
+  },
+  {
+   "id": "words_200",
+   "engrams": false,
+   "chainId": "BC-6df26aaa3dd71057bfddce8c",
+   "digest": "7429b40c31954405f2d5fba89f7ebd236db49f707788755df3dea9959afd44ee"
+  },
+  {
+   "id": "words_2000",
+   "engrams": false,
+   "chainId": "BC-9ffa8330e16911b8fc09f05f",
+   "digest": "2613aecb256ad84f28d01086ee931740f1d81559b36dc9cf11cabc7ed00b34ba"
+  },
+  {
+   "id": "max_60000",
+   "engrams": false,
+   "chainId": "BC-6d698843707e0e264c3cf718",
+   "digest": "229222afadfbf5b2ee9f5e67c958880708fe38dfedd5e71459d8b95f1bdc20de"
+  },
+  {
+   "id": "x80_one_chunk",
+   "engrams": true,
+   "chainId": "BC-787287da41a1375701094b64",
+   "digest": "80f592163c822a5c71630197b8871fd9ed2be8c216448bba1b59b97d1c5604f4"
+  },
+  {
+   "id": "x80_one_chunk",
+   "engrams": false,
+   "chainId": "BC-787287da41a1375701094b64",
+   "digest": "4f53e2715ead332a401c1a0b70fdb658edd17dcff8b4464535b3f8b9099337b2"
+  },
+  {
+   "id": "x80_x80_w_then_plain",
+   "engrams": true,
+   "chainId": "BC-7e10bb5029e4c275af72318b",
+   "digest": "87de0b40d9cc5da0e5969df23b2faf9738e2987d67c427397a9c19e5c4b0b196"
+  },
+  {
+   "id": "x80_x80_w_then_plain",
+   "engrams": false,
+   "chainId": "BC-7e10bb5029e4c275af72318b",
+   "digest": "5df7688a9ce5e2005e9e293a40e2337c79702d46b460700c347b1cdc4aab9b5f"
+  },
+  {
+   "id": "x80_x80_x_y_z",
+   "engrams": true,
+   "chainId": "BC-b24386021f3ebb45e8e88f69",
+   "digest": "1e07cd81971f6ec16077ffb6bff77269c056758a3cc1b6d2c7809ce61889c9f3"
+  },
+  {
+   "id": "x80_x80_x_y_z",
+   "engrams": false,
+   "chainId": "BC-b24386021f3ebb45e8e88f69",
+   "digest": "d185b1b94d5ef4c8a3a0a7e4eae0c19287e564d42f632f575c399a95e006bde5"
+  },
+  {
+   "id": "x80_x80_w_x80_w",
+   "engrams": true,
+   "chainId": "BC-58382632f9918c85c6ff577c",
+   "digest": "e82c20ca6ad1fd7fe91b31814ca0089301777c4567236668444549953307c7e4"
+  },
+  {
+   "id": "x80_x80_w_x80_w",
+   "engrams": false,
+   "chainId": "BC-58382632f9918c85c6ff577c",
+   "digest": "a467cd5593716e63d8df6ae23cc8d438838bce5671a2476092b62800b5d6f548"
+  }
+ ]
+}

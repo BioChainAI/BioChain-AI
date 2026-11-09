@@ -18,11 +18,16 @@ live grow→unfold demo, the token loop).
 ## Run it
 
 ```bash
-python3 shdccp_kernel.py     # the 64-bit packet ABI          →  8/8 checks
+python3 shdccp_kernel.py     # the 64-bit packet ABI          → 11/11 checks
 python3 codex_engine.py      # codex VM + growth + scoring    → 11/11 checks
 python3 biochain_mesh.py     # the 3-tier economy end to end  → 11/11 checks (~3 s)
 python3 pump_clock.py        # pump timing + chiral layer     → 13/13 checks
+python3 engram_shard.py      # sharded engram storage         →  9/9 checks
 ```
+
+From the repository root, `python3 -B -I tests/protocol/run_selftests.py` runs all five
+and `tests/protocol/test_contract_vectors.py`, which checks this stack against the RFC 07
+contract vectors (BioChainAI/SHD-CCP-core, vendored in `tests/vendor/`); CI runs it.
 
 Pure standard library, deterministic, no dependencies. Each module imports the one
 below it — kernel → codex → mesh — so the mesh run is the whole system.
@@ -65,11 +70,23 @@ One packet = one 64-bit word. Field layout fixed by the Kernel Group Design
 
 Determinism rules are protocol law: quaternions are exact fixed-point (no free floats
 on the wire; code −128 is forbidden), consensus logic reads the raw integers, and the
-parity bit invalidates any single flipped bit (measured: 64/64 caught). A **golden ABI
-hash** is printed by the self-test — pin it; any drift in the ABI changes that line.
+parity bit invalidates any single flipped bit (measured: 64/64 caught). The **golden ABI
+hash** `882a841362ae14e793d361c782f884148f71b2e930fcc81d24134e6bfa199ef6` is pinned in the
+module (`GOLDEN_ABI_HASH`); the self-test fails if the ABI drifts from it.
 
 `crystallize(chunk)` folds any byte chunk into one packet (XOR/rotate, φ-derived
 constant) — the bioseed-chain element.
+
+**The 0x80 rule (RFC 07 section 5.4, decision D6).** The −128 clamp governs the kernel's
+ABI and codex words only. The biochains the platform grows (`src/biomesh/`, the shdccp/2
+stream of RFC 07 in BioChainAI/SHD-CCP-core) keep a 0x80 crystal byte raw, and every
+deployed chainId commits to those raw packets. `stream_packet(chunk)` writes the shdccp/2
+packet: Form 9, the four crystal bytes raw, payload16 = the chunk length, freq/amp = the
+byte sum split 5/3, even parity. It equals `crystallize(chunk)` except on chunks with a
+0x80 crystal byte (about 1.5 % of real chunks), where `crystallize` writes 0x81. The
+browser grow cell is therefore identical to this kernel except that shdccp/2 keeps a 0x80
+crystal byte raw. The contract-vector test checks `stream_packet` on every packet vector,
+including 46 chunks with a 0x80 crystal byte.
 
 ## 2. The codex engine (`codex_engine.py`)
 
@@ -91,6 +108,15 @@ ranked expectation; the shipped residual is the rank stream (Elias-gamma coded).
 Unfolding replays the same model — lossless by construction, verified by the holonomy
 word (cumulative XOR of the bioseed chain) and the Merkle root. Chunks encode with a
 fresh model each (primed only from PRIME entries), so any chunk spot-checks independently.
+
+**Claims are BIOSEED/1 records**, tagged `format: "BIOSEED/1"` and `merkleRule:
+"bioseed1"`. Their `leafHashes` and `merkleRoot` use the BIOSEED/1 rule (raw SHA-256
+digests over a 4-byte big-endian chunk index; RFC 07 section 7.4), not the shdccp/2 rule of
+the platform's biochains (hex-string leaves bound to `i + "|"`; section 7.1), although the
+field names are the same. A verifier picks the rule from the tag (or from `streamVersion`
+on a shdccp/2 record) and never accepts a root computed under another rule. The tag
+changed the printed "golden claim hash" (it hashes the whole claim); replay is still
+bit-identical.
 
 **Measured** (`codex_engine_output.txt`):
 
@@ -143,6 +169,16 @@ replay with certainty (the honest physics of sampling, printed not hidden) ·
 
 ## Honest limitations
 
+- **The ECDSA in `biochain_mesh.py` is simulation-only.** It drives the mesh simulation
+  and must never hold or sign with a real key: private keys are derived from public names,
+  nonces come from an HMAC of the key and payload rather than RFC 6979, verification does
+  not check that the public key is on the curve and accepts high-S signatures, and the
+  scalar multiplication is not constant-time. The platform signs with WebCrypto
+  (`src/identity/crypto-core.js`, ATTEST/1).
+- **LINK/1 (`engram_shard.py`) is retired for LINK/2.** LINK/1 is a detached link from an
+  Owl Academy identity to a shard node, signed with the simulation ECDSA. Its successor,
+  LINK/2, is an ATTEST/1 link signed by both identities (decision D9; the attestation
+  profile is RFC 07 section 13). LINK/1 stays here as the reference stack's simulation.
 - **The rank coder is a reference model**, not a state-of-the-art compressor — the
   point is the *protocol* (closed ISA, counted bytes, sampled verification, measured
   attunement), which is compressor-agnostic. A better predictor slots in as a new
@@ -205,6 +241,10 @@ Full visualization: `pump_timing.html` (gear clock, handoff windows, chiral demo
 for the validation-node anatomy · Engram Codec / Ontological Codex for the quaternion
 delta-chain mathematics · POLYCENTRIA for the governance cell.*
 
+*Origin: these modules were copied from Owl-Academy's `BioChain-AI/BioChain_Enterprise/`
+(MIT, Copyright (c) 2026 Ebayednoob); see `NOTICE` at the repository root. This copy is the
+maintained one: Owl-Academy's copy is to be taken out of its published pages.*
+
 ---
 
 ## Enterprise naming correspondence (reference-stack exception)
@@ -227,3 +267,10 @@ the hashes and break the self-tests. The live platform layer (`src/`, `console/`
 Self-test status when copied: `shdccp_kernel 8/8` · `codex_engine 11/11` ·
 `biochain_mesh 11/11` · `pump_clock 13/13`; golden ABI hash
 `882a841362ae14e793d361c782f884148f71b2e930fcc81d24134e6bfa199ef6`.
+
+Changes since the copy, none of which renames a symbol: `shdccp_kernel` gained
+`crystal32`, `stream_packet` and the pinned `GOLDEN_ABI_HASH` (its self-test now runs 11
+checks; the ABI hash is unchanged); `codex_engine` claims carry `merkleRule: "bioseed1"`;
+docstrings label the simulation ECDSA and LINK/1; every module starts with SPDX and
+copyright lines. Current status: `shdccp_kernel 11/11` ·
+`codex_engine 11/11` · `biochain_mesh 11/11` · `pump_clock 13/13` · `engram_shard 9/9`.

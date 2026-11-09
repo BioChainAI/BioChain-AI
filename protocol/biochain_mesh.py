@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 """
 BioChain Mesh — the three-tier enterprise deployment, end to end.
 
@@ -42,6 +44,12 @@ COMPUTE_SECONDS_PER_CRYST = 12          # the fleet's posted redemption rate
 
 
 # ─── ECDSA P-256 (same primitive as seal-crypto.js / Spire Mesh study) ───────
+# SIMULATION ONLY. This pure-Python ECDSA drives the mesh simulation and must
+# never hold or sign with a real key: private keys are derived from public names
+# (keypair), nonces come from HMAC(d, payload || counter) rather than RFC 6979,
+# verification does not check that Q is on the curve and accepts high-S
+# signatures, and the scalar multiplication is not constant-time. The platform
+# signs with WebCrypto (src/identity/crypto-core.js).
 
 P = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
 NO = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551

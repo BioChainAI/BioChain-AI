@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 /**
  * Crypto Core — pure, Firebase-free cryptographic primitives for identities and signing keys.
  * ----------------------------------------------------------------------------

@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Ebayednoob (Owl-Academy). See NOTICE.
 """
 Pump Clock — logical time for BioChain Enterprise, plus the chiral layer.
 

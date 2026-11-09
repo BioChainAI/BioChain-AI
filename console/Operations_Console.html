@@ -1,4 +1,6 @@
 <!DOCTYPE html>
+<!-- SPDX-License-Identifier: MIT -->
+<!-- Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE. -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -65,6 +67,7 @@
     <div class="tab" data-tab="transfers">Transfers</div>
     <div class="tab" data-tab="trace">Trace</div>
     <div class="tab hidden" data-tab="roles" id="rolesTab">Roles</div>
+    <div class="tab hidden" data-tab="audit" id="auditTab">Audit</div>
   </nav>
 
   <div id="toast" class="hidden fixed bottom-5 right-5 glass rounded-lg px-4 py-3 text-sm z-50 max-w-sm"></div>
@@ -144,6 +147,31 @@
     </div>
   </section>
 
+  <!-- AUDIT (ADMIN only; read-only: it reads biochains and writes nothing) -->
+  <section data-panel="audit" class="hidden space-y-4">
+    <div class="glass rounded-xl p-5 space-y-3">
+      <h2 class="text-lg text-white">Strict audit</h2>
+      <p class="text-sm opacity-70">Runs the strict check of RFC 07 (<span class="mono">verifyIntegrityStrict</span>) over every biochain, page by page, and offers the report as a JSON file to save. It reads records and writes nothing. Shadow mode: the strict verdict is shown on the pages and only refuses a publish; a record that fails it is labelled, never deleted.</p>
+      <div class="flex flex-wrap gap-2 items-center">
+        <label class="text-sm">page size
+          <select id="auditPageSize" class="px-2 py-1 text-sm"><option>25</option><option selected>50</option><option>100</option></select></label>
+        <button id="auditBtn" class="btn px-4 py-2 rounded-lg text-black font-medium" style="background:linear-gradient(90deg,var(--gold),#f0c14b)">Run the audit</button>
+        <a id="auditDl" class="hidden text-sm underline" style="color:var(--cyan)"></a>
+      </div>
+      <div id="auditEngineWarn" class="hidden text-sm" style="color:#fbbf24"></div>
+      <div id="auditProgress" class="text-sm mono opacity-80"></div>
+    </div>
+    <div id="auditResult" class="hidden space-y-4">
+      <div class="glass rounded-xl p-5"><h3 class="text-white mb-2">Counts</h3><table id="auditCounts" class="text-sm mono"></table></div>
+      <div class="glass rounded-xl p-5"><h3 class="text-white mb-2">First failing check</h3><table id="auditByCheck" class="text-sm mono"></table></div>
+      <div class="glass rounded-xl p-5"><h3 class="text-white mb-2">By kind</h3><table id="auditByKind" class="text-sm mono"></table></div>
+      <div class="glass rounded-xl p-5 hidden" id="auditWeavePanel"><h3 class="text-white mb-2">Weave mismatches</h3>
+        <p class="text-xs opacity-70 mb-2">Records whose weaves do not reproduce here. They may have been grown in a browser whose arithmetic differs from V8's (RFC 07 section 8.7).</p>
+        <table id="auditWeave" class="text-sm mono"></table></div>
+      <div class="glass rounded-xl p-5 hidden" id="auditFailPanel"><h3 class="text-white mb-2">Records that are not strict ok</h3><table id="auditFail" class="text-sm mono"></table></div>
+    </div>
+  </section>
+
   <!-- TRACE -->
   <section data-panel="trace" class="hidden space-y-4">
     <div class="glass rounded-xl p-5">
@@ -166,6 +194,7 @@ import { resolveRole, grantRole, readRoleGrant, isRootAdmin } from "../src/ident
 import { createSigningKey, listSigningKeys, revokeSigningKey } from "../src/identity/signing-key.js";
 import { renderKeyIdenticon } from "../src/biomesh/identicon.js";
 import * as BM from "../src/biomesh/biomesh.js";
+import { runAudit } from "../src/biomesh/audit.js";
 
 let UID = null, ROLE = "MEMBER", grown = null;
 const $ = (s) => document.querySelector(s);
@@ -176,6 +205,15 @@ function toast(msg, ok = true) {
   t.classList.remove("hidden"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.add("hidden"), 4000);
 }
 const guard = (fn) => async (...a) => { try { return await fn(...a); } catch (e) { toast(e.message || String(e), false); } };
+// The strict verdict of a record (RFC 07) and its label (decision D15). Shadow mode while
+// BM.STRICT_ENFORCE is false: the label is shown; only publishing refuses a record that fails.
+async function strictOf(chain) {
+  const strict = BM.verifyIntegrityStrict(chain);
+  const self = await BM.verifyIntegrity(chain);
+  const failed = BM.failedCheck(strict);
+  return { strict, self, label: BM.strictLabel(strict, self.ok), detail: failed ? failed.detail : "" };
+}
+const strictPill = (v) => `<span class="pill" style="color:${v.strict.ok ? "var(--emerald)" : v.strict.legacy ? "var(--gold)" : "#f87171"}" title="${esc(v.detail)}">${esc(v.label)}</span>`;
 
 // Tabs
 document.querySelectorAll(".tab").forEach(tab => tab.onclick = () => {
@@ -219,15 +257,15 @@ $("#createKey").onclick = guard(async () => {
 $("#growBtn").onclick = guard(async () => {
   const text = $("#growText").value;
   grown = await BM.growBiochain(text);
-  const v = await BM.verifyIntegrity(grown);
-  $("#growOut").innerHTML = `chainId <span style="color:var(--cyan)">${esc(grown.chainId)}</span> · value ${grown.value} · ${grown.origBytes} B · engrams ${grown.engramCount ?? 0}<br>integrity: ${v.ok ? "✅" : "❌"} ${esc(v.reasons[v.reasons.length-1])}`;
-  $("#publishBtn").disabled = !v.ok;
+  const v = await strictOf(grown);
+  $("#growOut").innerHTML = `chainId <span style="color:var(--cyan)">${esc(grown.chainId)}</span> · value ${esc(grown.value)} · ${esc(grown.origBytes)} B · engrams ${esc(grown.engramCount ?? 0)}<br>integrity: ${v.self.ok ? "✅" : "❌"} ${esc(v.self.reasons[v.self.reasons.length-1])}<br>strict check: ${strictPill(v)}`;
+  $("#publishBtn").disabled = !v.strict.ok;
 });
 $("#publishBtn").onclick = guard(async () => {
   if (!grown) return;
   const keyId = $("#growKey").value;
   if (!keyId) return toast("Create a signing key first.", false);
-  await BM.publishBiochain(UID, keyId, grown, { title: $("#growTitle").value.trim() || "Untitled Biochain", listed: $("#growListed").checked });
+  await BM.publishBiochain(UID, keyId, grown, { title: $("#growTitle").value.trim() || "Untitled Biochain", listed: $("#growListed").checked, kind: "text" });
   toast("Certified & published: " + grown.chainId); $("#publishBtn").disabled = true; grown = null; $("#growText").value = "";
 });
 
@@ -258,19 +296,21 @@ async function refreshMarket() {
 
   $("#marketList").querySelectorAll("[data-verify]").forEach(b => b.onclick = guard(async () => {
     const c = await BM.getBiochain(b.dataset.verify);
-    const v = await BM.verifyIntegrity(c);
+    const v = await strictOf(c);
     const g = await BM.verifyGrown(c);
     document.querySelector(`[data-out="${CSS.escape(b.dataset.verify)}"]`).innerHTML =
-      `integrity ${v.ok ? "✅" : "❌"} · certification ${g.valid ? "✅ " + esc(g.reason) : "❌ " + esc(g.reason)}`;
-    b.dataset._ok = v.ok;
+      `strict ${strictPill(v)} · integrity ${v.self.ok ? "✅" : "❌"} · certification ${g.valid ? "✅ " + esc(g.reason) : "❌ " + esc(g.reason)}` +
+      (v.strict.ok ? "" : `<div class="opacity-70 mt-1">${esc(v.detail)}</div>`);
+    b.dataset._ok = v.strict.ok;
   }));
   $("#marketList").querySelectorAll("[data-rate]").forEach(b => b.onclick = guard(async () => {
     const stars = parseInt(prompt("Stars 1–5?", "5"), 10);
     if (!stars) return;
     const c = await BM.getBiochain(b.dataset.rate);
-    const v = await BM.verifyIntegrity(c);
-    await BM.rateBiochain(UID, b.dataset.rate, stars, "", v.ok);
-    toast("Rated " + stars + "★ (verified: " + v.ok + ")"); refreshMarket();
+    const v = await strictOf(c);
+    // recreatedOk is the strict verdict: a record that is only self-consistent does not count as verified.
+    await BM.rateBiochain(UID, b.dataset.rate, stars, "", v.strict.ok);
+    toast("Rated " + stars + "★ (strict check: " + v.label + ")"); refreshMarket();
   }));
   $("#marketList").querySelectorAll("[data-list]").forEach(b => b.onclick = guard(async () => {
     await BM.setListing(UID, b.dataset.list, b.dataset.listed !== "true"); refreshMarket();
@@ -296,7 +336,8 @@ async function refreshIncoming() {
       </div>
     </div>`).join("") : `<p class="opacity-60 text-sm">No incoming transfers.</p>`;
   $("#incomingList").querySelectorAll("[data-accept]").forEach(b => b.onclick = guard(async () => {
-    await BM.acceptBiochain(UID, b.dataset.accept); toast("Accepted — ownership moved to you."); refreshIncoming();
+    const r = await BM.acceptBiochain(UID, b.dataset.accept);
+    toast("Accepted — ownership moved to you. Strict check: " + BM.strictLabel(r.strict) + "."); refreshIncoming();
   }));
   $("#incomingList").querySelectorAll("[data-decline]").forEach(b => b.onclick = guard(async () => {
     await BM.declineBiochain(UID, b.dataset.decline); toast("Declined."); refreshIncoming();
@@ -308,11 +349,16 @@ $("#refreshIncoming").onclick = refreshIncoming;
 $("#traceBtn").onclick = guard(async () => {
   const t = await BM.traceBiochain($("#traceChain").value.trim());
   const hops = t.hops.map(h => `<li class="mono text-xs">→ ${esc(h.toUid)} · attestation ${h.attestationValid ? "✅" : "❌"} · ${esc(h.status)}</li>`).join("");
+  const failed = BM.failedCheck(t.strict);
+  const sv = { strict: t.strict, label: BM.strictLabel(t.strict, t.selfCheck.ok), detail: failed ? failed.detail : "" };
+  const checks = t.strict.checks.map(c => `<li class="mono text-xs">${c.ok ? "✓" : "✗"} ${esc(c.name)} — ${esc(c.detail)}</li>`).join("");
   $("#traceOut").innerHTML = `
     <div class="card p-3">
       <div class="text-white">${esc(t.chain.title || "Untitled")} <span class="mono opacity-60">${esc(t.chain.chainId)}</span></div>
       <div class="mt-2">certification: ${t.grown.valid ? "✅ " + esc(t.grown.reason) : "❌ " + esc(t.grown.reason)}</div>
-      <div class="mt-1">integrity: ${t.integrity.ok ? "✅ " + esc(t.integrity.reasons[t.integrity.reasons.length-1]) : "❌"}</div>
+      <div class="mt-1">integrity: ${t.integrity.ok ? "✅ " + esc(t.integrity.reasons[t.integrity.reasons.length-1]) : "❌ " + esc(t.integrity.reasons[0])}</div>
+      <div class="mt-1">strict check (RFC 07${BM.STRICT_ENFORCE ? "" : ", shadow mode"}): ${strictPill(sv)}${failed ? ` <span class="opacity-70">${esc(failed.detail)}</span>` : ""}
+        <ul class="mt-1 space-y-0.5">${checks}</ul></div>
       <div class="mt-2">${t.hops.length ? "lineage:<ul class='mt-1 space-y-0.5'>" + hops + "</ul>" : "no transfers — original grower still owns it."}</div>
     </div>`;
 });
@@ -338,6 +384,71 @@ $("#grantBtn").onclick = guard(async () => {
   toast(`Granted ${role} to ${uid}.`); await showRole(uid);
 });
 
+// ── Audit (ADMIN, read-only) ──────────────────────────────────────────
+let auditUrl = null;
+function fillTable(el, head, rows) {
+  el.textContent = "";
+  const tr = document.createElement("tr");
+  for (const h of head) { const th = document.createElement("th"); th.textContent = h; th.className = "text-left pr-4 opacity-70"; tr.appendChild(th); }
+  el.appendChild(tr);
+  for (const r of rows) {
+    const row = document.createElement("tr");
+    for (const v of r) { const td = document.createElement("td"); td.className = "pr-4 align-top break-all"; td.textContent = v === null || v === undefined ? "—" : String(v); row.appendChild(td); }
+    el.appendChild(row);
+  }
+}
+function renderAudit(report) {
+  const c = report.counts;
+  fillTable($("#auditCounts"), ["count", "records"], [
+    ["records", c.records], ["strict ok", c.strictOk], ["legacy", c.legacy], ["failed", c.failed],
+    ["self-consistent only", c.selfConsistentOnly], ["root-less", c.rootless], ["weave mismatch", c.weaveMismatch],
+    ["doc id ≠ chainId", c.idMismatch], ["data id ≠ doc id", c.dataIdMismatch]]);
+  fillTable($("#auditByCheck"), ["check", "records"], report.checks.map(k => [k, c.failedAt[k]]));
+  fillTable($("#auditByKind"), ["kind", "records", "strict ok"], Object.entries(c.byKind).map(([k, v]) => [k, v.records, v.strictOk]));
+  fillTable($("#auditWeave"), ["doc id", "kind", "created", "fields", "chainId from own weave"],
+    report.weaveMismatch.map(w => [w.docId, w.kind, w.createdAt, w.fields.join(", "), w.chainIdFromOwnWeave === null ? null : w.chainIdFromOwnWeave ? "yes" : "no"]));
+  const notOk = report.records.filter(e => !e.strict.ok);
+  fillTable($("#auditFail"), ["doc id", "title", "kind", "label", "detail"], notOk.map(e => [e.docId, e.title, e.kind, e.label, e.strict.detail]));
+  $("#auditWeavePanel").classList.toggle("hidden", !report.weaveMismatch.length);
+  $("#auditFailPanel").classList.toggle("hidden", !notOk.length);
+  $("#auditResult").classList.remove("hidden");
+}
+// The report as a download link the user clicks; nothing leaves the browser otherwise.
+function offerAudit(report) {
+  if (auditUrl) URL.revokeObjectURL(auditUrl);
+  auditUrl = URL.createObjectURL(new Blob([JSON.stringify(report, null, 1)], { type: "application/json" }));
+  const a = $("#auditDl");
+  a.href = auditUrl;
+  a.download = "biochain-audit-" + report.generatedAt.replace(/[:.]/g, "-") + ".json";
+  a.textContent = `Download the report (JSON, ${report.counts.records} records)`;
+  a.classList.remove("hidden");
+}
+$("#auditBtn").onclick = async () => {
+  if (ROLE !== "ADMIN") return toast("The audit is for ADMIN accounts.", false);
+  const btn = $("#auditBtn");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  try {
+    const report = await runAudit({
+      listPage: BM.listBiochainsPage, pageSize: Number($("#auditPageSize").value) || 50, strictEnforce: BM.STRICT_ENFORCE,
+      onProgress: ({ pages, records }) => { $("#auditProgress").textContent = `page ${pages} · ${records} records checked…`; },
+    });
+    const e = report.auditEngine;
+    $("#auditEngineWarn").textContent = e.matchesV8 ? "" : "This browser's arithmetic differs from V8's" +
+      (e.hypotMismatches ? ` (Math.hypot on ${e.hypotMismatches.length} of ${e.hypotCases} vectors, seeded weave ${e.weaveMatches ? "equal" : "different"})` : "") +
+      ": weave mismatches in this report may come from this browser. Run the audit in a Chromium-based browser.";
+    $("#auditEngineWarn").classList.toggle("hidden", e.matchesV8);
+    renderAudit(report);
+    offerAudit(report);
+    $("#auditProgress").textContent = `Done: ${report.counts.records} records in ${report.pages} page(s), ${report.counts.strictOk} strict ok. ` +
+      `Shadow mode: ${BM.STRICT_ENFORCE ? "off (enforced)" : "on (not enforced)"}. This browser's weave arithmetic: ${e.matchesV8 ? "equal to V8's" : "differs from V8's"}.`;
+  } catch (err) {
+    $("#auditProgress").textContent = `The audit stopped after ${err.checked ?? 0} records: ${err.message || err}`;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
 // ── Boot ──────────────────────────────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
   if (!user) return;                       // auth-guard handles redirect
@@ -350,6 +461,7 @@ onAuthStateChanged(auth, async (user) => {
   $("#whoami").textContent = "uid " + UID + " · " + id.identityId;
   $("#roleBadge").textContent = ROLE;
   $("#rolesTab").classList.toggle("hidden", ROLE !== "ADMIN");
+  $("#auditTab").classList.toggle("hidden", ROLE !== "ADMIN");
   refreshKeys();
 });
 </script>

@@ -1,0 +1,62 @@
+BioChain-AI
+Copyright (c) 2026 Schism-Labs-AI
+Licensed under the MIT License (LICENSE).
+
+This repository contains material from other repositories. Each part keeps its own licence and copyright, as
+listed here. Nested_Harmonic_Cocoon/ is a separate project with its own notices and is not covered by this file.
+
+------------------------------------------------------------------------------------------------------------------
+1. Owl-Academy (https://github.com/BioChainAI/Owl-Academy)
+   MIT License, Copyright (c) 2026 Ebayednoob
+
+   Generated from Owl-Academy (do not edit here; tools/sync-from-owl.mjs writes them from the commit set by
+   OWL_COMMIT in that script, and src/biomesh/VENDOR.json records the commit and each file's SHA-256):
+     src/biomesh/biomesh-core.js          from scripts/biomesh-core.js (one import line rewritten)
+     src/biomesh/biomesh-engine-check.js  from scripts/biomesh-engine-check.js (unchanged)
+
+   Copied from Owl-Academy and changed here since (each code and HTML file below carries
+   SPDX-License-Identifier: MIT and a copyright line; protocol/pump_clock.py is unchanged apart from those lines):
+     protocol/*.py                from BioChain-AI/BioChain_Enterprise/ (commit 7492785 here); the changes are
+                                  listed in protocol/README.md. This repository's copy is the maintained one.
+     protocol/README.md           from BioChain-AI/BioChain_Enterprise/README.md (commit 7492785 here), with a
+                                  naming table and the changes since the copy added
+     src/biomesh/biomesh.js       from scripts/biomesh.js (commit c7495c5 here); the codec now comes from the
+                                  generated src/biomesh/biomesh-core.js
+     src/biomesh/identicon.js     from scripts/sigil-renderer.js (commit c7495c5 here)
+     src/identity/*.js            from scripts/seal-crypto.js, minor-tome.js, spire-registrar.js,
+                                  genesis-registrar.js and schumann-oracle.js (commit c7495c5 here)
+     src/ui/*.js                  from scripts/auth-guard.js and scripts/ui/node-network-bg.js (commit c7495c5 here)
+     src/firebase/*.js            from scripts/firebase/auth.js, firestore.js and config.js (commit e8eb1be here);
+                                  config.js binds this repository's own Firebase project
+     console/*.html               re-hosted from mage_tower/Biomesh_*.html (commits 9407c5f and 23794ee here)
+     console/guides/*.html        from mage_tower/Biomesh_Language_Growing_Guide.html and
+                                  Biomesh_Mind_Eye_3D_Guide.html (commits 162be58 and 23794ee here)
+     src/biomesh/audit.js         adapted from mage_tower/Biomesh_Audit.html
+     tests/unit/contract-vectors.test.mjs   adapted from tests/unit/contract-vectors.test.mjs
+
+   Owl-Academy's licence:
+
+   MIT License
+
+   Copyright (c) 2026 Ebayednoob
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+   documentation files (the "Software"), to deal in the Software without restriction, including without limitation
+   the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and
+   to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all copies or substantial portions
+   of the Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
+   THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+   CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+   IN THE SOFTWARE.
+
+------------------------------------------------------------------------------------------------------------------
+2. SHD-CCP-core (https://github.com/BioChainAI/SHD-CCP-core)
+   tests/vendor/shdccp2-contract/: the RFC 07 contract vectors (contract_vectors/ there), dedicated to the public
+   domain under CC0-1.0 by their holder (tests/vendor/shdccp2-contract/LICENSE). Only the vector files and that
+   LICENSE are copied; none of SHD-CCP-core's GPL-3.0 code is in this repository. tests/vendor/VENDOR.json pins
+   each file's SHA-256 and the source commits.

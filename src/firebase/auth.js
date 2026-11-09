@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 /**
  * Authentication helpers. Google sign-in by default; swap the provider here to
  * change the platform's identity provider without touching any feature module.

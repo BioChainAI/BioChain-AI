@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Ebayednoob (Owl-Academy); changes Copyright (c) 2026 Schism-Labs-AI. See NOTICE.
 """
 Engram Shard — the hyperbolic engram compressor + chain-weaving spire engine,
 deployed as a decentralized node shard system.
@@ -188,7 +190,12 @@ def recreate(claim_skeleton, nodes, segments):
 
 def link_genesis(genesis_id, node, genesis_priv):
     """LINK/1 — a detached attestation: the Owl Academy identity signs the shard
-    key. Stored beside the mesh; consulted by humans and provenance UIs only."""
+    key. Stored beside the mesh; consulted by humans and provenance UIs only.
+
+    Simulation only: LINK/1 is retired for LINK/2, an ATTEST/1 link signed by
+    both identities (decision D9; the attestation profile is RFC 07 section 13
+    in BioChainAI/SHD-CCP-core). The signature here is this reference stack's
+    simulation ECDSA (biochain_mesh.sign), not a key a real identity holds."""
     payload = "LINK/1|%s|%s" % (genesis_id, node.node_id)
     return {"format": "LINK/1", "genesisId": genesis_id, "nodeId": node.node_id,
             "sig": sign(genesis_priv, payload)}
