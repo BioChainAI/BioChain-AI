@@ -49,7 +49,10 @@ All four layers are in the repository and served by GitHub Pages:
   Firestore services. `crypto-core.js` holds the Firebase-free signing-key and
   identity primitives, so they run in Node as well as the browser.
 - **Layer 4** — `console/` (Operations Console, Language Studio, Lattice Forge)
-  and `login.html`.
+  and `login.html`. After sign-in, `login.html` follows `?redirect=` only to a
+  page under the folder it is served from (`/BioChain-AI/` on Pages, an origin
+  shared with Owl Academy); any other value goes to the Operations Console
+  (`src/util/site-destination.js`).
 
 `verifyIntegrity` checks a record's self-consistency (parity, each chunk against
 its leaf, the Merkle root, the chiral weave and the engram stream) and fails at
