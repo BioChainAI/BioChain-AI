@@ -52,10 +52,13 @@
 import { signInWithGoogle, onAuthChange } from "./src/firebase/auth.js";
 import { readIdentity, registerIdentity, forgetSeed, forgetLocalSeed, computeIdentityId, renderIdentityIcon } from "./src/identity/identity-registry.js";
 import { resolveRole } from "./src/identity/access-control.js";
+import { siteDestination } from "./src/util/site-destination.js";
 
 const stage = document.getElementById("stage");
 const params = new URLSearchParams(location.search);
-const dest = params.get("redirect") || "console/Operations_Console.html";
+// Only a page of this site (the folder that holds login.html) is accepted as ?redirect=;
+// anything else goes to the default. Every navigation below uses dest.
+const dest = siteDestination(params.get("redirect"), location.href, "console/Operations_Console.html");
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;" }[c]));
 
 function signedOut() {

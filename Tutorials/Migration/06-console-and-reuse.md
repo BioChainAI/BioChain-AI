@@ -15,7 +15,9 @@ build gets a fresh, minimal one. It must do three things:
    `src/identity/identity-registry.js`). The identity doc carries no role —
    roles come from `config/rootAdmins` / `roleGrants` (see Chapter 03).
 3. Redirect back to the page the user requested (the `?redirect=` param that
-   `src/ui/auth-guard.js` appends).
+   `src/ui/auth-guard.js` appends), only when it is a page under the folder that
+   holds `login.html`; any other value (another scheme, host or app on the same
+   origin) goes to `console/Operations_Console.html` (`src/util/site-destination.js`).
 
 ## 6.2 Re-host the console pages
 

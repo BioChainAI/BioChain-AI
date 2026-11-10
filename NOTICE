@@ -33,6 +33,7 @@ listed here. Nested_Harmonic_Cocoon/ is a separate project with its own notices 
                                   Biomesh_Mind_Eye_3D_Guide.html (commits 162be58 and 23794ee here)
      src/biomesh/audit.js         adapted from mage_tower/Biomesh_Audit.html
      tests/unit/contract-vectors.test.mjs   adapted from tests/unit/contract-vectors.test.mjs
+     src/util/site-destination.js extends siteDestination() in login.html (commit 3a2edf3 there)
 
    Owl-Academy's licence:
 
